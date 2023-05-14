@@ -1,5 +1,8 @@
 from datetime import datetime
 
+import requests.exceptions
+from requests import get
+
 
 DT_FORMAT = "%H:%M %d.%m.%Y"
 
@@ -10,6 +13,14 @@ def deserialize_buttons(text: str) -> list[dict]:
         return buttons
     for row in text.split("\n"):
         caption, link = row.split(" - ")
+        if not "https://" in link:
+            link = "https://" + link
+        try:
+            req = get(link)
+        except requests.exceptions.ConnectionError:
+            raise ValueError
+        if not req.ok:
+            raise ValueError
         buttons.append({
             "caption": caption,
             "link": link
@@ -22,6 +33,14 @@ def serialize_buttons(buttons: list[dict]) -> str:
         return None
     text = "\n".join([f"{button['caption']} - {button['link']}" for button in buttons])
     return text
+
+
+def serialize_reply_buttons(buttons: list[str]) -> str:
+    return "\n".join(buttons)
+
+
+def deserialize_reply_buttons(text: str) -> list[str]:
+    return text.split("\n")
 
 
 class Admin:
@@ -42,7 +61,6 @@ class Admin:
     def get_tuple(self):
         return self.id, self.username, self.first_name, self.last_name
 
-
 class Bot:
 
     columns = (
@@ -51,17 +69,19 @@ class Bot:
         "username",
         "admin",
         "premium",
+        "settings"
     )
 
-    def __init__(self, _id: int, token: str, username: str, admin: int, premium: int):
+    def __init__(self, _id: int, token: str, username: str, admin: int, premium: int, settings: int):
         self.id = _id
         self.token = token
         self.username = username
         self.admin = admin
         self.premium = premium
+        self.settings = settings
 
     def get_tuple(self):
-        return self.id, self.token, self.username, self.admin, self.premium
+        return self.id, self.token, self.username, self.admin, self.premium, self.settings
 
 
 class User:
@@ -91,6 +111,7 @@ class Captcha:
 
     columns = (
         "bot",
+        "active",
         "text",
         "photo",
         "video",
@@ -98,17 +119,28 @@ class Captcha:
         "buttons"
     )
 
-    def __init__(self, _id: int, bot: int, text: str, photo: str, video: str, gif: str, buttons: list[str]):
+    def __init__(
+            self,
+            _id: int,
+            bot: int,
+            active: bool = False,
+            text: str = None,
+            photo: str = None,
+            video: str = None,
+            gif: str = None,
+            buttons: str = None
+    ):
         self.id = _id
         self.bot = bot
+        self.active = active
         self.text = text
         self.photo = photo
         self.video = video
         self.gif = gif
-        self.buttons = buttons
+        self.buttons = deserialize_reply_buttons(buttons)
 
     def get_tuple(self):
-        return self.bot, self.text, self.photo, self.video, self.gif, self.buttons
+        return self.bot, self.active, self.text, self.photo, self.video, self.gif, serialize_reply_buttons(self.buttons)
 
 
 class Greeting:
@@ -173,8 +205,8 @@ class Mail:
             "video",
             "gif",
             "buttons",
-            "sched_dt",
-            "del_delay",
+            "send_dt",
+            "del_dt",
             "status",
             "sent_num",
             "blocked_num",
@@ -185,18 +217,18 @@ class Mail:
             self,
             _id: int,
             bot: int,
-            active: bool,
-            text: str,
-            photo: str,
-            video: str,
-            gif: str,
-            buttons: list[dict[str, str]],
-            sched_dt: str,
-            del_delay: str,
-            status: bool,
-            sent_num: int,
-            blocked_num: int,
-            error_num: int
+            active: bool = False,
+            text: str = None,
+            photo: str = None,
+            video: str = None,
+            gif: str = None,
+            buttons: list[dict[str, str]] = None,
+            sched_dt: str = None,
+            del_dt: str = None,
+            status: bool = False,
+            sent_num: int = None,
+            blocked_num: int = None,
+            error_num: int = None
     ):
         self.id = _id
         self.bot = bot
@@ -205,9 +237,9 @@ class Mail:
         self.photo = photo
         self.video = video
         self.gif = gif
-        self.buttons = buttons
-        self.sched_dt = datetime.strptime(sched_dt, DT_FORMAT)
-        self.del_delay = del_delay
+        self.buttons = deserialize_buttons(buttons)
+        self.send_dt = datetime.strptime(sched_dt, DT_FORMAT) if sched_dt else None
+        self.del_dt = datetime.strptime(del_dt, DT_FORMAT) if del_dt else None
         self.status = status
         self.sent_num = sent_num
         self.blocked_num = blocked_num
@@ -216,13 +248,14 @@ class Mail:
     def get_tuple(self):
         return (
             self.bot,
+            self.active,
             self.text,
             self.photo,
             self.video,
             self.gif,
-            self.buttons,
-            self.sched_dt.strftime(DT_FORMAT),
-            self.del_delay,
+            serialize_buttons(self.buttons),
+            self.send_dt.strftime(DT_FORMAT) if self.send_dt else None,
+            self.del_dt.strftime(DT_FORMAT) if self.del_dt else None,
             self.status,
             self.sent_num,
             self.blocked_num,
@@ -246,17 +279,17 @@ class Purge:
             self,
             _id: int,
             bot: int,
-            active: bool,
-            sched_dt: str,
-            status: bool,
-            deleted_msgs_num: int,
-            cleared_chats_num: int,
-            error_num: int
+            active: bool = False,
+            sched_dt: str = None,
+            status: bool = False,
+            deleted_msgs_num: int = None,
+            cleared_chats_num: int = None,
+            error_num: int = None
     ):
         self.id = _id
         self.bot = bot
         self.active = active
-        self.sched_dt = datetime.strptime(sched_dt, DT_FORMAT)
+        self.sched_dt = datetime.strptime(sched_dt, DT_FORMAT) if sched_dt else None
         self.status = status
         self.deleted_msgs_num = deleted_msgs_num
         self.cleared_chats_num = cleared_chats_num
@@ -266,7 +299,7 @@ class Purge:
         return (
             self.bot,
             self.active,
-            self.sched_dt.strftime(DT_FORMAT),
+            self.sched_dt.strftime(DT_FORMAT) if self.sched_dt else None,
             self.status,
             self.deleted_msgs_num,
             self.cleared_chats_num,

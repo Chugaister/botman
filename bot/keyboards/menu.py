@@ -91,6 +91,10 @@ def gen_bot_menu(bot: models.Bot) -> InlineKeyboardMarkup:
             callback_data="open_bot_list"
         ),
         InlineKeyboardButton(
+            "🔽Приховати",
+            callback_data="hide"
+        ),
+        InlineKeyboardButton(
             "🔄Оновити",
             callback_data=bot_action.new(
                 id=bot.id,

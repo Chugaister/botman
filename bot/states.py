@@ -19,3 +19,5 @@ class InputStateGroup(StatesGroup):
 
     purge_sched_dt = State()
 
+    bot_username = State()
+

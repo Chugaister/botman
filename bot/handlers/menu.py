@@ -87,6 +87,7 @@ async def token_input(msg: Message, state: FSMContext):
         msg.text,
         info["username"],
         msg.from_user.id,
+        0,
         0
     )
     try:
@@ -99,9 +100,14 @@ async def token_input(msg: Message, state: FSMContext):
     await open_bot_menu(msg.from_user.id, bot_dc.id, state_data["msg_id"])
 
 
-async def open_bot_menu(uid: int, bot_id: int, msg_id: int):
+async def open_bot_menu(uid: int, bot_id: int, msg_id: int, callback_query_id: int = None):
     bot_dc = bots_db.get(bot_id)
-    admin = admins_db.get(bot_dc.admin)
+    if bot_dc.premium == -1 and uid not in config.admin_list:
+        return
+    try:
+        admin = admins_db.get(bot_dc.admin)
+    except data_exc.RecordIsMissing:
+        admin = models.Admin(0, "видалено", "", "")
     users = user_db.get_by(bot=bot_dc.id)
     all_users, active, dead = gen_stats(users)
     table = PrettyTable()
@@ -127,4 +133,4 @@ async def open_bot_menu(uid: int, bot_id: int, msg_id: int):
 
 @dp.callback_query_handler(kb.bot_action.filter(action="open_menu"), state="*")
 async def open_bot_menu_cb(cb: CallbackQuery, callback_data: dict):
-    await open_bot_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
+    await open_bot_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id, cb.id)

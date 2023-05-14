@@ -21,8 +21,7 @@ class Database:
 
     def add(self, object):
         query = f"INSERT INTO {self.table_name} {str(object.columns)} VALUES ({'?, '*(len(object.columns)-1)}?)"
-        print(query)
-        print(object.get_tuple())
+        print(query, object.get_tuple())
         try:
             self.cur.execute(query, object.get_tuple())
         except IntegrityError:
@@ -31,9 +30,9 @@ class Database:
         self.conn.commit()
 
     def get(self, _id: int):
-        query = f"SELECT * FROM {self.table_name} WHERE id={_id}"
+        query = f"SELECT * FROM {self.table_name} WHERE id=?"
         print(query)
-        self.cur.execute(query)
+        self.cur.execute(query, (_id,))
         data = self.cur.fetchone()
         if data is None:
             raise RecordIsMissing(_id)
@@ -42,7 +41,7 @@ class Database:
     def update(self, object):
         data_tuple = object.get_tuple()
         query = f"UPDATE {self.table_name} SET {', '.join([f'{cl_name}=?' for cl_name, value in zip(object.columns, data_tuple)])} WHERE id={object.id}"
-        print(query)
+        print(query, data_tuple)
         self.cur.execute(query, data_tuple)
         self.conn.commit()
 

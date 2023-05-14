@@ -5,5 +5,6 @@ from . import (
     menu,
     premium,
     purges,
-    settings
+    settings,
+    admin_panel
 )
