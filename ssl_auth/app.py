@@ -9,10 +9,9 @@ def hello():
     return "Hello, world"
 
 
-@app.route("/.well-known/pki-validation/CE3C2313F4FC06227B03EE646B38CF60.txt")
+@app.route(f"/.well-known/pki-validation/{config.auth_file_name}")
 def send_auth_file():
-    # return "FUCK"
-    return send_file("CE3C2313F4FC06227B03EE646B38CF60.txt")
+    return send_file(config.auth_file_name)
 
 
 if __name__ == "__main__":

@@ -1,2 +1,3 @@
-HOST = "127.0.0.1"
-PORT = 80
+HOST = "0.0.0.0"
+PORT = 443
+auth_file_name = "CE3C2313F4FC06227B03EE646B38CF60.txt"
