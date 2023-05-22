@@ -22,23 +22,26 @@ async def send_greeting_menu(uid: int, greeting_id: int, msg_id: int):
     greeting = greeting_db.get(greeting_id)
     bot_dc = bots_db.get(greeting.bot)
     if greeting.photo:
+        file = await file_manager.get_file(greeting.photo)
         await bot.send_photo(
             uid,
-            greeting.photo,
+            file,
             caption=greeting.text,
             reply_markup=kb.gen_greeting_menu(bot_dc, greeting)
         )
     elif greeting.video:
+        file = await file_manager.get_file(greeting.video)
         await bot.send_video(
             uid,
-            greeting.video,
+            file,
             caption=greeting.text,
             reply_markup=kb.gen_greeting_menu(bot_dc, greeting)
         )
     elif greeting.gif:
+        file = await file_manager.get_file(greeting.gif)
         await bot.send_animation(
             uid,
-            greeting.gif,
+            file,
             caption=greeting.text,
             reply_markup=kb.gen_greeting_menu(bot_dc, greeting)
         )
@@ -86,7 +89,10 @@ async def greeting_input_text(msg: Message, state: FSMContext):
     greeting = models.Greeting(
         _id=0,
         bot=state_data["bot_id"],
-        text=msg.text
+        text=msg.text,
+        photo=None,
+        video=None,
+        gif=None
     )
     greeting_db.add(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
@@ -95,12 +101,15 @@ async def greeting_input_text(msg: Message, state: FSMContext):
 
 
 @dp.message_handler(content_types=ContentTypes.PHOTO, state=states.InputStateGroup.greeting)
-async def greeting_input_text(msg: Message, state: FSMContext):
+async def greeting_input_photo(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     greeting = models.Greeting(
         _id=0,
         bot=state_data["bot_id"],
-        photo=msg.photo[-1].file_id
+        text=msg.caption,
+        photo=await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id),
+        video=None,
+        gif=None
     )
     greeting_db.add(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
@@ -109,12 +118,15 @@ async def greeting_input_text(msg: Message, state: FSMContext):
 
 
 @dp.message_handler(content_types=ContentTypes.VIDEO, state=states.InputStateGroup.greeting)
-async def greeting_input_text(msg: Message, state: FSMContext):
+async def greeting_input_video(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     greeting = models.Greeting(
         _id=0,
         bot=state_data["bot_id"],
-        video=msg.video.file_id
+        text=msg.caption,
+        photo=None,
+        video=await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id),
+        gif=None
     )
     greeting_db.add(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
@@ -123,12 +135,15 @@ async def greeting_input_text(msg: Message, state: FSMContext):
 
 
 @dp.message_handler(content_types=ContentTypes.ANIMATION, state=states.InputStateGroup.greeting)
-async def greeting_input_text(msg: Message, state: FSMContext):
+async def greeting_input_gif(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     greeting = models.Greeting(
         _id=0,
         bot=state_data["bot_id"],
-        gif=msg.animation.file_id
+        text=msg.caption,
+        photo=None,
+        video=None,
+        gif=await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
     )
     greeting_db.add(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])

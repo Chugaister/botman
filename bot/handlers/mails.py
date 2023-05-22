@@ -47,23 +47,26 @@ async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
         mail.text += f"\n\n<i>Заплановано на: {mail.send_dt.strftime(models.DT_FORMAT)}</i>"
     bot_dc = bots_db.get(mail.bot)
     if mail.photo:
+        file = file_manager.get_file(mail.photo)
         await bot.send_photo(
             uid,
-            mail.photo,
+            file,
             caption=mail.text,
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     elif mail.video:
+        file = file_manager.get_file(mail.video)
         await bot.send_video(
             uid,
-            mail.video,
+            file,
             caption=mail.text,
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     elif mail.gif:
+        file = file_manager.get_file(mail.gif)
         await bot.send_animation(
             uid,
-            mail.gif,
+            file,
             caption=mail.text,
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
@@ -125,7 +128,7 @@ async def mail_input_photo(msg: Message, state: FSMContext):
         _id=0,
         bot=state_data["bot_id"],
         text=msg.text,
-        photo=msg.photo[-1].file_id
+        photo=file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
     )
     mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -140,7 +143,7 @@ async def mail_input_video(msg: Message, state: FSMContext):
         _id=0,
         bot=state_data["bot_id"],
         text=msg.text,
-        video=msg.video.file_id
+        video=file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
     )
     mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -155,7 +158,7 @@ async def mail_input_text(msg: Message, state: FSMContext):
         _id=0,
         bot=state_data["bot_id"],
         text=msg.text,
-        gif=msg.animation.file_id
+        gif=file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
     )
     mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
