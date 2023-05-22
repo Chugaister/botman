@@ -8,11 +8,14 @@ async def open_captcha_menu(uid: int, captcha_id: int, msg_id: int):
     captcha = captchas_db.get(captcha_id)
     bot_dc = bots_db.get(captcha.bot)
     if captcha.photo:
-        await bot.send_photo(uid, captcha.photo, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
+        file = await file_manager.get_file(captcha.photo)
+        await bot.send_photo(uid, file, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
     elif captcha.video:
-        await bot.send_video(uid, captcha.video, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
+        file = file_manager.get_file(captcha.video)
+        await bot.send_video(uid, file, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
     elif captcha.gif:
-        await bot.send_animation(uid, captcha.gif, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
+        file = file_manager.get_file(captcha.gif)
+        await bot.send_animation(uid, file, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
     else:
         await bot.send_message(uid, captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
     try:
@@ -74,6 +77,9 @@ async def set_captcha_text(msg: Message, state: FSMContext):
     await state.set_state(None)
     captcha = captchas_db.get(state_data["captcha_id"])
     captcha.text = msg.text
+    captcha.photo = None
+    captcha.video = None
+    captcha.gif = None
     captchas_db.update(captcha)
     await msg.delete()
     await open_captcha_menu(msg.from_user.id, captcha.id, state_data["msg_id"])
@@ -85,7 +91,9 @@ async def set_captcha_photo(msg: Message, state: FSMContext):
     await state.set_state(None)
     captcha = captchas_db.get(state_data["captcha_id"])
     captcha.text = msg.caption
-    captcha.photo = msg.photo[-1].file_id
+    captcha.photo = await file_manager.download_file(bot, captcha.bot, msg.photo[-1].file_id)
+    captcha.video = None
+    captcha.gif = None
     captchas_db.update(captcha)
     await msg.delete()
     await open_captcha_menu(msg.from_user.id, captcha.id, state_data["msg_id"])
@@ -96,8 +104,10 @@ async def set_captcha_video(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     await state.set_state(None)
     captcha = captchas_db.get(state_data["captcha_id"])
-    captcha.text = msg.text
-    captcha.video = msg.video.file_id
+    captcha.text = msg.caption
+    captcha.photo = None
+    captcha.video = await file_manager.download_file(bot, captcha.bot, msg.video.file_id)
+    captcha.gif = None
     captchas_db.update(captcha)
     await msg.delete()
     await open_captcha_menu(msg.from_user.id, captcha.id, state_data["msg_id"])
@@ -108,8 +118,10 @@ async def set_captcha_gif(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     await state.set_state(None)
     captcha = captchas_db.get(state_data["captcha_id"])
-    captcha.text = msg.text
-    captcha.gif = msg.animation.file_id
+    captcha.text = msg.caption
+    captcha.photo = None
+    captcha.video = None
+    captcha.gif = await file_manager.download_file(bot, captcha.bot, msg.animation.file_id)
     captchas_db.update(captcha)
     await msg.delete()
     await open_captcha_menu(msg.from_user.id, captcha.id, state_data["msg_id"])
