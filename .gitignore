@@ -5,3 +5,5 @@ bot/__pycache__
 bot/handlers/__pycache__
 bot/keyboards/__pycache__
 bot/config.py
+ssl_auth/__pycache__/**
+manager/__pycache__
