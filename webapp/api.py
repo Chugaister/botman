@@ -2,9 +2,7 @@ from flask import Flask, send_file
 import config
 from dotenv import load_dotenv
 from os import getenv
-import sys
-sys.path.insert(0, 'botman\manager')
-from manager import Manager
+from manager.manager import Manager
 from aiogram import types
 load_dotenv()
 
