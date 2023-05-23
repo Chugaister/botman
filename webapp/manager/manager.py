@@ -23,9 +23,9 @@ class Manager:
         else:
             await self.echo_message(bot, message.chat.id, message.text)
 
-    async def on_startup(self, dp=None):
+    def on_startup(self):
         for bot, _ in self.bot_dict.values():
-            await bot.set_webhook("20.100.169.26")
+             bot.set_webhook("20.100.169.26")
 
 
     async def send_start_message(self, bot, chat_id):
