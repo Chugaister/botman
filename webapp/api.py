@@ -21,6 +21,7 @@ def create_webhook_handler(bot_manager):
     return handle_webhook
 
 bot_tokens = [getenv('BOT_TOKEN1')]
+Manager.on_startup()
 bot_manager = Manager(bot_tokens)
 webhook_handler = create_webhook_handler(bot_manager)
 app.route('/webhook', methods=['POST'])(webhook_handler)
