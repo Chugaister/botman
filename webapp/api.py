@@ -31,10 +31,10 @@ class WebhookManager(Manager):
         for bot, _ in self.bot_dict.values():
             await bot.set_webhook(self.webhook_url)
 
-async def on_startup(dp):
+async def on_startup():
     await bot_manager.set_webhook()
 
-webhook_url = '20.100.169.126'
+webhook_url = f'https://{config.HOST+config.PORT}'
 bot_tokens = [getenv('BOT_TOKEN1')]
 bot_manager = Manager(bot_tokens)
 webhook_handler = create_webhook_handler(bot_manager)

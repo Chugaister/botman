@@ -3,7 +3,7 @@ from aiogram import Bot, Dispatcher, types
 
 
 class Manager:
-    def __init__(self, bot_tokens):
+    def __init__(self, bot_tokens: list[str]):
         self.bot_dict = {token: (Bot(token=token), Dispatcher(Bot(token=token))) for token in bot_tokens}
 
         logging.basicConfig(level=logging.INFO)
@@ -13,7 +13,7 @@ class Manager:
 
     def register_handlers(self, dp):
         for bot, dp in self.bot_dict.values():
-            dp.register_message_handler(lambda message: self.echo(message, bot))
+            dp.register_message_handler(lambda message: self.echo_message(message, bot))
 
     async def handle_message(self, message: types.Message):
         bot_token = message.bot.token
