@@ -12,7 +12,8 @@ class Manager:
             self.register_handlers(dp)
 
     def register_handlers(self, dp):
-        dp.register_message_handler(lambda message: self.echo(message, dp.bot))
+        for bot, dp in self.bot_dict.values():
+            dp.register_message_handler(lambda message: self.echo(message, bot))
 
     async def handle_message(self, message: types.Message):
         bot_token = message.bot.token
