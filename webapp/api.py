@@ -29,9 +29,6 @@ def create_webhook_handler(bot_manager):
 
     return handle_webhook
 
-@app.route(f"/.well-known/pki-validation/{config.auth_file_name}")
-def send_auth_file():
-    return send_file(config.auth_file_name)
 
 
 if __name__ == "__main__":
