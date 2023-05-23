@@ -8,16 +8,6 @@ load_dotenv()
 
 app = Flask(__name__)
 
-
-# @app.route('/<token>', methods=['POST'])
-# def handle_webhook(token):
-#     data = request.get_json()
-#     update = types.Update.de_json(data)
-#     bot_token = update.message.bot.token
-#     bot, dp = bot_manager.bot_dict[bot_token]
-#     dp.process_update(update)
-#     return "OK"
-
 def create_webhook_handler(bot_manager):
     async def handle_webhook(request):
         data = await request.json()
@@ -28,8 +18,6 @@ def create_webhook_handler(bot_manager):
         return 'OK'
 
     return handle_webhook
-
-
 
 if __name__ == "__main__":
     bot_tokens = [getenv('BOT_TOKEN1')]

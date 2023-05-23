@@ -4,7 +4,7 @@ from aiogram import Bot, Dispatcher, types
 
 class Manager:
     def __init__(self, bot_tokens):
-        self.bot_dict = {token: (Bot(token=token), Dispatcher()) for token in bot_tokens}
+        self.bot_dict = {token: (Bot(token=token), Dispatcher(Bot(token=token))) for token in bot_tokens}
 
         logging.basicConfig(level=logging.INFO)
 
