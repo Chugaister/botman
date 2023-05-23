@@ -1,9 +1,11 @@
-from flask import Flask, send_file
+from flask import Flask
 import config
 from dotenv import load_dotenv
 from os import getenv
 from manager.manager import Manager
 from aiogram import types
+import asyncio
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -20,13 +22,27 @@ def create_webhook_handler(bot_manager):
 
     return handle_webhook
 
+class WebhookManager(Manager):
+    def __init__(self, bot_tokens, webhook_url):
+        super().__init__(bot_tokens)
+        self.webhook_url = webhook_url
+
+    async def set_webhook(self):
+        for bot, _ in self.bot_dict.values():
+            await bot.set_webhook(self.webhook_url)
+
+async def on_startup(dp):
+    await bot_manager.set_webhook()
+
+webhook_url = '20.100.169.126'
 bot_tokens = [getenv('BOT_TOKEN1')]
 bot_manager = Manager(bot_tokens)
-bot_manager.on_startup()
 webhook_handler = create_webhook_handler(bot_manager)
 app.route('/webhook', methods=['POST'])(webhook_handler)
 
 if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(on_startup(bot_manager))
     app.run(
         host=config.HOST,
         port=config.PORT,
