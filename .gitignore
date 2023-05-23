@@ -2,10 +2,8 @@
 data/source/base.db
 data/__pycache__
 bot/__pycache__
-bot/handlers/__pycache__
-bot/keyboards/__pycache__
 bot/config.py
-ssl_auth/__pycache__/**
-ssl_auth/__pycache__
-manager/__pycache__
-webapp/__pycache__
+**/__pycache__/
+*.pyc
+webapp/certificate.crt 
+webapp/private.key
