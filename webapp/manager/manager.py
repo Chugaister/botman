@@ -23,6 +23,16 @@ class Manager:
         else:
             await self.echo_message(bot, message.chat.id, message.text)
 
+    async def on_startup(self, dp):
+        for bot, _ in self.bot_dict.values():
+            await bot.set_webhook("20.100.169.26")
+            await bot.send_message(chat_id='YOUR_CHAT_ID', text='Bot started!') 
+
+    async def on_shutdown(self, dp):
+        for bot, _ in self.bot_dict.values():
+            await bot.send_message(chat_id='YOUR_CHAT_ID', text='Bot stopped!')
+            await bot.delete_webhook()
+
     async def send_start_message(self, bot, chat_id):
         response_text = "Welcome to the bot! Send me a message and I'll echo it back."
         await bot.send_message(chat_id=chat_id, text=response_text)
