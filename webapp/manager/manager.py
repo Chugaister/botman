@@ -9,11 +9,7 @@ class Manager:
         logging.basicConfig(level=logging.INFO)
 
         for bot, dp in self.bot_dict.values():
-            self.register_handlers(dp)
-
-    def register_handlers(self):
-        for bot, dp in self.bot_dict.values():
-            dp.register_message_handler(lambda message: self.echo_message(message, bot))
+             dp.register_message_handler(lambda message: self.echo_message(bot, message))
 
     async def handle_message(self, message: types.Message):
         bot_token = message.bot.token
@@ -28,7 +24,7 @@ class Manager:
         response_text = "Welcome to the bot! Send me a message and I'll echo it back."
         await bot.send_message(chat_id=chat_id, text=response_text)
 
-    async def echo_message(self, bot, chat_id, message_text):
-        await bot.send_message(chat_id=chat_id, text=message_text)
+    async def echo_message(bot, message: types.Message):
+        await message.answer(message.text)
 
     

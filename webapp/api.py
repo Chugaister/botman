@@ -29,6 +29,7 @@ async def on_startup():
 def create_webhook_handler(bot_manager):
     async def handle_webhook(request):
         data = await request.json()
+        print(data)
         update = types.Update.de_json(data)
         bot_token = update.message.bot.token
         bot, dp = bot_manager.bot_dict[bot_token]
@@ -43,7 +44,7 @@ webhook_url = f'https://20.100.169.126/webhook'
 bot_tokens = [getenv('BOT_TOKEN1')]
 bot_manager = Manager(bot_tokens)
 webhook_handler = create_webhook_handler(bot_manager)
-app.route('/webhook', methods=['POST'])(webhook_handler)
+app.route('/webhook/', methods=['POST'])(webhook_handler)
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
