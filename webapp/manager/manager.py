@@ -11,7 +11,7 @@ class Manager:
         for bot, dp in self.bot_dict.values():
             self.register_handlers(dp)
 
-    def register_handlers(self, dp):
+    def register_handlers(self):
         for bot, dp in self.bot_dict.values():
             dp.register_message_handler(lambda message: self.echo_message(message, bot))
 

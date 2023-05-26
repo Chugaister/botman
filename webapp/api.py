@@ -34,7 +34,7 @@ class WebhookManager(Manager):
 async def on_startup():
     await bot_manager.set_webhook()
 
-webhook_url = f'https://20.100.126.169/webhook'
+webhook_url = f'https://20.100.169.126/webhook'
 bot_tokens = [getenv('BOT_TOKEN1')]
 bot_manager = Manager(bot_tokens)
 webhook_handler = create_webhook_handler(bot_manager)
