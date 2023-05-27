@@ -17,7 +17,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def on_startup():
-    for token, (_, bot) in bot_manager.bot_dict.items():
+    for token, (bot, _) in bot_manager.bot_dict.items():
         WEBHOOK_PATH = f"/bot/{token}"
         WEBHOOK_URL = "https://20.100.169.126" + WEBHOOK_PATH
         webhook_info = await bot.get_webhook_info()
@@ -29,7 +29,7 @@ async def on_startup():
 
 @app.post("/bot/{token}")
 async def bot_webhook(token, update: dict):
-    dp, bot = bot_manager.bot_dict[token]
+    bot, dp = bot_manager.bot_dict[token]
     telegram_update = types.Update(**update)
     Dispatcher.set_current(dp)
     Bot.set_current(bot)
@@ -39,6 +39,6 @@ async def bot_webhook(token, update: dict):
 @app.on_event("shutdown")
 async def on_shutdown():
     print("shutting down...")
-    for _, bot in bot_manager.bot_dict.values():
+    for bot, _ in bot_manager.bot_dict.values():
         await bot.delete_webhook()
         await bot.session.close()
