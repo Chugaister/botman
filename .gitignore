@@ -7,3 +7,4 @@ bot/config.py
 *.pyc
 webapp/certificate.crt 
 webapp/private.key
+webapp/bot.py
