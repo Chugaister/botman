@@ -11,7 +11,7 @@ class Manager:
         for bot, dp in self.bot_dict.values():
              dp.register_message_handler(lambda message: self.echo_message(bot, message))
 
-    async def echo_message(bot, message: types.Message):
+    async def echo_message(self, bot, message: types.Message):
         await message.answer(message.text)
 
     
