@@ -11,19 +11,6 @@ class Manager:
         for bot, dp in self.bot_dict.values():
              dp.register_message_handler(lambda message: self.echo_message(bot, message))
 
-    async def handle_message(self, message: types.Message):
-        bot_token = message.bot.token
-        bot, _ = self.bot_dict[bot_token]
-
-        if message.text.startswith('/start'):
-            await self.send_start_message(bot, message.chat.id)
-        else:
-            await self.echo_message(bot, message.chat.id, message.text)
-
-    async def send_start_message(self, bot, chat_id):
-        response_text = "Welcome to the bot! Send me a message and I'll echo it back."
-        await bot.send_message(chat_id=chat_id, text=response_text)
-
     async def echo_message(bot, message: types.Message):
         await message.answer(message.text)
 
