@@ -8,3 +8,4 @@ bot/config.py
 webapp/certificate.crt 
 webapp/private.key
 webapp/bot.py
+webapp/ca_bundle.crt
