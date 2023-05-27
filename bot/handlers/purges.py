@@ -44,8 +44,9 @@ async def add_purge(cb: CallbackQuery, callback_data: dict):
     await open_purge_menu(cb.from_user.id, purge.id, cb.message.message_id)
 
 
-@dp.callback_query_handler(purge_action.filter(action="open_menu"))
-async def open_purge_menu_cb(cb: CallbackQuery, callback_data: dict):
+@dp.callback_query_handler(purge_action.filter(action="open_menu"), state="*")
+async def open_purge_menu_cb(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    await state.set_state(None)
     await open_purge_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
 
 
