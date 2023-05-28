@@ -61,6 +61,7 @@ class Admin:
     def get_tuple(self):
         return self.id, self.username, self.first_name, self.last_name
 
+
 class Bot:
 
     columns = (
@@ -68,26 +69,29 @@ class Bot:
         "token",
         "username",
         "admin",
+        "status",
         "premium",
         "settings"
     )
 
-    def __init__(self, _id: int, token: str, username: str, admin: int, premium: int, settings: int):
+    def __init__(self, _id: int, token: str, username: str, admin: int, status: int = 1, premium: int = 0, settings: int = 0):
         self.id = _id
         self.token = token
         self.username = username
         self.admin = admin
+        self.status = status
         self.premium = premium
         self.settings = settings
 
     def get_tuple(self):
-        return self.id, self.token, self.username, self.admin, self.premium, self.settings
+        return self.id, self.token, self.username, self.admin, self.status, self.premium, self.settings
 
 
 class User:
 
     columns = (
         "id",
+        "bot",
         "username",
         "first_name",
         "last_name",
@@ -95,8 +99,9 @@ class User:
         "join_dt"
     )
 
-    def __init__(self, _id: int, username: str, first_name: str, last_name: str, status: bool, join_dt: str):
-        self.id = _id,
+    def __init__(self, _id: int, bot: int, username: str, first_name: str, last_name: str, status: bool, join_dt: str):
+        self.id = _id
+        self.bot = bot
         self.username = username
         self.first_name = first_name
         self.last_name = last_name
@@ -104,7 +109,7 @@ class User:
         self.join_dt = datetime.strptime(join_dt, DT_FORMAT)
 
     def get_tuple(self):
-        return self.id, self.username, self.first_name, self.last_name, self.status, self.join_dt.strftime(DT_FORMAT)
+        return self.id, self.bot, self.username, self.first_name, self.last_name, self.status, self.join_dt.strftime(DT_FORMAT)
 
 
 class Captcha:
@@ -320,9 +325,9 @@ class Msg:
         self.id = _id
         self.user = user
         self.bot = bot
-        self.del_dt = datetime.strptime(del_dt, DT_FORMAT)
+        self.del_dt = datetime.strptime(del_dt, DT_FORMAT) if del_dt else None
 
     def get_tuple(self):
-        return self.id, self.user, self.bot, self.del_dt
+        return self.id, self.user, self.bot, self.del_dt.strftime(DT_FORMAT) if self.del_dt else None,
 
 
