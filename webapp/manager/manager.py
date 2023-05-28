@@ -16,7 +16,7 @@ class Manager:
 
     async def set_webhook(self, bots: list[models.Bot]):
         for bot in bots:
-            Bot(token=bot.token).set_webhook(f"https://20.100.169.126/bot/{bot.token}")
+            await Bot(token=bot.token).set_webhook(f"https://20.100.169.126/bot/{bot.token}")
 
     async def echo_message(self, bot, message: types.Message):
         await message.answer(message.text)
