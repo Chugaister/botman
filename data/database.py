@@ -1,10 +1,21 @@
 import sqlite3
 from sqlite3 import connect
 from sqlite3 import IntegrityError
-from os.path import join
-
-from . import DIR
+from . import DIR, exists, join, makedirs
 from .exceptions import *
+from . import autocreation
+
+
+def create_db(source):
+    path = join(DIR, source)
+    if not exists(path):
+        makedirs(path)
+        conn = connect(join(path, "base.db"))
+        cur = conn.cursor()
+        for query in autocreation.queries:
+            cur.execute(query)
+        conn.commit()
+        makedirs(join(path, "media"))
 
 
 def get_db(source) -> sqlite3.Connection:

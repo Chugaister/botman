@@ -16,11 +16,11 @@ from os import path
 
 from data import models
 from data.stats import gen_stats
-from data.database import Database, get_db
+from data.database import Database, get_db, create_db
 from data.file_manager import FileManager
 from data import exceptions as data_exc
-
 from . import config, states
+
 
 ukraine_tz = timezone('Europe/Kiev')
 logging.basicConfig(level=logging.INFO)
@@ -28,9 +28,11 @@ bot = Bot(config.token, parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
-db_conn = get_db("source")
+source = "source"
+create_db(source)
+db_conn = get_db(source)
 
-file_manager = FileManager("source")
+file_manager = FileManager(source)
 admins_db = Database("admins", db_conn, models.Admin)
 bots_db = Database("bots", db_conn, models.Bot)
 user_db = Database("users", db_conn, models.User)
