@@ -321,7 +321,7 @@ class Msg:
         "del_dt",
     )
 
-    def __init__(self, _id: int, user: int, bot: int, del_dt: str):
+    def __init__(self, _id: int, user: int, bot: int, del_dt: str = None):
         self.id = _id
         self.user = user
         self.bot = bot
