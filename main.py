@@ -5,7 +5,7 @@ from bot.misc import bot as main_bot, dp as main_dp
 from bot.config import token as main_token
 bot_tokens = [BOT_TOKEN1, BOT_TOKEN2]
 from bot.misc import manager as bot_manager
-
+import bot.handlers
 
 
 app = FastAPI()
