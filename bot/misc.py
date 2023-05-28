@@ -22,6 +22,8 @@ from data.file_manager import FileManager
 from data import exceptions as data_exc
 from . import states
 
+from webapp.manager.manager import Manager
+
 try:
     from . import config
 except ImportError:
@@ -48,3 +50,6 @@ greeting_db = Database("greetings", db_conn, models.Greeting)
 mails_db = Database("mails", db_conn, models.Mail)
 purges_db = Database("purges", db_conn, models.Purge)
 msgs_db = Database("msgs", db_conn, models.Msg)
+
+ubots = bots_db.get_all()
+manager = Manager(ubots)

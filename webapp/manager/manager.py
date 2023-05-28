@@ -1,10 +1,10 @@
 import logging
 from aiogram import Bot, Dispatcher, types
-
+from data import models
 
 class Manager:
-    def __init__(self, bot_tokens: list[str]):
-        self.bot_dict = {token: (Bot(token=token), Dispatcher(Bot(token=token))) for token in bot_tokens}
+    def __init__(self, bots: list[models.Bot]):
+        self.bot_dict = {bot.token: (Bot(token=bot.token), Dispatcher(Bot(token=bot.token))) for bot in bots}
 
         logging.basicConfig(level=logging.INFO)
 
