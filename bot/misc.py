@@ -21,7 +21,7 @@ from data.database import Database, get_db, create_db
 from data.file_manager import FileManager
 from data import exceptions as data_exc
 from . import states
-
+import asyncio
 from webapp.manager.manager import Manager
 
 try:
@@ -53,3 +53,4 @@ msgs_db = Database("msgs", db_conn, models.Msg)
 
 ubots = bots_db.get_all()
 manager = Manager(ubots)
+asyncio.run(manager.set_webhook(ubots))
