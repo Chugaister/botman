@@ -1,11 +1,9 @@
 from fastapi import FastAPI
-from dotenv import load_dotenv
-from os import getenv
 from aiogram import types, Dispatcher, Bot
+from config import BOT_TOKEN1, BOT_TOKEN2
 
-load_dotenv()
 
-bot_tokens = [getenv("BOT_TOKEN1"), getenv("BOT_TOKEN2")]
+bot_tokens = [BOT_TOKEN1, BOT_TOKEN2]
 from manager.manager import Manager
 
 
