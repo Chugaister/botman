@@ -13,13 +13,20 @@ import logging
 from requests import get
 from prettytable import PrettyTable
 from os import path
+from sys import exit
 
 from data import models
 from data.stats import gen_stats
 from data.database import Database, get_db, create_db
 from data.file_manager import FileManager
 from data import exceptions as data_exc
-from . import config, states
+from . import states
+
+try:
+    from . import config
+except ImportError:
+    print("config.py not found")
+    exit()
 
 
 ukraine_tz = timezone('Europe/Kiev')
