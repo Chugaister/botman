@@ -24,8 +24,9 @@ async def open_captcha_menu(uid: int, captcha_id: int, msg_id: int):
         pass
 
 
-@dp.callback_query_handler(bot_action.filter(action="captcha"))
-async def open_captcha_menu_cb(cb: CallbackQuery, callback_data: dict):
+@dp.callback_query_handler(bot_action.filter(action="captcha"), state="*")
+async def open_captcha_menu_cb(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    await state.set_state(None)
     captchas = captchas_db.get_by(bot=int(callback_data["id"]))
     if captchas == []:
         captcha = models.Captcha(

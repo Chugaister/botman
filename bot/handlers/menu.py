@@ -87,8 +87,6 @@ async def token_input(msg: Message, state: FSMContext):
         msg.text,
         info["username"],
         msg.from_user.id,
-        0,
-        0
     )
     try:
         bots_db.add(bot_dc)
@@ -102,7 +100,7 @@ async def token_input(msg: Message, state: FSMContext):
 
 async def open_bot_menu(uid: int, bot_id: int, msg_id: int, callback_query_id: int = None):
     bot_dc = bots_db.get(bot_id)
-    if bot_dc.premium == -1 and uid not in config.admin_list:
+    if bot_dc.status == -1 and uid not in config.admin_list:
         return
     try:
         admin = admins_db.get(bot_dc.admin)

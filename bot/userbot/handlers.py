@@ -70,6 +70,13 @@ async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
             await msg.delete()
         except MessageCantBeDeleted:
             pass
+    else:
+        msg_dc = models.Msg(
+            msg.message_id,
+            uid,
+            ubot.id
+        )
+        msgs_db.add(msg_dc)
 
 
 async def send_all_greeting(ubot: Bot, uid: int):
@@ -84,6 +91,19 @@ async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, stat
 
 # message_handler state=captcha
 async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMContext):
+    user = models.User(
+        msg.from_user.id,
+        ubot.id,
+        msg.from_user.username,
+        msg.from_user.first_name,
+        msg.from_user.last_name,
+        True,
+        datetime.now(tz=ukraine_tz).strftime(models.DT_FORMAT)
+    )
+    try:
+        user_db.add(user)
+    except data_exc.RecordAlreadyExists:
+        pass
     state_data = await state.get_data()
     await msg.delete()
     await ubot.delete_message(msg.from_user.id, state_data["msg_id"])
@@ -93,4 +113,18 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
 
 # message_handler command /start
 async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
+    user = models.User(
+        msg.from_user.id,
+        ubot.id,
+        msg.from_user.username,
+        msg.from_user.first_name,
+        msg.from_user.last_name,
+        True,
+        datetime.now(tz=ukraine_tz).strftime(models.DT_FORMAT)
+    )
+    try:
+        user_db.add(user)
+    except data_exc.RecordAlreadyExists:
+        pass
     await send_all_greeting(ubot, msg.from_user.id)
+    await msg.delete()

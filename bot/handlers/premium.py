@@ -5,4 +5,12 @@ import bot.keyboards.premium as kb
 
 @dp.callback_query_handler(bot_action.filter(action="premium"))
 async def premium_menu(cb: CallbackQuery, callback_data: dict):
-    await cb.answer("In development ⏳")
+    bot_dc = bots_db.get(int(callback_data["id"]))
+    await cb.message.answer(
+        "Аби отримати преміум, зв'яжіться з адміністратором",
+        reply_markup=kb.gen_premium_menu(bot_dc)
+    )
+    try:
+        await cb.message.delete()
+    except MessageCantBeDeleted:
+        pass

@@ -77,7 +77,7 @@ async def bot_username_input(msg: Message, state: FSMContext):
 @dp.callback_query_handler(admin_bot_action.filter(action="ban"))
 async def ban_bot(cb: CallbackQuery, callback_data: dict):
     bot_dc = bots_db.get(int(callback_data["id"]))
-    bot_dc.premium = -1
+    bot_dc.status = -1
     bots_db.update(bot_dc)
     await send_adminbot_panel(cb.from_user.id, bot_dc.id, cb.message.message_id)
 
@@ -85,7 +85,7 @@ async def ban_bot(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(admin_bot_action.filter(action="unban"))
 async def unban_bot(cb: CallbackQuery, callback_data: dict):
     bot_dc = bots_db.get(int(callback_data["id"]))
-    bot_dc.premium = 0
+    bot_dc.status = 1
     bots_db.update(bot_dc)
     await send_adminbot_panel(cb.from_user.id, bot_dc.id, cb.message.message_id)
 

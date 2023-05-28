@@ -276,6 +276,7 @@ async def edit_send_delay(msg: Message, state: FSMContext):
     greeting = greeting_db.get(state_data["greeting_id"])
     greeting.send_delay = int(msg.text)
     greeting_db.update(greeting)
+    await msg.delete()
     await greeting_schedule_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
 
 
@@ -318,6 +319,7 @@ async def edit_del_delay(msg: Message, state: FSMContext):
     greeting = greeting_db.get(state_data["greeting_id"])
     greeting.del_delay = int(msg.text)
     greeting_db.update(greeting)
+    await msg.delete()
     await greeting_schedule_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
 
 

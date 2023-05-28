@@ -45,7 +45,7 @@ def gen_admin_bot_menu(bot: models.Bot) -> InlineKeyboardMarkup:
             bot.id,
             "unban"
         )
-    ) if bot.premium == -1 else InlineKeyboardButton(
+    ) if bot.status == -1 else InlineKeyboardButton(
         "✖️Бан",
         callback_data=admin_bot_action.new(
             bot.id,
