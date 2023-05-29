@@ -5,6 +5,8 @@ from aiogram.dispatcher.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from asyncio import gather, sleep
 from datetime import datetime
+from pytz import timezone
+
 
 from .keyboards import *
 from data.factory import *
