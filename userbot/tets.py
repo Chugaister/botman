@@ -1,4 +1,4 @@
-from bot.userbot.handlers import *
+from userbot.handlers import *
 from aiogram import executor
 
 

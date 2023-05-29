@@ -1,7 +1,11 @@
 import logging
 from aiogram import Bot, Dispatcher, types
 from data import models
-from bot.userbot.handlers import start_handler, req_handler, captcha_confirm, CaptchaStatesGroup
+
+from web_config.config import PUBLIC_IP
+from userbot.handlers import start_handler, req_handler, captcha_confirm, CaptchaStatesGroup
+
+
 class Manager:
     def __init__(self, bots: list[models.Bot]):
         self.bot_dict = {bot.token: (Bot(token=bot.token), Dispatcher(Bot(token=bot.token))) for bot in bots}
@@ -16,7 +20,9 @@ class Manager:
 
     async def set_webhook(self, bots: list[models.Bot]):
         for bot in bots:
-            await Bot(token=bot.token).set_webhook(f"https://20.100.169.126/bot/{bot.token}")
+            ubot = Bot(token=bot.token)
+            await ubot.set_webhook(f"https://{PUBLIC_IP}/bot/{bot.token}")
+            await (await ubot.get_session()).close()
 
     async def echo_message(self, bot, message: types.Message):
         await message.answer(message.text)

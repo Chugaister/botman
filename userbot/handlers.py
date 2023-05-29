@@ -1,7 +1,14 @@
-from bot.misc import *
-from bot.keyboards import gen_custom_buttons, gen_custom_reply_buttons
+from aiogram import Bot, Dispatcher
+from aiogram.utils.exceptions import MessageCantBeDeleted
+from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode
+from aiogram.dispatcher.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from asyncio import gather
+from asyncio import gather, sleep
+from datetime import datetime
+
+from .keyboards import *
+from data.factory import *
+from data import exceptions as data_exc
 
 
 class CaptchaStatesGroup(StatesGroup):
@@ -98,7 +105,7 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
         msg.from_user.first_name,
         msg.from_user.last_name,
         True,
-        datetime.now(tz=ukraine_tz).strftime(models.DT_FORMAT)
+        datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
     try:
         user_db.add(user)
@@ -120,7 +127,7 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
         msg.from_user.first_name,
         msg.from_user.last_name,
         True,
-        datetime.now(tz=ukraine_tz).strftime(models.DT_FORMAT)
+        datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
     try:
         user_db.add(user)

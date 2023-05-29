@@ -1,9 +1,19 @@
 import os
-from webapp.config import PORT, HOST 
-certfile_path = os.path.join(os.path.dirname(__file__), "webapp", "certificate.crt")
-keyfile_path = os.path.join(os.path.dirname(__file__), "webapp", "private.key")
-ca_bundle_path = os.path.join(os.path.dirname(__file__),"webapp", "ca_bundle.crt")
 import uvicorn
-from main import app
+
+from web_config.config import PORT, HOST, PUBLIC_IP
+from app import app
+
+certfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "certificate.crt")
+keyfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "private.key")
+ca_bundle_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "ca_bundle.crt")
+
 if __name__ == "__main__":
-    uvicorn.run(app, host=HOST, port=PORT, ssl_certfile=certfile_path, ssl_keyfile=keyfile_path, ssl_ca_certs=ca_bundle_path)
+    uvicorn.run(
+        app,
+        host=HOST,
+        port=PORT,
+        ssl_certfile=certfile_path,
+        ssl_keyfile=keyfile_path,
+        ssl_ca_certs=ca_bundle_path
+    )

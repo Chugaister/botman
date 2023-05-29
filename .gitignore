@@ -1,11 +1,6 @@
 .idea
-data/source/base.db
-data/__pycache__
-bot/__pycache__
+data/source/
 bot/config.py
 **/__pycache__/
-*.pyc
-webapp/certificate.crt 
-webapp/private.key
-webapp/bot.py
-webapp/ca_bundle.crt
+ssl_auth/
+web_config/
