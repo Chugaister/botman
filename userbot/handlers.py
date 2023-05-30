@@ -32,7 +32,7 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, uid: int):
         file = await file_manager.get_file(captcha.gif)
         await ubot.send_animation(uid, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
     elif captcha.text:
-        msg = await ubot.send_animation(uid, captcha.text)
+        msg = await ubot.send_message(uid, captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
     state = udp.current_state(chat=uid, user=uid)
     await state.set_state(CaptchaStatesGroup.captcha)
     await state.set_data({"msg_id": msg.message_id})
