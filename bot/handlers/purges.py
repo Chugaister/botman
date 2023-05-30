@@ -11,7 +11,7 @@ async def open_purges_list(cb: CallbackQuery, callback_data: dict):
         return
     purges = purges_db.get_by(bot=int(callback_data["id"]))
     await cb.message.answer(
-        "Чистки:",
+        "{text8}\nЧистки:",
         reply_markup=kb.gen_purge_list(bot_dc, purges)
     )
     try:
