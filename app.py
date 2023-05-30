@@ -42,6 +42,4 @@ async def bot_webhook(token, update: dict):
 @app.on_event("shutdown")
 async def on_shutdown():
     await main_bot.delete_webhook()
-    for bot, _ in bot_manager.bot_dict.values():
-        await bot.delete_webhook()
-        await bot.session.close()
+    await bot_manager.delete_webhooks(bots_db.get_all())
