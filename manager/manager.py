@@ -12,29 +12,19 @@ class Manager:
 
         logging.basicConfig(level=logging.INFO)
         
-        # for bot, dp in self.bot_dict.values():
-        #      Bot.set_current(bot)
-        #      Dispatcher.set_current(dp)
-        #     #  dp.register_message_handler(lambda message: self.echo_message(bot, message))
-        #      dp.register_message_handler(lambda msg: start_handler(Bot.get_current(), Dispatcher.get_current(), msg), commands="start")
-        #      dp.register_chat_join_request_handler(lambda req, state: req_handler(Bot.get_current(), Dispatcher.get_current(), req, state))
-        #      dp.register_message_handler(lambda msg, state: captcha_confirm(Bot.get_current(), Dispatcher.get_current(), msg, state), state=CaptchaStatesGroup.captcha)
-
-    async def set_webhook(self, bot: models.Bot):
-            ubot = Bot(token=bot.token)
-            udp = Dispatcher(ubot)
-            Bot.set_current(ubot)
-            Dispatcher.set_current(udp)
+        for bot, dp in self.bot_dict.values():
+             Bot.set_current(bot)
+             Dispatcher.set_current(dp)
             #  dp.register_message_handler(lambda message: self.echo_message(bot, message))
-            udp.register_message_handler(lambda msg: start_handler(Bot.get_current(), Dispatcher.get_current(), msg), commands="start")
-            udp.register_chat_join_request_handler(lambda req, state: req_handler(Bot.get_current(), Dispatcher.get_current(), req, state))
-            udp.register_message_handler(lambda msg, state: captcha_confirm(Bot.get_current(), Dispatcher.get_current(), msg, state), state=CaptchaStatesGroup.captcha)
+             dp.register_message_handler(lambda msg: start_handler(Bot.get_current(), Dispatcher.get_current(), msg), commands="start")
+             dp.register_chat_join_request_handler(lambda req, state: req_handler(Bot.get_current(), Dispatcher.get_current(), req, state))
+             dp.register_message_handler(lambda msg, state: captcha_confirm(Bot.get_current(), Dispatcher.get_current(), msg, state), state=CaptchaStatesGroup.captcha)
+
+    async def set_webhook(self, bots: list[models.Bot]):
+        for bot in bots:
+            ubot = Bot(token=bot.token)
             await ubot.set_webhook(f"https://{PUBLIC_IP}/bot/{bot.token}")
             await (await ubot.get_session()).close()
-
-    async def set_webhooks(self, bots: list[models.Bot]):
-         for bot in bots:
-              self.set_webhook(bot)
 
     async def echo_message(self, bot, message: types.Message):
         await message.answer(message.text)
