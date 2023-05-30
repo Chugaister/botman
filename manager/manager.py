@@ -13,7 +13,7 @@ class Manager:
         logging.basicConfig(level=logging.INFO)
         
         
-    def register_handlers(self, bots = list[models.Bot]):
+    def register_handlers(self, bots: list[models.Bot]):
         for bot in bots:
             if not self.bot_dict[bot.token]:
                 self.bot_dict[bot.token] = (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage()))
