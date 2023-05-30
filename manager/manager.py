@@ -23,6 +23,8 @@ class Manager:
 
     async def set_webhook(self, bots: list[models.Bot]):
         for bot in bots:
+            if not self.bot_dict[bot.token]:
+                self.bot_dict[bot.token] = ((Bot(token=bot.token)), Dispatcher(Bot(token=bot.token)))  
             ubot = Bot(token=bot.token)
             await ubot.set_webhook(f"https://{PUBLIC_IP}/bot/{bot.token}")
             await (await ubot.get_session()).close()
@@ -31,7 +33,7 @@ class Manager:
         ubot = Bot(bot.token)
         await ubot.delete_webhook()
         await ubot.session.close()
-        
+
     async def delete_webhooks(self, bots: list[models.Bot]):
         for bot in bots:
             await self.delete_webhook(bot)
