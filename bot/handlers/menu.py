@@ -90,6 +90,15 @@ async def token_input(msg: Message, state: FSMContext):
     )
     try:
         bots_db.add(bot_dc)
+        captchas = captchas_db.get_by(bot=bot_dc.id)
+        if captchas == []:
+            captcha = models.Captcha(
+                0,
+                bot_dc.id,
+                text="Аби увійти в канал, підтвердіть, що ви не робот",
+                buttons="✅ Я не робот"
+            )
+            captchas_db.add(captcha)
     except data_exc.RecordAlreadyExists:
         bot_dc = bots_db.get(info["id"])
         bot_dc.admin = msg.from_user.id

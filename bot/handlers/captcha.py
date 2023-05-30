@@ -27,17 +27,7 @@ async def open_captcha_menu(uid: int, captcha_id: int, msg_id: int):
 @dp.callback_query_handler(bot_action.filter(action="captcha"), state="*")
 async def open_captcha_menu_cb(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     await state.set_state(None)
-    captchas = captchas_db.get_by(bot=int(callback_data["id"]))
-    if captchas == []:
-        captcha = models.Captcha(
-            0,
-            int(callback_data["id"]),
-            text="Аби увійти в канал, підтвердіть, що ви не робот",
-            buttons="✅ Я не робот"
-        )
-        captchas_db.add(captcha)
-    else:
-        captcha = captchas[0]
+    captcha = captchas_db.get_by(bot=int(callback_data["id"]))[0]
     await open_captcha_menu(cb.from_user.id, captcha.id, cb.message.message_id)
 
 

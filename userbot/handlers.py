@@ -1,7 +1,16 @@
-from bot.misc import *
-from bot.keyboards import gen_custom_buttons, gen_custom_reply_buttons
+from aiogram import Bot, Dispatcher
+from aiogram.utils.exceptions import MessageCantBeDeleted
+from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode
+from aiogram.dispatcher.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from asyncio import gather
+from asyncio import gather, sleep
+from datetime import datetime
+from pytz import timezone
+
+
+from .keyboards import *
+from data.factory import *
+from data import exceptions as data_exc
 
 
 class CaptchaStatesGroup(StatesGroup):
@@ -23,7 +32,7 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, uid: int):
         file = await file_manager.get_file(captcha.gif)
         await ubot.send_animation(uid, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
     elif captcha.text:
-        msg = await ubot.send_animation(uid, captcha.text)
+        msg = await ubot.send_message(uid, captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
     state = udp.current_state(chat=uid, user=uid)
     await state.set_state(CaptchaStatesGroup.captcha)
     await state.set_data({"msg_id": msg.message_id})
@@ -98,7 +107,7 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
         msg.from_user.first_name,
         msg.from_user.last_name,
         True,
-        datetime.now(tz=ukraine_tz).strftime(models.DT_FORMAT)
+        datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
     try:
         user_db.add(user)
@@ -120,7 +129,7 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
         msg.from_user.first_name,
         msg.from_user.last_name,
         True,
-        datetime.now(tz=ukraine_tz).strftime(models.DT_FORMAT)
+        datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
     try:
         user_db.add(user)

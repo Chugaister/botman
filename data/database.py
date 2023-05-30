@@ -67,3 +67,10 @@ class Database:
         self.cur.execute(query, [value for key, value in items])
         records = self.cur.fetchall()
         return [self.datatype(*record) for record in records]
+
+    def get_all(self):
+        query = f"SELECT * FROM {self.table_name}"
+        self.cur.execute(query)
+        records = self.cur.fetchall()
+        return [self.datatype(*record) for record in records]
+    
