@@ -34,7 +34,7 @@ class Manager:
 
     async def set_webhooks(self, bots: list[models.Bot]):
          for bot in bots:
-              self.set_webhook(bot)
+              await self.set_webhook(bot)
 
     async def echo_message(self, bot, message: types.Message):
         await message.answer(message.text)
