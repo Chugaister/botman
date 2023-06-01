@@ -18,7 +18,7 @@ async def send_start(msg: Message):
     except data_exc.RecordAlreadyExists:
         pass
     await msg.answer(
-        "Опис",
+        "{text1}\nОпис",
         reply_markup=kb.go_to_bot_list
     )
     try:
@@ -32,7 +32,7 @@ async def open_bot_list(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
     bots = bots_db.get_by(admin=cb.from_user.id)
     await cb.message.answer(
-        "Список ботів:",
+        "{text2}\nСписок ботів:",
         reply_markup=kb.gen_bot_list(bots)
     )
     try:
@@ -50,7 +50,7 @@ async def back_to_start_msg(cb: CallbackQuery):
 @dp.callback_query_handler(lambda cb: cb.data == "add_bot")
 async def add_bot(cb: CallbackQuery, state: FSMContext):
     msg = await cb.message.answer(
-        "Надішліть токен бота",
+        "{text3}\nНадішліть токен бота",
         reply_markup=gen_cancel("open_bot_list")
     )
     await state.set_state(states.InputStateGroup.token)
@@ -99,6 +99,8 @@ async def token_input(msg: Message, state: FSMContext):
                 buttons="✅ Я не робот"
             )
             captchas_db.add(captcha)
+        manager.register_handlers([bot_dc])
+        manager.set_webhook([bot_dc])
     except data_exc.RecordAlreadyExists:
         bot_dc = bots_db.get(info["id"])
         bot_dc.admin = msg.from_user.id

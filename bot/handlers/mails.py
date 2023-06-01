@@ -10,7 +10,7 @@ async def open_mail_list(cb: CallbackQuery, callback_data: dict):
     bot_dc = bots_db.get(int(callback_data["id"]))
     mails = mails_db.get_by(bot=int(callback_data["id"]))
     await cb.message.answer(
-        "Розсилки:",
+        "{text6}\nРозсилки:",
         reply_markup=kb.gen_mail_list(bot_dc, mails)
     )
     try:
