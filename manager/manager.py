@@ -18,8 +18,8 @@ class Manager:
             if not self.bot_dict[bot.token]:
                 self.bot_dict[bot.token] = (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage()))
         for bot, dp in self.bot_dict.values():
-            #  Bot.set_current(bot)
-            #  Dispatcher.set_current(dp)        
+             Bot.set_current(bot)
+             Dispatcher.set_current(dp)        
             #  dp.register_message_handler(lambda message: self.echo_message(Bot.get_current(), message))
              dp.register_message_handler(lambda msg: start_handler(Bot.get_current(), Dispatcher.get_current(), msg), commands="start")
              dp.register_chat_join_request_handler(lambda req, state: req_handler(Bot.get_current(), Dispatcher.get_current(), req, state))
