@@ -99,12 +99,13 @@ async def token_input(msg: Message, state: FSMContext):
                 buttons="✅ Я не робот"
             )
             captchas_db.add(captcha)
-        manager.register_handlers([bot_dc])
-        manager.set_webhook([bot_dc])
     except data_exc.RecordAlreadyExists:
         bot_dc = bots_db.get(info["id"])
         bot_dc.admin = msg.from_user.id
+        bot_dc.status = 1
         bots_db.update(bot_dc)
+    manager.register_handlers([bot_dc])
+    await manager.set_webhook([bot_dc])
     await state.set_state(None)
     await open_bot_menu(msg.from_user.id, bot_dc.id, state_data["msg_id"])
 

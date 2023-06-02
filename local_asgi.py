@@ -14,16 +14,9 @@ app = FastAPI()
 @app.on_event("startup")
 async def on_startup():
     await main_bot.set_webhook(url=f"https://{PUBLIC_IP}/bot/{main_token}")
-    bot_manager.register_handlers([])
-    await bot_manager.set_webhook(bots_db.get_all())
-    # for token, (bot, _) in bot_manager.bot_dict.items():
-    #     WEBHOOK_PATH = f"/bot/{token}"
-    #     WEBHOOK_URL = "https://20.100.169.126" + WEBHOOK_PATH
-    #     webhook_info = await bot.get_webhook_info()
-    #     if webhook_info.url != WEBHOOK_URL:
-    #         await bot.set_webhook(
-    #             url=WEBHOOK_URL
-    #         )
+    ubots = bots_db.get_by(status=1)
+    bot_manager.register_handlers(ubots)
+    await bot_manager.set_webhook(ubots)
 
 
 @app.post("/bot/{token}")
