@@ -14,7 +14,8 @@ class Manager:
         
     def register_handlers(self, bots: list[models.Bot]):
         for bot in bots:
-            self.bot_dict[bot.token] = (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage()))
+            if bot.token not in self.bot_dict.keys():
+                self.bot_dict[bot.token] = (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage()))
         for bot, dp in self.bot_dict.values():
             Bot.set_current(bot)
             Dispatcher.set_current(dp)
@@ -25,7 +26,7 @@ class Manager:
 
     async def set_webhook(self, bots: list[models.Bot]):
         for bot in bots:
-            if not bot.token not in self.bot_dict.keys():
+            if bot.token not in self.bot_dict.keys():
                 self.bot_dict[bot.token] = ((Bot(token=bot.token)), Dispatcher(Bot(token=bot.token)))  
             ubot = Bot(token=bot.token)
             await ubot.set_webhook(f"https://{PUBLIC_IP}/bot/{bot.token}")
