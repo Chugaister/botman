@@ -1,7 +1,6 @@
 from bot.misc import *
 from bot.keyboards import mails as kb
 from bot.keyboards import bot_action, mail_action, gen_cancel
-
 from datetime import datetime
 
 
@@ -336,3 +335,11 @@ async def del_del_dt(cb: CallbackQuery, callback_data: dict):
     mail.del_dt = None
     mails_db.update(mail)
     await mail_schedule_menu(cb.from_user.id, mail.id, cb.message.message_id)
+
+
+@dp.callback_query_handler(mail_action.filter(action="sendout"))
+async def sendout(cb: CallbackQuery, callback_data: dict):
+    mail = mails_db.get(int(callback_data["id"]))
+    bot_dc = bots_db.get(mail.bot)
+    await gig.send_mail(manager.bot_dict[bot_dc.token][0], mail)
+    await open_mail_list(cb, {"id": bot_dc.id})

@@ -29,7 +29,7 @@ class Manager:
             if bot.token not in self.bot_dict.keys():
                 self.bot_dict[bot.token] = ((Bot(token=bot.token)), Dispatcher(Bot(token=bot.token)))  
             ubot = Bot(token=bot.token)
-            await ubot.set_webhook(f"https://{PUBLIC_IP}/bot/{bot.token}")
+            await ubot.set_webhook(f"https://{PUBLIC_IP}/bot/{bot.token}", drop_pending_updates=True)
             await (await ubot.get_session()).close()
 
     async def delete_webhook(self, bot: models.Bot):

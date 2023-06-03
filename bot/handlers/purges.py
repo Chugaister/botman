@@ -91,3 +91,10 @@ async def edit_sched_dt(msg: Message, state: FSMContext):
     purges_db.update(purge)
     await open_purge_menu(msg.from_user.id, purge.id, state_data["msg_id"])
 
+
+@dp.callback_query_handler(purge_action.filter(action="run"))
+async def run(cb: CallbackQuery, callback_data: dict):
+    purge = purges_db.get(int(callback_data["id"]))
+    bot_dc = bots_db.get(purge.bot)
+    await gig.clean(manager.bot_dict[bot_dc.token][0], purge)
+    await open_purges_list(cb, {"id": bot_dc.id})

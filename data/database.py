@@ -5,6 +5,8 @@ from . import DIR, exists, join, makedirs
 from .exceptions import *
 from . import autocreation
 
+import logging
+
 
 def create_db(source):
     path = join(DIR, source)
@@ -42,7 +44,7 @@ class Database:
 
     def get(self, _id: int):
         query = f"SELECT * FROM {self.table_name} WHERE id=?"
-        print(query)
+        logging.debug(f"GET: {query}")
         self.cur.execute(query, (_id,))
         data = self.cur.fetchone()
         if data is None:
@@ -52,24 +54,27 @@ class Database:
     def update(self, object):
         data_tuple = object.get_tuple()
         query = f"UPDATE {self.table_name} SET {', '.join([f'{cl_name}=?' for cl_name, value in zip(object.columns, data_tuple)])} WHERE id={object.id}"
-        print(query, data_tuple)
+        logging.debug(f"UPDATE: {query} {data_tuple}")
         self.cur.execute(query, data_tuple)
         self.conn.commit()
 
     def delete(self, _id: int):
         query = f"DELETE FROM {self.table_name} WHERE id={_id}"
+        logging.debug(f"DELETE: {query}")
         self.cur.execute(query)
         self.conn.commit()
 
     def get_by(self, **kwargs):
         items = list(kwargs.items())
         query = f"SELECT * FROM {self.table_name} WHERE {' AND '.join([f'{key}=?' for key, value in items])}"
+        logging.debug(f"GETBY: {query}")
         self.cur.execute(query, [value for key, value in items])
         records = self.cur.fetchall()
         return [self.datatype(*record) for record in records]
 
     def get_all(self):
         query = f"SELECT * FROM {self.table_name}"
+        logging.debug(f"GETALL: {query}")
         self.cur.execute(query)
         records = self.cur.fetchall()
         return [self.datatype(*record) for record in records]
