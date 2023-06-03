@@ -119,14 +119,18 @@ async def open_bot_menu(uid: int, bot_id: int, msg_id: int, callback_query_id: i
     except data_exc.RecordIsMissing:
         admin = models.Admin(0, "видалено", "", "")
     users = user_db.get_by(bot=bot_dc.id)
-    all_users, active, dead = gen_stats(users)
+    all_users, active, dead, joined_today, joined_week, joined_month = gen_stats(users)
     table = PrettyTable()
     table.field_names = ["Юзери", "Кількість"]
     table.add_rows([
         ["Всього", all_users],
         ["Активних", active],
-        ["Мертвих", dead]
     ])
+    table.add_row(["Мертвих", dead], divider=True)
+    table.add_rows([
+        ["Сьогодні", f'+{joined_today}'],
+        ["Тиждень", f'+{joined_week}'], 
+        ["Місяць", f'+{joined_month}']])
     await bot.send_message(
         uid,
         f"🤖 @{bot_dc.username}\n🆔 {bot_dc.id}\n👤@{admin.username}\n👑Преміум {bot_dc.premium}\n\n📊Статистика:\n<code>{table}</code>",
