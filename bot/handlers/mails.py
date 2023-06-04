@@ -1,6 +1,6 @@
 from bot.misc import *
 from bot.keyboards import mails as kb
-from bot.keyboards import bot_action, mail_action, gen_cancel
+from bot.keyboards import bot_action, mail_action, gen_cancel, gen_ok
 from datetime import datetime
 
 
@@ -341,5 +341,20 @@ async def del_del_dt(cb: CallbackQuery, callback_data: dict):
 async def sendout(cb: CallbackQuery, callback_data: dict):
     mail = mails_db.get(int(callback_data["id"]))
     bot_dc = bots_db.get(mail.bot)
-    await gig.send_mail(manager.bot_dict[bot_dc.token][0], mail)
-    await open_mail_list(cb, {"id": bot_dc.id})
+    mails_db.delete(mail.id)
+    await cb.message.answer(
+        "Вам прийде повідомлення після закінчення розсилки",
+        reply_markup=gen_ok(bot_action.new(
+            bot_dc.id,
+            "mails"
+        ))
+    )
+    try:
+        await cb.message.delete()
+    except MessageCantBeDeleted:
+        pass
+    sent_num, blocked_num, error_num = await gig.send_mail(manager.bot_dict[bot_dc.token][0], mail)
+    await cb.message.answer(
+        f"Розсилка {hex(mail.id*1234)} закінчена\nНадіслано: {sent_num}\nЗаблоковано:{blocked_num}\nПомилка:{error_num}",
+        reply_markup=gen_ok("hide")
+    )
