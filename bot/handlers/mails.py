@@ -266,7 +266,10 @@ async def edit_send_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext
 async def edit_send_dt(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     mail = mails_db.get(state_data["mail_id"])
-    await msg.delete()
+    try:
+        await msg.delete()
+    except MessageToDeleteNotFound:
+        pass
     try:
         if ukraine_tz.localize(datetime.strptime(msg.text, models.DT_FORMAT)) > datetime.now(tz=timezone('Europe/Kiev')):
             mail.del_dt = datetime.strptime(msg.text, models.DT_FORMAT)
@@ -277,6 +280,7 @@ async def edit_send_dt(msg: Message, state: FSMContext):
             state_data["msg_id"],
             reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
         )
+            return
     except ValueError:
         await bot.edit_message_text(
             "Невірний формат. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
@@ -321,7 +325,10 @@ async def edit_del_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext)
 async def edit_del_dt(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     mail = mails_db.get(state_data["mail_id"])
-    await msg.delete()
+    try:
+        await msg.delete()
+    except MessageToDeleteNotFound:
+        pass
     try:
         if ukraine_tz.localize(datetime.strptime(msg.text, models.DT_FORMAT)) > datetime.now(tz=timezone('Europe/Kiev')):
             mail.del_dt = datetime.strptime(msg.text, models.DT_FORMAT)
@@ -332,6 +339,7 @@ async def edit_del_dt(msg: Message, state: FSMContext):
             state_data["msg_id"],
             reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
         )
+            return
     except ValueError:
         await bot.edit_message_text(
             "Невірний формат. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
