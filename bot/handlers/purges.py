@@ -1,5 +1,5 @@
 from bot.misc import *
-from bot.keyboards import bot_action, purge_action, gen_cancel
+from bot.keyboards import bot_action, purge_action, gen_cancel, gen_ok
 import bot.keyboards.purges as kb
 
 
@@ -11,7 +11,7 @@ async def open_purges_list(cb: CallbackQuery, callback_data: dict):
         return
     purges = purges_db.get_by(bot=int(callback_data["id"]))
     await cb.message.answer(
-        "Чистки:",
+        "{text8}\nЧистки:",
         reply_markup=kb.gen_purge_list(bot_dc, purges)
     )
     try:
@@ -90,4 +90,27 @@ async def edit_sched_dt(msg: Message, state: FSMContext):
     await state.set_state(None)
     purges_db.update(purge)
     await open_purge_menu(msg.from_user.id, purge.id, state_data["msg_id"])
+
+
+@dp.callback_query_handler(purge_action.filter(action="run"))
+async def run(cb: CallbackQuery, callback_data: dict):
+    purge = purges_db.get(int(callback_data["id"]))
+    bot_dc = bots_db.get(purge.bot)
+    purges_db.delete(purge.id)
+    await cb.message.answer(
+        "Вам прийде повідомлення після закінчення розсилки",
+        reply_markup=gen_ok(bot_action.new(
+            bot_dc.id,
+            "purges"
+        ))
+    )
+    try:
+        await cb.message.delete()
+    except MessageCantBeDeleted:
+        pass
+    cleared_num, error_num = await gig.clean(manager.bot_dict[bot_dc.token][0], purge)
+    await cb.message.answer(
+        f"Чистка {hex(purge.id*1234)} закінчена\nОчищено: {cleared_num}\nПомилка:{error_num}",
+        reply_markup=gen_ok("hide")
+    )
 

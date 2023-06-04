@@ -9,7 +9,7 @@ async def greeting_list(cb: CallbackQuery, callback_data: dict):
     bot_dc = bots_db.get(int(callback_data["id"]))
     greetings = greeting_db.get_by(bot=int(callback_data["id"]))
     await cb.message.answer(
-        "Привітання:",
+        "{text4}Привітання:",
         reply_markup=kb.gen_greeting_list(bot_dc, greetings)
     )
     try:
@@ -231,7 +231,7 @@ async def greeting_schedule_menu(uid: int, greeting_id: int, msg_id: int):
     greeting = greeting_db.get(greeting_id)
     await bot.send_message(
         uid,
-        f"<i>📩Затримка надсилання: {f'{greeting.send_delay} сек.' if greeting.send_delay else 'немає'}\n\
+        f"/text5/\n<i>📩Затримка надсилання: {f'{greeting.send_delay} сек.' if greeting.send_delay else 'немає'}\n\
 ♻️Затримка автовидалення: {f'{greeting.del_delay} сек.' if greeting.del_delay else 'немає'}</i>",
         reply_markup=kb.gen_timings_menu(greeting)
     )

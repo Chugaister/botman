@@ -18,6 +18,7 @@ from sys import exit
 from data import exceptions as data_exc
 from data.stats import gen_stats
 from data.factory import *
+from userbot import gig
 
 from . import states
 import asyncio
@@ -36,6 +37,5 @@ bot = Bot(config.token, parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
-ubots = bots_db.get_all()
-manager = Manager(ubots)
+manager = Manager([])
 # get_event_loop().run_until_complete(manager.set_webhook(ubots))

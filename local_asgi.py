@@ -1,25 +1,16 @@
-import os
-import uvicorn
-from web_config.config import PORT, HOST, PUBLIC_IP
-# from app import app
 from fastapi import FastAPI
 from aiogram import types, Dispatcher, Bot
+import uvicorn
+from web_config.local_config import PUBLIC_IP
 from bot.misc import bot as main_bot, dp as main_dp
 from bot.config import token as main_token
 from bot.misc import manager as bot_manager, bots_db
 from bot.listeners import listen_mails, listen_purges
 import bot.handlers
+import logging
 from asyncio import create_task
-import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--local', action='store_true', help='Run in local mode')
-
-args = parser.parse_args()
-if args.local:
-    from web_config.local_config import PUBLIC_IP, HOST, PORT
-else:
-    from web_config.config import PUBLIC_IP, HOST, PORT
+logging.basicConfig(level=logging.DEBUG)
 
 app = FastAPI()
 
@@ -32,7 +23,6 @@ async def on_startup():
     await bot_manager.set_webhook(ubots)
     create_task(listen_mails())
     create_task(listen_purges())
-
 
 @app.post("/bot/{token}")
 async def bot_webhook(token, update: dict):
@@ -54,23 +44,12 @@ async def on_shutdown():
     await bot_manager.delete_webhooks(bots_db.get_all())
 
 
-certfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "certificate.crt")
-keyfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "private.key")
-ca_bundle_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "ca_bundle.crt")
+from web_config.local_config import PORT, HOST, PUBLIC_IP
+
 
 if __name__ == "__main__":
-    if args.local:
-        uvicorn.run(
+    uvicorn.run(
         app,
         host=HOST,
         port=PORT
-        )
-    else:
-        uvicorn.run(
-            app,
-            host=HOST,
-            port=PORT,
-            ssl_certfile=certfile_path,
-            ssl_keyfile=keyfile_path,
-            ssl_ca_certs=ca_bundle_path
-        )
+    )

@@ -7,7 +7,7 @@ import bot.keyboards.premium as kb
 async def premium_menu(cb: CallbackQuery, callback_data: dict):
     bot_dc = bots_db.get(int(callback_data["id"]))
     await cb.message.answer(
-        "Аби отримати преміум, зв'яжіться з адміністратором",
+        "{text7}\nАби отримати преміум, зв'яжіться з адміністратором",
         reply_markup=kb.gen_premium_menu(bot_dc)
     )
     try:

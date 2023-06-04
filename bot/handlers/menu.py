@@ -18,7 +18,7 @@ async def send_start(msg: Message):
     except data_exc.RecordAlreadyExists:
         pass
     await msg.answer(
-        "Опис",
+        "{text1}\nОпис",
         reply_markup=kb.go_to_bot_list
     )
     try:
@@ -32,7 +32,7 @@ async def open_bot_list(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
     bots = bots_db.get_by(admin=cb.from_user.id)
     await cb.message.answer(
-        "Список ботів:",
+        "{text2}\nСписок ботів:",
         reply_markup=kb.gen_bot_list(bots)
     )
     try:
@@ -50,7 +50,7 @@ async def back_to_start_msg(cb: CallbackQuery):
 @dp.callback_query_handler(lambda cb: cb.data == "add_bot")
 async def add_bot(cb: CallbackQuery, state: FSMContext):
     msg = await cb.message.answer(
-        "Надішліть токен бота",
+        "{text3}\nНадішліть токен бота",
         reply_markup=gen_cancel("open_bot_list")
     )
     await state.set_state(states.InputStateGroup.token)
@@ -102,7 +102,10 @@ async def token_input(msg: Message, state: FSMContext):
     except data_exc.RecordAlreadyExists:
         bot_dc = bots_db.get(info["id"])
         bot_dc.admin = msg.from_user.id
+        bot_dc.status = 1
         bots_db.update(bot_dc)
+    manager.register_handlers([bot_dc])
+    await manager.set_webhook([bot_dc])
     await state.set_state(None)
     await open_bot_menu(msg.from_user.id, bot_dc.id, state_data["msg_id"])
 
@@ -116,14 +119,18 @@ async def open_bot_menu(uid: int, bot_id: int, msg_id: int, callback_query_id: i
     except data_exc.RecordIsMissing:
         admin = models.Admin(0, "видалено", "", "")
     users = user_db.get_by(bot=bot_dc.id)
-    all_users, active, dead = gen_stats(users)
+    all_users, active, dead, joined_today, joined_week, joined_month = gen_stats(users)
     table = PrettyTable()
     table.field_names = ["Юзери", "Кількість"]
     table.add_rows([
         ["Всього", all_users],
         ["Активних", active],
-        ["Мертвих", dead]
     ])
+    table.add_row(["Мертвих", dead], divider=True)
+    table.add_rows([
+        ["Сьогодні", f'+{joined_today}'],
+        ["Тиждень", f'+{joined_week}'], 
+        ["Місяць", f'+{joined_month}']])
     await bot.send_message(
         uid,
         f"🤖 @{bot_dc.username}\n🆔 {bot_dc.id}\n👤@{admin.username}\n👑Преміум {bot_dc.premium}\n\n📊Статистика:\n<code>{table}</code>",

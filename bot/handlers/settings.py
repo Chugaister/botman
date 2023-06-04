@@ -9,7 +9,7 @@ from bot.handlers.menu import open_bot_list
 async def open_settings(cb: CallbackQuery, callback_data: dict):
     bot_dc = bots_db.get(int(callback_data["id"]))
     await cb.message.answer(
-        "Налаштування",
+        "{text9}Налаштування",
         reply_markup=kb.gen_settings_menu(bot_dc)
     )
     try:
@@ -21,6 +21,7 @@ async def open_settings(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(bot_action.filter(action="delete_bot"))
 async def delete_bot(cb: CallbackQuery, callback_data: dict):
     bot_dc = bots_db.get(int(callback_data["id"]))
+    await manager.delete_webhook(bot_dc)
     await cb.message.answer(
         "Ви впевнені, що хочете видалити бота?",
         reply_markup=gen_confirmation(
@@ -37,6 +38,8 @@ async def delete_bot(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(bot_action.filter(action="confirm_deletion"))
 async def deletion_confirm(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     bot_dc = bots_db.get(int(callback_data["id"]))
+    await manager.delete_webhook(bot_dc)
     bot_dc.admin = None
+    bot_status = 0
     bots_db.update(bot_dc)
     await open_bot_list(cb, state)
