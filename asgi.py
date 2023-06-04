@@ -7,7 +7,7 @@ from aiogram import types, Dispatcher, Bot
 from bot.misc import bot as main_bot, dp as main_dp
 from bot.config import token as main_token
 from bot.misc import manager as bot_manager, bots_db
-from bot.listeners import listen_mails, listen_purges
+from bot.listeners import listen_mails, listen_purges, listen_autodeletion
 import bot.handlers
 from asyncio import create_task
 import argparse
@@ -32,6 +32,7 @@ async def on_startup():
     await bot_manager.set_webhook(ubots)
     create_task(listen_mails())
     create_task(listen_purges())
+    create_task(listen_autodeletion())
 
 
 @app.post("/bot/{token}")
