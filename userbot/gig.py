@@ -51,7 +51,7 @@ async def send_mail(ubot: Bot, mail: models.Mail):
                 msg.message_id,
                 user.id,
                 mail.bot,
-                mail.del_dt
+                mail.del_dt.strftime(models.DT_FORMAT)
             )
             msgs_db.add(msg_dc)
             sent_num += 1

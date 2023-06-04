@@ -32,3 +32,20 @@ async def listen_mails():
                     reply_markup=gen_ok("hide")
                 )
         await sleep(5)
+
+
+async def listen_autodeletion():
+    while True:
+        msgs = [msg for msg in msgs_db.get_all() if msg.del_dt != None]
+        for msg in msgs:
+            if datetime.now(tz=timezone('Europe/Kiev')) > ukraine_tz.localize(msg.del_dt):
+                bot_dc = bots_db.get(msg.bot)
+                try:
+                    await manager.bot_dict[bot_dc.token][0].delete_message(
+                        msg.user,
+                        msg.id
+                    )
+                except:
+                    pass
+                msgs_db.delete(msg.id)
+        await sleep(5)
