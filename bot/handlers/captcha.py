@@ -18,10 +18,7 @@ async def open_captcha_menu(uid: int, captcha_id: int, msg_id: int):
         await bot.send_animation(uid, file, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
     else:
         await bot.send_message(uid, captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
-    try:
-        await bot.delete_message(uid, msg_id)
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(uid, msg_id)
 
 
 @dp.callback_query_handler(bot_action.filter(action="captcha"), state="*")
@@ -56,10 +53,7 @@ async def set_captcha(cb: CallbackQuery, callback_data: dict, state: FSMContext)
     )
     await state.set_state(states.InputStateGroup.captcha)
     await state.set_data({"captcha_id": int(callback_data["id"]), "msg_id": msg.message_id})
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.captcha)
@@ -127,10 +121,7 @@ async def set_buttons_entry(cb: CallbackQuery, callback_data: dict, state: FSMCo
     )
     await state.set_state(states.InputStateGroup.captcha_buttons)
     await state.set_data({"msg_id": msg.message_id, "captcha_id": captcha.id})
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.captcha_buttons)

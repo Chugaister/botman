@@ -10,7 +10,4 @@ async def premium_menu(cb: CallbackQuery, callback_data: dict):
         "{text7}\nАби отримати преміум, зв'яжіться з адміністратором",
         reply_markup=kb.gen_premium_menu(bot_dc)
     )
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)

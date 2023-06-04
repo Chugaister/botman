@@ -59,7 +59,7 @@ async def send_mail(ubot: Bot, mail: models.Mail):
             blocked_num += 1
         except:
             error_num += 1
-        return sent_num, blocked_num, error_num
+    return sent_num, blocked_num, error_num
 
 
 async def clean(ubot: Bot, purge: models.Purge):

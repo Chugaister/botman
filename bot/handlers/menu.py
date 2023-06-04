@@ -21,10 +21,7 @@ async def send_start(msg: Message):
         "{text1}\nОпис",
         reply_markup=kb.go_to_bot_list
     )
-    try:
-        await msg.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(msg.from_user.id, msg.message_id)
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "open_bot_list", state="*")
@@ -35,10 +32,7 @@ async def open_bot_list(cb: CallbackQuery, state: FSMContext):
         "{text2}\nСписок ботів:",
         reply_markup=kb.gen_bot_list(bots)
     )
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "start_msg")
@@ -55,10 +49,7 @@ async def add_bot(cb: CallbackQuery, state: FSMContext):
     )
     await state.set_state(states.InputStateGroup.token)
     await state.set_data({"msg_id": msg.message_id})
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 def token_validation(msg: Message):
@@ -136,13 +127,7 @@ async def open_bot_menu(uid: int, bot_id: int, msg_id: int, callback_query_id: i
         f"🤖 @{bot_dc.username}\n🆔 {bot_dc.id}\n👤@{admin.username}\n👑Преміум {bot_dc.premium}\n\n📊Статистика:\n<code>{table}</code>",
         reply_markup=kb.gen_bot_menu(bot_dc)
     )
-    try:
-        await bot.delete_message(
-            uid,
-            msg_id
-        )
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(uid, msg_id)
 
 
 @dp.callback_query_handler(kb.bot_action.filter(action="open_menu"), state="*")

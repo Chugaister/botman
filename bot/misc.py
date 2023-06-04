@@ -2,7 +2,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode
 from aiogram.dispatcher.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.utils.exceptions import MessageCantBeDeleted, MessageNotModified
+from aiogram.utils.exceptions import MessageCantBeDeleted, MessageNotModified, MessageToDeleteNotFound
 from aiogram.utils.callback_data import CallbackData
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
@@ -39,3 +39,15 @@ dp = Dispatcher(bot, storage=storage)
 
 manager = Manager([])
 # get_event_loop().run_until_complete(manager.set_webhook(ubots))
+
+
+async def safe_del_msg(uid: int, msg_id: int):
+    try:
+        await bot.delete_message(
+            uid,
+            msg_id
+        )
+    except MessageCantBeDeleted:
+        pass
+    except MessageToDeleteNotFound:
+        pass

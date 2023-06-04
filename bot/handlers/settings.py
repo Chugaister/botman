@@ -12,10 +12,7 @@ async def open_settings(cb: CallbackQuery, callback_data: dict):
         "{text9}Налаштування",
         reply_markup=kb.gen_settings_menu(bot_dc)
     )
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.callback_query_handler(bot_action.filter(action="delete_bot"))
@@ -29,10 +26,7 @@ async def delete_bot(cb: CallbackQuery, callback_data: dict):
             bot_action.new(bot_dc.id, "open_menu")
         )
     )
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.callback_query_handler(bot_action.filter(action="confirm_deletion"))

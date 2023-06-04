@@ -31,10 +31,7 @@ async def set_premium(cb: CallbackQuery, state: FSMContext):
     )
     await state.set_state(states.InputStateGroup.bot_username)
     await state.set_data({"msg_id": msg.message_id})
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 async def send_adminbot_panel(uid: int, bot_id: int, msg_id: int):
@@ -48,13 +45,7 @@ async def send_adminbot_panel(uid: int, bot_id: int, msg_id: int):
         f"🤖 @{bot_dc.username}\n🆔 {bot_dc.id}\n👤@{admin.username}\n👑Преміум {bot_dc.premium}\n",
         reply_markup=kb.gen_admin_bot_menu(bot_dc)
     )
-    try:
-        await bot.delete_message(
-            uid,
-            msg_id
-        )
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(uid, msg_id)
 
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.bot_username)
@@ -114,7 +105,4 @@ async def in_development(cb: CallbackQuery):
 
 @dp.callback_query_handler(lambda cb: cb.data == "hide", state="*")
 async def hide(cb: CallbackQuery):
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)

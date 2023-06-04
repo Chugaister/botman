@@ -34,11 +34,11 @@ def gen_confirmation(action_true: str, action_false) -> InlineKeyboardMarkup:
     return confirm_bar
 
 
-def gen_ok(callback_data: str) -> InlineKeyboardMarkup:
+def gen_ok(callback_data: str, caption: str = "OK") -> InlineKeyboardMarkup:
     ok_menu = InlineKeyboardMarkup()
     ok_menu.add(
         InlineKeyboardButton(
-            "OK",
+            caption,
             callback_data=callback_data
         )
     )

@@ -5,17 +5,15 @@ from bot.keyboards import bot_action, greeting_action, gen_cancel
 
 
 @dp.callback_query_handler(bot_action.filter(action="greetings"), state="*")
-async def greeting_list(cb: CallbackQuery, callback_data: dict):
+async def greeting_list(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    await state.set_state(None)
     bot_dc = bots_db.get(int(callback_data["id"]))
     greetings = greeting_db.get_by(bot=int(callback_data["id"]))
     await cb.message.answer(
         "{text4}Привітання:",
         reply_markup=kb.gen_greeting_list(bot_dc, greetings)
     )
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 async def send_greeting_menu(uid: int, greeting_id: int, msg_id: int):
@@ -51,10 +49,7 @@ async def send_greeting_menu(uid: int, greeting_id: int, msg_id: int):
             greeting.text,
             reply_markup=kb.gen_greeting_menu(bot_dc, greeting)
         )
-    try:
-        await bot.delete_message(uid, msg_id)
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(uid, msg_id)
 
 
 @dp.callback_query_handler(greeting_action.filter(action="open_greeting_menu"), state="*")
@@ -77,10 +72,7 @@ async def add_greeting(cb: CallbackQuery, callback_data: dict, state: FSMContext
     )
     await state.set_state(states.InputStateGroup.greeting)
     await state.set_data({"msg_id": msg.message_id, "bot_id": bot_dc.id})
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.greeting)
@@ -152,11 +144,11 @@ async def greeting_input_gif(msg: Message, state: FSMContext):
 
 
 @dp.callback_query_handler(greeting_action.filter(action="delete_greeting"))
-async def delete_greeting(cb: CallbackQuery, callback_data: dict):
+async def delete_greeting(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     greeting = greeting_db.get(int(callback_data["id"]))
     callback_data["id"] = greeting.bot
     greeting_db.delete(greeting.id)
-    await greeting_list(cb, callback_data)
+    await greeting_list(cb, callback_data, state)
 
 
 @dp.callback_query_handler(greeting_action.filter(action="greeting_off"))
@@ -186,10 +178,7 @@ async def add_greeting_buttons(cb: CallbackQuery, callback_data: dict, state: FS
             )
         )
     )
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
     await state.set_state(states.InputStateGroup.greeting_buttons)
     await state.set_data({"msg_id": msg.message_id, "greeting_id": callback_data["id"]})
 
@@ -235,13 +224,7 @@ async def greeting_schedule_menu(uid: int, greeting_id: int, msg_id: int):
 ♻️Затримка автовидалення: {f'{greeting.del_delay} сек.' if greeting.del_delay else 'немає'}</i>",
         reply_markup=kb.gen_timings_menu(greeting)
     )
-    try:
-        await bot.delete_message(
-            uid,
-            msg_id
-        )
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(uid, msg_id)
 
 
 @dp.callback_query_handler(greeting_action.filter(action="schedule"), state="*")
@@ -263,10 +246,7 @@ async def edit_send_delay(cb: CallbackQuery, callback_data: dict, state: FSMCont
     )
     await state.set_state(states.InputStateGroup.greeting_send_delay)
     await state.set_data({"greeting_id": int(callback_data["id"]), "msg_id": msg.message_id})
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.message_handler(lambda msg: msg.text.isdigit(), content_types=ContentTypes.TEXT, state=states.InputStateGroup.greeting_send_delay)
@@ -306,10 +286,7 @@ async def edit_del_delay(cb: CallbackQuery, callback_data: dict, state: FSMConte
     )
     await state.set_state(states.InputStateGroup.greeting_del_delay)
     await state.set_data({"greeting_id": int(callback_data["id"]), "msg_id": msg.message_id})
-    try:
-        await cb.message.delete()
-    except MessageCantBeDeleted:
-        pass
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.message_handler(lambda msg: msg.text.isdigit(), content_types=ContentTypes.TEXT, state=states.InputStateGroup.greeting_del_delay)
