@@ -275,6 +275,8 @@ async def edit_send_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext
 async def edit_send_dt(msg: Message, state: FSMContext): 
     state_data = await state.get_data()
     mail = await safe_get_mail(msg.from_user.id, state_data["mail_id"])
+    if not mail:
+        return
     try:
         await msg.delete()
     except MessageToDeleteNotFound:
@@ -335,8 +337,9 @@ async def edit_del_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext)
 async def edit_del_dt(msg: Message, state: FSMContext):
     await msg.delete()
     state_data = await state.get_data()
-    mail = mails_db.get(state_data["mail_id"])
-    await msg.delete()
+    mail = await safe_get_mail(msg.from_user.id, state_data["mail_id"])
+    if not mail:
+        return
     try:
         if ukraine_tz.localize(datetime.strptime(msg.text, models.DT_FORMAT)) > datetime.now(tz=timezone('Europe/Kiev')):
             mail.del_dt = datetime.strptime(msg.text, models.DT_FORMAT)
