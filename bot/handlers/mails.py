@@ -272,13 +272,11 @@ async def edit_send_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext
 
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.mail_send_dt)
-async def edit_send_dt(msg: Message, state: FSMContext):
-    await msg.delete()
+async def edit_send_dt(msg: Message, state: FSMContext): 
     state_data = await state.get_data()
     mail = await safe_get_mail(msg.from_user.id, state_data["mail_id"])
     try:
-        if not mail:
-        return
+        await msg.delete()
     except MessageToDeleteNotFound:
         pass
     try:
