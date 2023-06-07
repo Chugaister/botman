@@ -160,7 +160,7 @@ async def greeting_off(cb: CallbackQuery, callback_data: dict, state: FSMContext
 
 
 @dp.callback_query_handler(greeting_action.filter(action="greeting_on"))
-async def greeting_off(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+async def greeting_on(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     greeting = greeting_db.get(int(callback_data["id"]))
     greeting.active = True
     greeting_db.update(greeting)
