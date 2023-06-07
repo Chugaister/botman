@@ -34,7 +34,7 @@ class Database:
 
     def add(self, object):
         query = f"INSERT INTO {self.table_name} {str(object.columns)} VALUES ({'?, '*(len(object.columns)-1)}?)"
-        print(query, object.get_tuple())
+        logging.debug(query, object.get_tuple())
         try:
             self.cur.execute(query, object.get_tuple())
         except IntegrityError:
@@ -44,7 +44,7 @@ class Database:
 
     def get(self, _id: int):
         query = f"SELECT * FROM {self.table_name} WHERE id=?"
-        logging.debug(f"GET: {query}")
+        # logging.debug(f"GET: {query}")
         self.cur.execute(query, (_id,))
         data = self.cur.fetchone()
         if data is None:
@@ -67,14 +67,14 @@ class Database:
     def get_by(self, **kwargs):
         items = list(kwargs.items())
         query = f"SELECT * FROM {self.table_name} WHERE {' AND '.join([f'{key}=?' for key, value in items])}"
-        logging.debug(f"GETBY: {query}")
+        # logging.debug(f"GETBY: {query}")
         self.cur.execute(query, [value for key, value in items])
         records = self.cur.fetchall()
         return [self.datatype(*record) for record in records]
 
     def get_all(self):
         query = f"SELECT * FROM {self.table_name}"
-        logging.debug(f"GETALL: {query}")
+        # logging.debug(f"GETALL: {query}")
         self.cur.execute(query)
         records = self.cur.fetchall()
         return [self.datatype(*record) for record in records]

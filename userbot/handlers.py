@@ -3,7 +3,7 @@ from aiogram.utils.exceptions import MessageCantBeDeleted
 from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode
 from aiogram.dispatcher.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from asyncio import gather, sleep
+from asyncio import gather, sleep, create_task
 from datetime import datetime
 from pytz import timezone
 
@@ -135,5 +135,5 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
         user_db.add(user)
     except data_exc.RecordAlreadyExists:
         pass
-    await send_all_greeting(ubot, msg.from_user.id)
+    create_task(send_all_greeting(ubot, msg.from_user.id))
     await msg.delete()
