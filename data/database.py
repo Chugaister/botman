@@ -34,7 +34,7 @@ class Database:
 
     def add(self, object):
         query = f"INSERT INTO {self.table_name} {str(object.columns)} VALUES ({'?, '*(len(object.columns)-1)}?)"
-        logging.debug(query, object.get_tuple())
+        logging.debug(f"{query}, {object.get_tuple()}")
         try:
             self.cur.execute(query, object.get_tuple())
         except IntegrityError:
