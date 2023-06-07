@@ -272,9 +272,6 @@ async def del_send_delay(cb: CallbackQuery, callback_data: dict):
 async def edit_del_delay(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     greeting = greeting_db.get(int(callback_data["id"]))
     bot_dc = bots_db.get(greeting.bot)
-    if bot_dc.premium <= 0:
-        await cb.answer("⭐️Лише для преміум ботів")
-        return
     msg = await cb.message.answer(
         "Введіть затримку автовидалення (у секундах)",
         reply_markup=gen_cancel(

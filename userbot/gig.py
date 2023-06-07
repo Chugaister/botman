@@ -56,6 +56,8 @@ async def send_mail(ubot: Bot, mail: models.Mail):
             msgs_db.add(msg_dc)
             sent_num += 1
         except BotBlocked:
+            user.status = 0
+            user_db.update(user)
             blocked_num += 1
         except:
             error_num += 1
