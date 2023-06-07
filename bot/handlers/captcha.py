@@ -11,10 +11,10 @@ async def open_captcha_menu(uid: int, captcha_id: int, msg_id: int):
         file = await file_manager.get_file(captcha.photo)
         await bot.send_photo(uid, file, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
     elif captcha.video:
-        file = file_manager.get_file(captcha.video)
+        file = await file_manager.get_file(captcha.video)
         await bot.send_video(uid, file, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
     elif captcha.gif:
-        file = file_manager.get_file(captcha.gif)
+        file = await file_manager.get_file(captcha.gif)
         await bot.send_animation(uid, file, caption=captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))
     else:
         await bot.send_message(uid, captcha.text, reply_markup=kb.gen_captcha_menu(bot_dc, captcha))

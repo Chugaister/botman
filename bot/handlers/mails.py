@@ -283,7 +283,7 @@ async def edit_send_dt(msg: Message, state: FSMContext):
         pass
     try:
         if ukraine_tz.localize(datetime.strptime(msg.text, models.DT_FORMAT)) > datetime.now(tz=timezone('Europe/Kiev')):
-            mail.del_dt = datetime.strptime(msg.text, models.DT_FORMAT)
+            mail.send_dt = datetime.strptime(msg.text, models.DT_FORMAT)
         else:
             await bot.edit_message_text(
             "Дата розсилки не може бути у минулому. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
@@ -368,6 +368,10 @@ async def edit_del_dt(msg: Message, state: FSMContext):
 async def del_del_dt(cb: CallbackQuery, callback_data: dict):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not mail:
+        return
+    bot_dc = bots_db.get(mail.bot)
+    if bot_dc.premium <= 0:
+        await cb.answer("⭐️Лише для преміум ботів")
         return
     mail.del_dt = None
     mails_db.update(mail)
