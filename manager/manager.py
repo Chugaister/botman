@@ -1,4 +1,3 @@
-import logging
 from aiogram import Bot, Dispatcher, types
 from data import models
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -9,8 +8,6 @@ from userbot.handlers import start_handler, req_handler, captcha_confirm, Captch
 class Manager:
     def __init__(self, bots: list[models.Bot]):
         self.bot_dict = {bot.token: (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage())) for bot in bots}
-
-        logging.basicConfig(level=logging.INFO)
         
     def register_handlers(self, bots: list[models.Bot]):
         for bot in bots:
