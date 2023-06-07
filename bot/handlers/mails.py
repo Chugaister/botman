@@ -286,7 +286,7 @@ async def edit_send_dt(msg: Message, state: FSMContext):
             mail.send_dt = datetime.strptime(msg.text, models.DT_FORMAT)
         else:
             await bot.edit_message_text(
-            "Дата розсилки не може бути у минулому. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            "❗️Дата розсилки не може бути у минулому.Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
             msg.from_user.id,
             state_data["msg_id"],
             reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))

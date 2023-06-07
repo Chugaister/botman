@@ -240,7 +240,7 @@ async def edit_send_delay(cb: CallbackQuery, callback_data: dict, state: FSMCont
         reply_markup=gen_cancel(
             callback_data=greeting_action.new(
                 callback_data["id"],
-                "schedule"
+                "schedule"  
             )
         )
     )
@@ -249,15 +249,32 @@ async def edit_send_delay(cb: CallbackQuery, callback_data: dict, state: FSMCont
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
-@dp.message_handler(lambda msg: msg.text.isdigit(), content_types=ContentTypes.TEXT, state=states.InputStateGroup.greeting_send_delay)
+@dp.message_handler(lambda msg: msg, content_types=ContentTypes.TEXT, state=states.InputStateGroup.greeting_send_delay)
 async def edit_send_delay(msg: Message, state: FSMContext):
-    await state.set_state(None)
     state_data = await state.get_data()
-    greeting = greeting_db.get(state_data["greeting_id"])
-    greeting.send_delay = int(msg.text)
-    greeting_db.update(greeting)
-    await msg.delete()
-    await greeting_schedule_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
+    if msg.text.isdigit() and int(msg.text) > 0 and int(msg.text) < 86400:
+        await state.set_state(None)       
+        greeting = greeting_db.get(state_data["greeting_id"])
+        greeting.send_delay = int(msg.text)
+        greeting_db.update(greeting)
+        await msg.delete()
+        await greeting_schedule_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
+    else:
+        await safe_del_msg(msg.from_user.id, msg.message_id)
+        try:
+            await bot.edit_message_text(
+                "❗️Затримка має бути цілим додатнім числом. Від 1 до 86399\nВведіть затримку надсилання (у секундах)",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(
+                callback_data=greeting_action.new(
+                state_data["greeting_id"],
+                "schedule"  
+                    )
+                )
+                )
+        except MessageNotModified:
+            pass        
 
 
 @dp.callback_query_handler(greeting_action.filter(action="del_send_delay"))
