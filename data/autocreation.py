@@ -104,7 +104,7 @@ queries = [
         "user"	INTEGER NOT NULL,
         "bot"	INTEGER NOT NULL,
         "del_dt"	INTEGER,
-        PRIMARY KEY("id"),
+        PRIMARY KEY("id", "bot"),
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
         FOREIGN KEY("user") REFERENCES "users"("id")
     );
