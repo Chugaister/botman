@@ -11,6 +11,7 @@ from bot.listeners import listen_mails, listen_purges, listen_autodeletion
 import bot.handlers
 from asyncio import create_task
 import argparse
+import logging
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--local', action='store_true', help='Run in local mode')
@@ -38,6 +39,7 @@ async def on_startup():
 @app.post("/bot/{token}")
 async def bot_webhook(token, update: dict):
     telegram_update = types.Update(**update)
+    logging.debug(f"Get updates: {telegram_update}")
     if token == main_token:
         Dispatcher.set_current(main_dp)
         Bot.set_current(main_bot)

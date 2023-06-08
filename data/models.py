@@ -128,7 +128,7 @@ class Captcha:
             self,
             _id: int,
             bot: int,
-            active: bool = False,
+            active: bool = True,
             text: str = None,
             photo: str = None,
             video: str = None,
