@@ -285,50 +285,50 @@ async def del_send_delay(cb: CallbackQuery, callback_data: dict):
     await greeting_schedule_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
 
 
-# @dp.callback_query_handler(greeting_action.filter(action="edit_del_delay"))
-# async def edit_del_delay(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-#     greeting = greeting_db.get(int(callback_data["id"]))
-#     bot_dc = bots_db.get(greeting.bot)
-#     msg = await cb.message.answer(
-#         "Введіть затримку надсилання у секундах (число від 1 до 86399)",
-#         reply_markup=gen_cancel(
-#             callback_data=greeting_action.new(
-#                 callback_data["id"],
-#                 "schedule"
-#             )
-#         )
-#     )
-#     await state.set_state(states.InputStateGroup.greeting_del_delay)
-#     await state.set_data({"greeting_id": int(callback_data["id"]), "msg_id": msg.message_id})
-#     await safe_del_msg(cb.from_user.id, cb.message.message_id)
+@dp.callback_query_handler(greeting_action.filter(action="edit_del_delay"))
+async def edit_del_delay(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    greeting = greeting_db.get(int(callback_data["id"]))
+    bot_dc = bots_db.get(greeting.bot)
+    msg = await cb.message.answer(
+        'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
+        reply_markup=gen_cancel(
+            callback_data=greeting_action.new(
+                callback_data["id"],
+                "schedule"
+            )
+        )
+    )
+    await state.set_state(states.InputStateGroup.greeting_del_delay)
+    await state.set_data({"greeting_id": int(callback_data["id"]), "msg_id": msg.message_id})
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
-# @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.greeting_del_delay)
-# async def edit_del_delay(msg: Message, state: FSMContext):
-#     state_data = await state.get_data()
-#     if msg.text.isdigit() and 0 < int(msg.text) < 86400:
-#         await state.set_state(None)
-#         greeting = greeting_db.get(state_data["greeting_id"])
-#         greeting.del_delay = int(msg.text)
-#         greeting_db.update(greeting)
-#         await msg.delete()
-#         await greeting_schedule_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
-#     else:
-#         await safe_del_msg(msg.from_user.id, msg.message_id)
-#         try:
-#             await bot.edit_message_text(
-#                 "❗️Невірний формат\nВведіть затримку надсилання у секундах (число від 1 до 86399)",
-#                 msg.from_user.id,
-#                 state_data["msg_id"],
-#                 reply_markup=gen_cancel(
-#                     callback_data=greeting_action.new(
-#                         state_data["greeting_id"],
-#                         "schedule"
-#                     )
-#                 )
-#             )
-#         except MessageNotModified:
-#             pass
+@dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.greeting_del_delay)
+async def edit_del_delay(msg: Message, state: FSMContext):
+    state_data = await state.get_data()
+    if re.match(r'^\d{2}:\d{2}$', msg.text) and 0 < convert_to_seconds(msg.text) < 3600 :
+        await state.set_state(None)
+        greeting = greeting_db.get(state_data["greeting_id"])
+        greeting.del_delay = int(convert_to_seconds(msg.text))
+        greeting_db.update(greeting)
+        await msg.delete()
+        await greeting_schedule_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
+    else:
+        await safe_del_msg(msg.from_user.id, msg.message_id)
+        try:
+            await bot.edit_message_text(
+                'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(
+                    callback_data=greeting_action.new(
+                        state_data["greeting_id"],
+                        "schedule"
+                    )
+                )
+            )
+        except MessageNotModified:
+            pass
 
 
 @dp.callback_query_handler(greeting_action.filter(action="del_del_delay"))
