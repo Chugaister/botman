@@ -32,7 +32,7 @@ except ImportError:
 
 
 ukraine_tz = timezone('Europe/Kiev')
-logging.basicConfig(filename='../logfile.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(message)s')
+logging.basicConfig(filename='logfile.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(message)s', encoding='utf-8')
 bot = Bot(config.token, parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
