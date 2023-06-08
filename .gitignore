@@ -4,3 +4,4 @@ bot/config.py
 **/__pycache__/
 ssl_auth/
 web_config/
+logfile.log
