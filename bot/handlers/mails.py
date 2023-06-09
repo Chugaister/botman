@@ -39,7 +39,7 @@ async def open_mail_list(cb: CallbackQuery, callback_data: dict, state: FSMConte
 async def add_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     bot_dc = bots_db.get(int(callback_data["id"]))
     msg = await cb.message.answer(
-        "Надішліть текст, гіф, фото або відео з підписом",
+        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
             bot_action.new(
                 id=bot_dc.id,
@@ -99,22 +99,6 @@ async def open_mail_menu_cb(cb: CallbackQuery, callback_data: dict):
         return
     await open_mail_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
 
-
-@dp.callback_query_handler(bot_action.filter(action="add_mail"))
-async def add_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    bot_dc = bots_db.get(int(callback_data["id"]))
-    msg = await cb.message.answer(
-        "Надішліть текст, гіф, фото або відео з підписом",
-        reply_markup=gen_cancel(
-            bot_action.new(
-                id=bot_dc.id,
-                action="mails"
-            )
-        )
-    )
-    await state.set_state(states.InputStateGroup.mail)
-    await state.set_data({"msg_id": msg.message_id, "bot_id": bot_dc.id})
-    await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.mail)
@@ -182,7 +166,7 @@ async def add_buttons(cb: CallbackQuery, callback_data: dict, state: FSMContext)
     if not mail:
         return
     msg = await cb.message.answer(
-        "Щоб додати кнопки-посилання надішліть список у форматі\nпідпис1 - посилання1\nпідпис2 - посилання2\n...",
+        "Щоб додати кнопки-посилання надішліть список у форматі\n<b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
         reply_markup=gen_cancel(
             mail_action.new(
                 id=callback_data["id"],
@@ -211,17 +195,20 @@ async def mail_buttons_input(msg: Message, state: FSMContext):
     try:
         mail.buttons = models.deserialize_buttons(msg.text)
     except ValueError:
-        await bot.edit_message_text(
-            "Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\nпідпис1 - посилання1\nпідпис2 - посилання2\n...",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(
-                mail_action.new(
-                    id=mail.id,
-                    action="open_mail_menu"
+        try:
+            await bot.edit_message_text(
+                "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n<i><b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b></i>",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(
+                    mail_action.new(
+                        id=mail.id,
+                        action="open_mail_menu"
+                    )
                 )
             )
-        )
+        except MessageNotModified:
+            pass
         return
     mails_db.update(mail)
     await state.set_state(None)
