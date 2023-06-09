@@ -51,3 +51,7 @@ async def safe_del_msg(uid: int, msg_id: int):
         pass
     except MessageToDeleteNotFound:
         pass
+
+
+def gen_hex_caption(id: int) -> str:
+    return str(hex(id*1234))

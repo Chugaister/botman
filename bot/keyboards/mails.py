@@ -7,7 +7,7 @@ def gen_mail_list(bot: models.Bot, mails: list[models.Mail]) -> InlineKeyboardMa
     for mail in mails:
         mail_list.add(
             InlineKeyboardButton(
-                f"{hex(mail.id*1234)}",
+                f"{mail.text[:20]}..." if mail.text else gen_hex_caption(mail.id),
                 callback_data=mail_action.new(
                     id=mail.id,
                     action="open_mail_menu"
