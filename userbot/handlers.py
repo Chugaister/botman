@@ -18,26 +18,26 @@ class CaptchaStatesGroup(StatesGroup):
     captcha = State()
 
 
-async def send_captcha(ubot: Bot, udp: Dispatcher, uid: int):
+async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User):
     # checking advanced settings
     captcha = captchas_db.get_by(bot=ubot.id)[0]
     if not captcha.active:
         return
     if captcha.text:
-        user = user_db.get(uid)
+        user = user_db.get(user.id)
         captcha.text = gen_dynamic_text(captcha.text, user)
     if captcha.photo:
         file = await file_manager.get_file(captcha.photo)
-        msg = await ubot.send_photo(uid, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
+        msg = await ubot.send_photo(user.id, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
     elif captcha.video:
         file = await file_manager.get_file(captcha.video)
-        msg = await ubot.send_video(uid, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
+        msg = await ubot.send_video(user.id, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
     elif captcha.gif:
         file = await file_manager.get_file(captcha.gif)
-        msg = await ubot.send_animation(uid, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
+        msg = await ubot.send_animation(user.id, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
     elif captcha.text:
-        msg = await ubot.send_message(uid, captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
-    state = udp.current_state(chat=uid, user=uid)
+        msg = await ubot.send_message(user.id, captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
+    state = udp.current_state(chat=user.id, user=user.id)
     await state.set_state(CaptchaStatesGroup.captcha)
     await state.set_data({"msg_id": msg.message_id})
 
@@ -103,8 +103,17 @@ async def send_all_greeting(ubot: Bot, uid: int):
 # chat_join_request_handler
 async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, state: FSMContext):
     captcha = captchas_db.get_by(bot=ubot.id)[0]
+    user = models.User(
+        request.from_user.id,
+        ubot.id,
+        request.from_user.username,
+        request.from_user.first_name,
+        request.from_user.last_name,
+        True,
+        datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
+    )
     if captcha.active:
-        await send_captcha(ubot, udp, request.from_user.id)
+        await send_captcha(ubot, udp, user)
     else:
         create_task(send_all_greeting(ubot, request.from_user.id))
 
