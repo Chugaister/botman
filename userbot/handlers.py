@@ -9,6 +9,7 @@ from pytz import timezone
 
 
 from .keyboards import *
+from .utils import gen_dynamic_text
 from data.factory import *
 from data import exceptions as data_exc
 
@@ -22,6 +23,9 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, uid: int):
     captcha = captchas_db.get_by(bot=ubot.id)[0]
     if not captcha.active:
         return
+    if captcha.text:
+        user = user_db.get(uid)
+        captcha.text = gen_dynamic_text(captcha.text, user)
     if captcha.photo:
         file = await file_manager.get_file(captcha.photo)
         msg = await ubot.send_photo(uid, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
@@ -41,6 +45,9 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, uid: int):
 async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
     if not greeting.active:
         return
+    if greeting.text:
+        user = user_db.get(uid)
+        greeting.text = gen_dynamic_text(greeting.text, user)
     if greeting.send_delay:
         await sleep(greeting.send_delay)
     if greeting.photo:
@@ -95,7 +102,11 @@ async def send_all_greeting(ubot: Bot, uid: int):
 
 # chat_join_request_handler
 async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, state: FSMContext):
-    await send_captcha(ubot, udp, request.from_user.id)
+    captcha = captchas_db.get_by(bot=ubot.id)[0]
+    if captcha.active:
+        await send_captcha(ubot, udp, request.from_user.id)
+    else:
+        create_task(send_all_greeting(ubot, request.from_user.id))
 
 
 # message_handler state=captcha
