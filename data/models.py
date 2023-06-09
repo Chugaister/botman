@@ -7,40 +7,75 @@ from requests import get
 DT_FORMAT = "%H:%M %d.%m.%Y"
 
 
-def deserialize_buttons(text: str) -> list[dict]:
+# def deserialize_buttons(text: str) -> list[dict]:
+#     buttons = []
+#     if text is None:
+#         return buttons
+#     for row in text.split("\n"):
+#         caption, link = row.split(" - ")
+#         if not "https://" in link:
+#             link = "https://" + link
+#         try:
+#             req = get(link)
+#         except requests.exceptions.ConnectionError:
+#             raise ValueError
+#         if not req.ok:
+#             raise ValueError
+#         buttons.append({
+#             "caption": caption,
+#             "link": link
+#         })
+#     return buttons
+def deserialize_buttons(text: str) -> list[list[dict]]:
     buttons = []
     if text is None:
         return buttons
     for row in text.split("\n"):
-        caption, link = row.split(" - ")
-        if not "https://" in link:
-            link = "https://" + link
-        try:
-            req = get(link)
-        except requests.exceptions.ConnectionError:
-            raise ValueError
-        if not req.ok:
-            raise ValueError
-        buttons.append({
-            "caption": caption,
-            "link": link
-        })
+        button_dicts = []
+        for button in row.split(" | "):
+            caption, link = button.split(" - ")
+            if not link.startswith("https://"):
+                link = "https://" + link
+            try:
+                req = requests.get(link)
+            except requests.exceptions.ConnectionError:
+                raise ValueError
+            if not req.ok:
+                raise ValueError
+            button_dicts.append({"caption": caption.strip(), "link": link})
+        buttons.append(button_dicts)
     return buttons
 
 
-def serialize_buttons(buttons: list[dict]) -> str:
-    if buttons == []:
+# def serialize_buttons(buttons: list[dict]) -> str:
+#     if buttons == []:
+#         return None
+#     text = "\n".join([f"{button['caption']} - {button['link']}" for button in buttons])
+#     return text
+def serialize_buttons(buttons: list[list[dict]]) -> str:
+    if not buttons:
         return None
-    text = "\n".join([f"{button['caption']} - {button['link']}" for button in buttons])
+    serialized_rows = []
+    for button_row in buttons:
+        serialized_buttons = [f"{button['caption']} - {button['link']}" for button in button_row]
+        serialized_rows.append(" | ".join(serialized_buttons))
+    text = "\n".join(serialized_rows)
     return text
 
 
-def serialize_reply_buttons(buttons: list[str]) -> str:
-    return "\n".join(buttons)
+def deserialize_reply_buttons(text: str) -> list[list[str]]:
+    reply_buttons = []
+    for row in text.split("\n"):
+        captions = row.split(" | ")
+        reply_buttons.append(captions)
+    return reply_buttons
 
-
-def deserialize_reply_buttons(text: str) -> list[str]:
-    return text.split("\n")
+def serialize_reply_buttons(buttons: list[list[str]]) -> str:
+    rows = []
+    for row in buttons:
+        row_text = " | ".join(row)
+        rows.append(row_text)
+    return "\n".join(rows)
 
 
 class Admin:

@@ -35,14 +35,12 @@ def gen_greeting_list(bot: models.Bot, greetings: list[models.Greeting]) -> Inli
 
 def gen_greeting_menu(bot: models.Bot, greeting: models.Greeting) -> InlineKeyboardMarkup:
     greeting_menu = InlineKeyboardMarkup()
-    greeting_menu.add(
-        *[
-            InlineKeyboardButton(
-                button["caption"],
-                url=button["link"]
-            ) for button in greeting.buttons
-        ]
-    )
+    for button_row in greeting.buttons:
+        row_buttons = []
+        for button_dict in button_row:
+            button = InlineKeyboardButton(button_dict["caption"], url=button_dict["link"])
+            row_buttons.append(button)
+        greeting_menu.row(*row_buttons)
     switchButton = InlineKeyboardButton(
         "✅Вимкнути",
         callback_data=greeting_action.new(

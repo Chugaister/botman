@@ -4,8 +4,12 @@ from . import bot_action, captcha_action
 
 def gen_captcha_menu(bot: models.Bot, captcha: models.Captcha) -> InlineKeyboardMarkup:
     captcha_menu = InlineKeyboardMarkup()
-    reply_buttons = [InlineKeyboardButton(caption, callback_data="reply_buttons_info") for caption in captcha.buttons]
-    captcha_menu.add(*reply_buttons)
+    for button_row in captcha.buttons:
+        row_buttons = []
+        for caption in button_row:
+            button = InlineKeyboardButton(caption, callback_data="reply_buttons_info")
+            row_buttons.append(button)
+        captcha_menu.row(*row_buttons)
     switch_button = InlineKeyboardButton(
         "❌Вимкнути",
         callback_data=captcha_action.new(captcha.id, "captcha_off")

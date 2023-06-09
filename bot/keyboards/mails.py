@@ -35,14 +35,12 @@ def gen_mail_list(bot: models.Bot, mails: list[models.Mail]) -> InlineKeyboardMa
 
 def gen_mail_menu(bot: models.Bot, mail: models.Mail) -> InlineKeyboardMarkup:
     mail_menu = InlineKeyboardMarkup()
-    mail_menu.add(
-        *[
-            InlineKeyboardButton(
-                button["caption"],
-                url=button["link"]
-            ) for button in mail.buttons
-        ]
-    )
+    for button_row in mail.buttons:
+        row_buttons = []
+        for button_dict in button_row:
+            button = InlineKeyboardButton(button_dict["caption"], url=button_dict["link"])
+            row_buttons.append(button)
+        mail_menu.row(*row_buttons)
     mail_menu.add(
         InlineKeyboardButton(
             "➕Додати кнопки",
