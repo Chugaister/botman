@@ -221,7 +221,7 @@ async def greeting_schedule_menu(uid: int, greeting_id: int, msg_id: int):
     await bot.send_message(
         uid,
         f"/text5/\n<i>📩Затримка надсилання: {f'{greeting.send_delay // 60} хв. {greeting.send_delay % 60} сек.' if greeting.send_delay else 'немає'}\n\
-♻️Затримка автовидалення: {f'{greeting.del_delay} сек.' if greeting.del_delay else 'немає'}</i>",
+♻️Затримка автовидалення: {f'{greeting.del_delay // 60 } хв. {greeting.send_delay % 60} сек.' if greeting.del_delay else 'немає'}</i>",
         reply_markup=kb.gen_timings_menu(greeting)
     )
     await safe_del_msg(uid, msg_id)
