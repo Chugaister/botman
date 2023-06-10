@@ -118,10 +118,11 @@ async def mail_input_text(msg: Message, state: FSMContext):
 @dp.message_handler(content_types=ContentTypes.PHOTO, state=states.InputStateGroup.mail)
 async def mail_input_photo(msg: Message, state: FSMContext):
     state_data = await state.get_data()
+    print(f"Photo sent with text: {msg.caption}")
     mail = models.Mail(
         _id=0,
         bot=state_data["bot_id"],
-        text=msg.text,
+        text=msg.caption,
         photo=await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
     )
     mails_db.add(mail)
@@ -136,7 +137,7 @@ async def mail_input_video(msg: Message, state: FSMContext):
     mail = models.Mail(
         _id=0,
         bot=state_data["bot_id"],
-        text=msg.text,
+        text=msg.caption,
         video=await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
     )
     mails_db.add(mail)
@@ -151,7 +152,7 @@ async def mail_input_gif(msg: Message, state: FSMContext):
     mail = models.Mail(
         _id=0,
         bot=state_data["bot_id"],
-        text=msg.text,
+        text=msg.caption,
         gif=await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
     )
     mails_db.add(mail)
