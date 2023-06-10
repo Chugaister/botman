@@ -1,5 +1,5 @@
 from aiogram import Bot, Dispatcher
-from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked
+from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, MessageToDeleteNotFound
 from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode
 from aiogram.dispatcher.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -12,6 +12,18 @@ from .keyboards import *
 from .utils import gen_dynamic_text
 from data.factory import *
 from data import exceptions as data_exc
+
+
+async def safe_del_msg(ubot: Bot, uid: int, msg_id: int):
+    try:
+        await ubot.delete_message(
+            uid,
+            msg_id
+        )
+    except MessageCantBeDeleted:
+        pass
+    except MessageToDeleteNotFound:
+        pass
 
 
 class CaptchaStatesGroup(StatesGroup):
@@ -88,7 +100,7 @@ async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
     if greeting.del_delay:
         await sleep(greeting.del_delay)
         try:
-            await msg.delete()
+            await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
         except MessageCantBeDeleted:
             pass
     else:
@@ -139,7 +151,7 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
     except data_exc.RecordAlreadyExists:
         pass
     state_data = await state.get_data()
-    await msg.delete()
+    await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
     await ubot.delete_message(msg.from_user.id, state_data["msg_id"])
     await state.set_state(None)
     await send_all_greeting(ubot, msg.from_user.id)
@@ -161,4 +173,4 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
     except data_exc.RecordAlreadyExists:
         pass
     create_task(send_all_greeting(ubot, msg.from_user.id))
-    await msg.delete()
+    await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
