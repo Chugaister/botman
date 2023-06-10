@@ -43,7 +43,14 @@ bot = Bot(config.token, parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
-manager = Manager([])
+
+if "--local" in sys.argv:
+    from web_config.local_config import PUBLIC_IP
+    manager = Manager([], PUBLIC_IP)
+else:
+    from web_config.config import PUBLIC_IP
+    manager = Manager([], PUBLIC_IP)
+    
 # get_event_loop().run_until_complete(manager.set_webhook(ubots))
 
 
