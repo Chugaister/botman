@@ -28,5 +28,5 @@ def gen_custom_buttons(buttons: list[list[dict]]):
 def gen_custom_reply_buttons(buttons: list[list[str]]):
     custom_buttons = ReplyKeyboardMarkup(resize_keyboard=True)
     for button_list in buttons:
-        custom_buttons.row(caption for caption in button_list)
+        custom_buttons.add(*button_list)
     return custom_buttons

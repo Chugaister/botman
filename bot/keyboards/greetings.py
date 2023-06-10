@@ -7,7 +7,7 @@ def gen_greeting_list(bot: models.Bot, greetings: list[models.Greeting]) -> Inli
     for greeting in greetings:
         greeting_list.add(
             InlineKeyboardButton(
-                f"{hex(greeting.id*1234)}",
+                f"{greeting.text[:20]}..." if greeting.text else gen_hex_caption(greeting.id),
                 callback_data=greeting_action.new(
                     id=greeting.id,
                     action="open_greeting_menu"

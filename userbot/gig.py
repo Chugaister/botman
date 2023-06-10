@@ -3,10 +3,12 @@ from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked
 from asyncio import sleep
 from datetime import datetime
 from pytz import timezone
+from copy import copy
 
 from data import models
 from data.factory import *
 from .keyboards import gen_custom_buttons
+from .utils import gen_dynamic_text
 
 
 async def send_mail(ubot: Bot, mail: models.Mail):
@@ -16,42 +18,45 @@ async def send_mail(ubot: Bot, mail: models.Mail):
     error_num = 0
     for user in users:
         await sleep(0.035)
+        mail_copy = copy(mail)
+        if mail_copy.text:
+            mail_copy.text = gen_dynamic_text(mail_copy.text, user)
         try:
-            if mail.photo:
-                file = await file_manager.get_file(mail.photo)
+            if mail_copy.photo:
+                file = await file_manager.get_file(mail_copy.photo)
                 msg = await ubot.send_photo(
                     user.id,
                     file,
-                    caption=mail.text,
-                    reply_markup=gen_custom_buttons(mail.buttons)
+                    caption=mail_copy.text,
+                    reply_markup=gen_custom_buttons(mail_copy.buttons)
                 )
-            elif mail.video:
-                file = await file_manager.get_file(mail.video)
+            elif mail_copy.video:
+                file = await file_manager.get_file(mail_copy.video)
                 msg = await ubot.send_video(
                     user.id,
                     file,
-                    caption=mail.text,
-                    reply_markup=gen_custom_buttons(mail.buttons)
+                    caption=mail_copy.text,
+                    reply_markup=gen_custom_buttons(mail_copy.buttons)
                 )
-            elif mail.gif:
-                file = await file_manager.get_file(mail.gif)
+            elif mail_copy.gif:
+                file = await file_manager.get_file(mail_copy.gif)
                 msg = await ubot.send_animation(
                     user.id,
                     file,
-                    caption=mail.text,
-                    reply_markup=gen_custom_buttons(mail.buttons)
+                    caption=mail_copy.text,
+                    reply_markup=gen_custom_buttons(mail_copy.buttons)
                 )
-            elif mail.text:
+            elif mail_copy.text:
                 msg = await ubot.send_message(
                     user.id,
-                    mail.text,
-                    reply_markup=gen_custom_buttons(mail.buttons)
+                    mail_copy.text,
+                    reply_markup=gen_custom_buttons(mail_copy.buttons)
                 )
             msg_dc = models.Msg(
                 msg.message_id,
                 user.id,
-                mail.bot,
-                mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt != None else None
+                mail_copy.bot,
+                mail_copy.del_dt.strftime(models.DT_FORMAT) if mail_copy.del_dt != None else None
             )
             msgs_db.add(msg_dc)
             sent_num += 1

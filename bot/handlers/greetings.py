@@ -62,7 +62,7 @@ async def send_greeting_menu_cb(cb: CallbackQuery, callback_data: dict, state: F
 async def add_greeting(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     bot_dc = bots_db.get(int(callback_data["id"]))
     msg = await cb.message.answer(
-        "Надішліть текст, гіф, фото або відео з підписом",
+        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
             bot_action.new(
                 id=bot_dc.id,
@@ -170,7 +170,7 @@ async def greeting_on(cb: CallbackQuery, callback_data: dict, state: FSMContext)
 @dp.callback_query_handler(greeting_action.filter(action="add_greeting_buttons"))
 async def add_greeting_buttons(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     msg = await cb.message.answer(
-        "Щоб додати кнопки-посилання надішліть список у форматі\nпідпис1 - посилання1\nпідпис2 - посилання2\n...",
+        "Щоб додати кнопки-посилання надішліть список у форматі\n<b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
         reply_markup=gen_cancel(
             greeting_action.new(
                 id=callback_data["id"],
@@ -199,17 +199,20 @@ async def greeting_buttons_input(msg: Message, state: FSMContext):
     try:
         greeting.buttons = models.deserialize_buttons(msg.text)
     except ValueError:
-        await bot.edit_message_text(
-            "Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\nпідпис1 - посилання1\nпідпис2 - посилання2\n...",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(
-                greeting_action.new(
-                    id=greeting.id,
-                    action="open_greeting_menu"
+        try:
+            await bot.edit_message_text(
+                "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n<b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(
+                    greeting_action.new(
+                        id=greeting.id,
+                        action="open_greeting_menu"
+                    )
                 )
             )
-        )
+        except MessageNotModified:
+            pass
         return
     greeting_db.update(greeting)
     await state.set_state(None)

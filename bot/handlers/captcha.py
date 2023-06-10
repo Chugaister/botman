@@ -48,7 +48,7 @@ async def captcha_off(cb: CallbackQuery, callback_data: dict):
 async def set_captcha(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     captcha = captchas_db.get(int(callback_data["id"]))
     msg = await cb.message.answer(
-        "Надішліть текст, гіф, фото або відео з підписом",
+        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(bot_action.new(id=captcha.bot, action="captcha"))
     )
     await state.set_state(states.InputStateGroup.captcha)
@@ -116,7 +116,7 @@ async def set_captcha_gif(msg: Message, state: FSMContext):
 async def set_buttons_entry(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     captcha = captchas_db.get(int(callback_data["id"]))
     msg = await cb.message.answer(
-        "Введіть кнопки у форматi\n<i>підпис1\nпідпис2\n...</i>",
+        "Щоб додати кнопки-посилання надішліть список у форматі\n<b>text_1 | text_2 \ntext_3\n...</b>",
         reply_markup=gen_cancel(bot_action.new(id=captcha.bot, action="captcha"))
     )
     await state.set_state(states.InputStateGroup.captcha_buttons)
@@ -127,12 +127,29 @@ async def set_buttons_entry(cb: CallbackQuery, callback_data: dict, state: FSMCo
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.captcha_buttons)
 async def set_buttons(msg: Message, state: FSMContext):
     state_data = await state.get_data()
+    await msg.delete()
     await state.set_state(None)
     captcha = captchas_db.get(state_data["captcha_id"])
-    captcha.buttons = models.deserialize_reply_buttons(msg.text)
+    try:
+        captcha.buttons = models.deserialize_reply_buttons(msg.text)
+    except ValueError:
+        try:
+            await bot.edit_message_text(
+                "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n<b>text_1 | text_2 \ntext_3\n...</b>",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(
+                    bot_action.new(
+                        id=captcha.bot,
+                        action="captcha"
+                    )
+                )
+            )
+        except MessageNotModified:
+            pass
+        return
     captchas_db.update(captcha)
     await open_captcha_menu(msg.from_user.id, captcha.id, state_data["msg_id"])
-    await msg.delete()
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "reply_buttons_info")
