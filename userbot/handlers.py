@@ -24,7 +24,6 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User):
     if not captcha.active:
         return
     if captcha.text:
-        user = user_db.get(user.id)
         captcha.text = gen_dynamic_text(captcha.text, user)
     try:
         if captcha.photo:
