@@ -5,3 +5,4 @@ bot/config.py
 ssl_auth/
 web_config/
 logfile.log
+logs/
