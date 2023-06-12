@@ -4,4 +4,4 @@ requests~=2.28.2
 prettytable~=3.7.0
 fastapi~=0.95.2
 uvicorn~=0.22.0
-pyngrok~=5.1.0
+pyngrok~=6.0.0
