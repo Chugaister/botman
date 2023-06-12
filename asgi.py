@@ -12,7 +12,7 @@ import bot.handlers
 from asyncio import create_task
 import argparse
 import logging
-
+import sys
 parser = argparse.ArgumentParser()
 parser.add_argument('--local', action='store_true', help='Run in local mode')
 
@@ -21,6 +21,13 @@ if args.local:
     from web_config.local_config import PUBLIC_IP, HOST, PORT
 else:
     from web_config.config import PUBLIC_IP, HOST, PORT
+
+logging.basicConfig(filename='logs/logfile.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(message)s', encoding='utf-8')
+def custom_exception_handler(exc_type, exc_value, exc_traceback):
+    logging.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+# Set the custom exception hook
+sys.excepthook = custom_exception_handler
 
 app = FastAPI()
 
