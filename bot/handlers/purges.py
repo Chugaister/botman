@@ -93,20 +93,35 @@ async def schedule_purge(cb: CallbackQuery, callback_data: dict, state: FSMConte
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.purge_sched_dt)
 async def edit_sched_dt(msg: Message, state: FSMContext):
-    await msg.delete()
+    await safe_del_msg(msg.from_user.id, msg.message_id)
     state_data = await state.get_data()
     purge = await safe_get_purge(msg.from_user.id, state_data["purge_id"])
     if not purge:
         return
     try:
-        purge.sched_dt = datetime.strptime(msg.text, models.DT_FORMAT)
+        if datetime.strptime(msg.text, models.DT_FORMAT) > datetime.now():     
+            purge.sched_dt = datetime.strptime(msg.text, models.DT_FORMAT)
+        else:
+            try:
+                await bot.edit_message_text(
+                "Невірний формат. Введена дата мусить бути пізнішою ніж поточна.\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(purge_action.new(purge.id, "open_menu"))
+                )
+            except MessageNotModified:
+                pass
+            return
     except ValueError:
-        await bot.edit_message_text(
-            "Невірний формат. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(purge_action.new(purge.id, "schedule"))
-        )
+        try:
+            await bot.edit_message_text(
+                "Невірний формат. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(purge_action.new(purge.id, "open_menu"))
+            )
+        except MessageNotModified:
+            pass
         return
     await state.set_state(None)
     purges_db.update(purge)
