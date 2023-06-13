@@ -323,29 +323,51 @@ async def edit_del_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext)
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.mail_del_dt)
 async def edit_del_dt(msg: Message, state: FSMContext):
-    await msg.delete()
+    await safe_del_msg(msg.from_user.id, msg.message_id)
     state_data = await state.get_data()
     mail = await safe_get_mail(msg.from_user.id, state_data["mail_id"])
     if not mail:
         return
     try:
         if ukraine_tz.localize(datetime.strptime(msg.text, models.DT_FORMAT)) > datetime.now(tz=timezone('Europe/Kiev')):
-            mail.del_dt = datetime.strptime(msg.text, models.DT_FORMAT)
+            if mail.send_dt:
+                if ((datetime.strptime(msg.text, models.DT_FORMAT) - mail.send_dt).total_seconds() / 3600) > 47.75:
+                    try:
+                        await bot.edit_message_text(
+                        "Різниця між часом надсилання та часом автовидалення не може перевищувати 48 годин. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+                        msg.from_user.id,
+                        state_data["msg_id"],
+                        reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
+                    )
+                    except MessageNotModified:
+                        pass
+                    return
+                else:
+                    mail.del_dt = datetime.strptime(msg.text, models.DT_FORMAT)
+            else:   
+                mail.del_dt = datetime.strptime(msg.text, models.DT_FORMAT)
         else:
-            await bot.edit_message_text(
-            "Дата розсилки не може бути у минулому. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
-        )
+            try:
+                await bot.edit_message_text(
+                "Дата видалення не може бути у минулому. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
+            )
+            except MessageNotModified:
+                pass
             return
+    
     except ValueError:
-        await bot.edit_message_text(
-            "Невірний формат. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
-        )
+        try:
+            await bot.edit_message_text(
+                "Невірний формат. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
+            )
+        except MessageNotModified:
+            pass
         return
     await state.set_state(None)
     mails_db.update(mail)
