@@ -29,6 +29,10 @@ def custom_exception_handler(exc_type, exc_value, exc_traceback):
 # Set the custom exception hook
 sys.excepthook = custom_exception_handler
 
+
+async def log_exception(update: types.Update, exception: Exception):
+        logging.error(f"An error occurred in update {update.update_id}: {exception}", exc_info=True)
+
 app = FastAPI()
 
 
@@ -36,6 +40,7 @@ app = FastAPI()
 async def on_startup():
     await main_bot.set_webhook(url=f"https://{PUBLIC_IP}/bot/{main_token}", drop_pending_updates=True)
     ubots = bots_db.get_by(status=1)
+    main_dp.register_errors_handler(log_exception)
     bot_manager.register_handlers(ubots)
     await bot_manager.set_webhook(ubots)
     create_task(listen_mails())
