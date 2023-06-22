@@ -5,7 +5,8 @@ import asyncio
 
 
 async def main():
-    global file_manager, admins_db, bots_db, user_db, captchas_db, greeting_db, mails_db, purges_db, msgs_db
+    source = "source"
+    create_db(source)
     db_conn = await get_db(source)
 
     file_manager = FileManager(source)
@@ -17,7 +18,7 @@ async def main():
     mails_db = Database("mails", db_conn, models.Mail)
     purges_db = Database("purges", db_conn, models.Purge)
     msgs_db = Database("msgs", db_conn, models.Msg)
-
+    return file_manager, admins_db, bots_db, user_db, captchas_db, greeting_db, mails_db, purges_db, msgs_db
 source = "source"
 create_db(source)
-asyncio.run(main())
+file_manager, admins_db, bots_db, user_db, captchas_db, greeting_db, mails_db, purges_db, msgs_db = asyncio.run(main())
