@@ -1,5 +1,3 @@
-import asyncio
-import sqlite3
 from sqlite3 import connect
 from sqlite3 import IntegrityError
 import aiosqlite
