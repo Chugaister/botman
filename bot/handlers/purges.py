@@ -5,7 +5,7 @@ import bot.keyboards.purges as kb
 
 async def safe_get_purge(uid: int, purge_id: int, cb_id: int | None = None) -> models.Purge | None:
     try:
-        purge = purges_db.get(purge_id)
+        purge = await purges_db.getFromDB(purge_id)
         return purge
     except data_exc.RecordIsMissing:
         if cb_id:
@@ -24,11 +24,11 @@ async def safe_get_purge(uid: int, purge_id: int, cb_id: int | None = None) -> m
 
 @dp.callback_query_handler(bot_action.filter(action="purges"))
 async def open_purges_list(cb: CallbackQuery, callback_data: dict):
-    bot_dc = bots_db.get(int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(int(callback_data["id"]))
     if bot_dc.premium <= 0:
         await cb.answer("⭐️Лише для преміум ботів")
         return
-    purges = purges_db.get_by(bot=int(callback_data["id"]))
+    purges = await purges_db.get_by_fromDB(bot=int(callback_data["id"]))
     await cb.message.answer(
         "{text8}\nЧистки:",
         reply_markup=kb.gen_purge_list(bot_dc, purges)
@@ -37,7 +37,7 @@ async def open_purges_list(cb: CallbackQuery, callback_data: dict):
 
 
 async def open_purge_menu(uid: int, purge_id: int, msg_id: int):
-    purge = purges_db.get(purge_id)
+    purge = await purges_db.getFromDB(purge_id)
     await bot.send_message(
         uid,
         f"♻️Чистка: {hex(purge.id * 1234)}\n\
@@ -53,7 +53,7 @@ async def add_purge(cb: CallbackQuery, callback_data: dict):
         0,
         int(callback_data["id"])
     )
-    purges_db.add(purge)
+    await purges_db.addToBD(purge)
     await open_purge_menu(cb.from_user.id, purge.id, cb.message.message_id)
 
 
@@ -71,8 +71,8 @@ async def delete_purge(cb: CallbackQuery, callback_data: dict):
     purge = await safe_get_purge(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not purge:
         return
-    purge = purges_db.get(int(callback_data["id"]))
-    purges_db.delete(purge.id)
+    purge = await purges_db.getFromDB(int(callback_data["id"]))
+    await purges_db.deleteFromDB(purge.id)
     callback_data["id"] = purge.bot
     await open_purges_list(cb, callback_data)
 
@@ -124,7 +124,7 @@ async def edit_sched_dt(msg: Message, state: FSMContext):
             pass
         return
     await state.set_state(None)
-    purges_db.update(purge)
+    await purges_db.updateInDB(purge)
     await open_purge_menu(msg.from_user.id, purge.id, state_data["msg_id"])
 
 
@@ -133,8 +133,8 @@ async def run(cb: CallbackQuery, callback_data: dict):
     purge = await safe_get_purge(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not purge:
         return
-    bot_dc = bots_db.get(purge.bot)
-    purges_db.delete(purge.id)
+    bot_dc = await bots_db.getFromDB(purge.bot)
+    await purges_db.deleteFromDB(purge.id)
     await cb.message.answer(
         "Вам прийде повідомлення після закінчення розсилки",
         reply_markup=gen_ok(bot_action.new(

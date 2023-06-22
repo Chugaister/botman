@@ -22,7 +22,7 @@ if args.local:
 else:
     from web_config.config import PUBLIC_IP, HOST, PORT
 
-logging.basicConfig(filename='logs/logfile.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(message)s', encoding='utf-8')
+logging.basicConfig(filename='logs/logfile.logs', level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(message)s', encoding='utf-8')
 def custom_exception_handler(exc_type, exc_value, exc_traceback):
     logging.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
 
@@ -39,7 +39,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def on_startup():
     await main_bot.set_webhook(url=f"https://{PUBLIC_IP}/bot/{main_token}", drop_pending_updates=True)
-    ubots = bots_db.get_by(status=1)
+    ubots = await bots_db.get_by_fromDB(status=1)
     main_dp.register_errors_handler(log_exception)
     bot_manager.register_handlers(ubots)
     await bot_manager.set_webhook(ubots)
@@ -66,7 +66,7 @@ async def bot_webhook(token, update: dict):
 @app.on_event("shutdown")
 async def on_shutdown():
     await main_bot.delete_webhook()
-    await bot_manager.delete_webhooks(bots_db.get_all())
+    await bot_manager.delete_webhooks(await bots_db.get_all_fromDB())
 
 
 certfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "certificate.crt")

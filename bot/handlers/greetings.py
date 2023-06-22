@@ -7,8 +7,8 @@ from bot.keyboards import bot_action, greeting_action, gen_cancel
 @dp.callback_query_handler(bot_action.filter(action="greetings"), state="*")
 async def greeting_list(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     await state.set_state(None)
-    bot_dc = bots_db.get(int(callback_data["id"]))
-    greetings = greeting_db.get_by(bot=int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(int(callback_data["id"]))
+    greetings = await greeting_db.get_by_fromDB(bot=int(callback_data["id"]))
     await cb.message.answer(
         "{text4}Привітання:",
         reply_markup=kb.gen_greeting_list(bot_dc, greetings)
@@ -17,8 +17,8 @@ async def greeting_list(cb: CallbackQuery, callback_data: dict, state: FSMContex
 
 
 async def send_greeting_menu(uid: int, greeting_id: int, msg_id: int):
-    greeting = greeting_db.get(greeting_id)
-    bot_dc = bots_db.get(greeting.bot)
+    greeting = await greeting_db.getFromDB(greeting_id)
+    bot_dc = await bots_db.getFromDB(greeting.bot)
     if greeting.photo:
         file = await file_manager.get_file(greeting.photo)
         await bot.send_photo(
@@ -60,7 +60,7 @@ async def send_greeting_menu_cb(cb: CallbackQuery, callback_data: dict, state: F
 
 @dp.callback_query_handler(bot_action.filter(action="add_greeting"))
 async def add_greeting(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    bot_dc = bots_db.get(int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(int(callback_data["id"]))
     msg = await cb.message.answer(
         "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
@@ -86,7 +86,7 @@ async def greeting_input_text(msg: Message, state: FSMContext):
         video=None,
         gif=None
     )
-    greeting_db.add(greeting)
+    await greeting_db.addToBD(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -103,7 +103,7 @@ async def greeting_input_photo(msg: Message, state: FSMContext):
         video=None,
         gif=None
     )
-    greeting_db.add(greeting)
+    await greeting_db.addToBD(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -120,7 +120,7 @@ async def greeting_input_video(msg: Message, state: FSMContext):
         video=await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id),
         gif=None
     )
-    greeting_db.add(greeting)
+    await greeting_db.addToBD(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -137,7 +137,7 @@ async def greeting_input_gif(msg: Message, state: FSMContext):
         video=None,
         gif=await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
     )
-    greeting_db.add(greeting)
+    await greeting_db.addToBD(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -145,25 +145,25 @@ async def greeting_input_gif(msg: Message, state: FSMContext):
 
 @dp.callback_query_handler(greeting_action.filter(action="delete_greeting"))
 async def delete_greeting(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    greeting = greeting_db.get(int(callback_data["id"]))
+    greeting = await greeting_db.getFromDB(int(callback_data["id"]))
     callback_data["id"] = greeting.bot
-    greeting_db.delete(greeting.id)
+    await greeting_db.deleteFromDB(greeting.id)
     await greeting_list(cb, callback_data, state)
 
 
 @dp.callback_query_handler(greeting_action.filter(action="greeting_off"))
 async def greeting_off(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    greeting = greeting_db.get(int(callback_data["id"]))
+    greeting = await greeting_db.getFromDB(int(callback_data["id"]))
     greeting.active = False
-    greeting_db.update(greeting)
+    await greeting_db.updateInDB(greeting)
     await send_greeting_menu_cb(cb, callback_data, state)
 
 
 @dp.callback_query_handler(greeting_action.filter(action="greeting_on"))
 async def greeting_on(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    greeting = greeting_db.get(int(callback_data["id"]))
+    greeting = await greeting_db.getFromDB(int(callback_data["id"]))
     greeting.active = True
-    greeting_db.update(greeting)
+    await greeting_db.updateInDB(greeting)
     await send_greeting_menu_cb(cb, callback_data, state)
 
 
@@ -195,7 +195,7 @@ def button_input_filter(msg: Message) -> bool:
 async def greeting_buttons_input(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     await msg.delete()
-    greeting = greeting_db.get(state_data["greeting_id"])
+    greeting = await greeting_db.getFromDB(state_data["greeting_id"])
     try:
         greeting.buttons = models.deserialize_buttons(msg.text)
     except ValueError:
@@ -214,13 +214,13 @@ async def greeting_buttons_input(msg: Message, state: FSMContext):
         except MessageNotModified:
             pass
         return
-    greeting_db.update(greeting)
+    await greeting_db.updateInDB(greeting)
     await state.set_state(None)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
 
 
 async def greeting_schedule_menu(uid: int, greeting_id: int, msg_id: int):
-    greeting = greeting_db.get(greeting_id)
+    greeting = await greeting_db.getFromDB(greeting_id)
     await bot.send_message(
         uid,
         f"/text5/\n<i>📩Затримка надсилання: {f'{greeting.send_delay // 60} хв. {greeting.send_delay % 60} сек.' if greeting.send_delay else 'немає'}\n\
@@ -257,9 +257,9 @@ async def edit_send_delay(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     if re.match(r'^\d{2}:\d{2}$', msg.text) and 0 < convert_to_seconds(msg.text) < 3600 :
         await state.set_state(None)       
-        greeting = greeting_db.get(state_data["greeting_id"])
+        greeting = await greeting_db.getFromDB(state_data["greeting_id"])
         greeting.send_delay = int(convert_to_seconds(msg.text))
-        greeting_db.update(greeting)
+        await greeting_db.updateInDB(greeting)
         await msg.delete()
         await greeting_schedule_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     else:
@@ -282,16 +282,16 @@ async def edit_send_delay(msg: Message, state: FSMContext):
 
 @dp.callback_query_handler(greeting_action.filter(action="del_send_delay"))
 async def del_send_delay(cb: CallbackQuery, callback_data: dict):
-    greeting = greeting_db.get(int(callback_data["id"]))
+    greeting = await greeting_db.getFromDB(int(callback_data["id"]))
     greeting.send_delay = None
-    greeting_db.update(greeting)
+    await greeting_db.updateInDB(greeting)
     await greeting_schedule_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
 
 
 @dp.callback_query_handler(greeting_action.filter(action="edit_del_delay"))
 async def edit_del_delay(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    greeting = greeting_db.get(int(callback_data["id"]))
-    bot_dc = bots_db.get(greeting.bot)
+    greeting = await greeting_db.getFromDB(int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(greeting.bot)
     msg = await cb.message.answer(
         'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
         reply_markup=gen_cancel(
@@ -311,9 +311,9 @@ async def edit_del_delay(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     if re.match(r'^\d{2}:\d{2}$', msg.text) and 0 < convert_to_seconds(msg.text) < 3600 :
         await state.set_state(None)
-        greeting = greeting_db.get(state_data["greeting_id"])
+        greeting = await greeting_db.getFromDB(state_data["greeting_id"])
         greeting.del_delay = int(convert_to_seconds(msg.text))
-        greeting_db.update(greeting)
+        await greeting_db.updateInDB(greeting)
         await msg.delete()
         await greeting_schedule_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     else:
@@ -336,9 +336,9 @@ async def edit_del_delay(msg: Message, state: FSMContext):
 
 @dp.callback_query_handler(greeting_action.filter(action="del_del_delay"))
 async def del_del_delay(cb: CallbackQuery, callback_data: dict):
-    greeting = greeting_db.get(int(callback_data["id"]))
+    greeting = await greeting_db.getFromDB(int(callback_data["id"]))
     greeting.del_delay = None
-    greeting_db.update(greeting)
+    await greeting_db.updateInDB(greeting)
     await greeting_schedule_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
 
 def convert_to_seconds(time_str):

@@ -35,9 +35,9 @@ async def set_premium(cb: CallbackQuery, state: FSMContext):
 
 
 async def send_adminbot_panel(uid: int, bot_id: int, msg_id: int):
-    bot_dc = bots_db.get(bot_id)
+    bot_dc = await bots_db.getFromDB(bot_id)
     try:
-        admin = admins_db.get(bot_dc.admin)
+        admin = await admins_db.getFromDB(bot_dc.admin)
     except data_exc.RecordIsMissing:
         admin = models.Admin(0, "видалено", "", "")
     await bot.send_message(
@@ -52,7 +52,7 @@ async def send_adminbot_panel(uid: int, bot_id: int, msg_id: int):
 async def bot_username_input(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     bot_username = msg.text.replace("@", "")
-    bot_list = bots_db.get_by(username=bot_username)
+    bot_list = await bots_db.get_by_fromDB(username=bot_username)
     await msg.delete()
     if bot_list == []:
         await msg.answer(
@@ -67,33 +67,33 @@ async def bot_username_input(msg: Message, state: FSMContext):
 
 @dp.callback_query_handler(admin_bot_action.filter(action="ban"))
 async def ban_bot(cb: CallbackQuery, callback_data: dict):
-    bot_dc = bots_db.get(int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(int(callback_data["id"]))
     bot_dc.status = -1
-    bots_db.update(bot_dc)
+    await bots_db.updateInDB(bot_dc)
     await send_adminbot_panel(cb.from_user.id, bot_dc.id, cb.message.message_id)
 
 
 @dp.callback_query_handler(admin_bot_action.filter(action="unban"))
 async def unban_bot(cb: CallbackQuery, callback_data: dict):
-    bot_dc = bots_db.get(int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(int(callback_data["id"]))
     bot_dc.status = 1
-    bots_db.update(bot_dc)
+    await bots_db.updateInDB(bot_dc)
     await send_adminbot_panel(cb.from_user.id, bot_dc.id, cb.message.message_id)
 
 
 @dp.callback_query_handler(admin_bot_action.filter(action="premium_add"))
 async def premium_add(cb: CallbackQuery, callback_data: dict):
-    bot_dc = bots_db.get(int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(int(callback_data["id"]))
     bot_dc.premium = 1
-    bots_db.update(bot_dc)
+    await bots_db.updateInDB(bot_dc)
     await send_adminbot_panel(cb.from_user.id, bot_dc.id, cb.message.message_id)
 
 
 @dp.callback_query_handler(admin_bot_action.filter(action="premium_sub"))
 async def premium_sub(cb: CallbackQuery, callback_data: dict):
-    bot_dc = bots_db.get(int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(int(callback_data["id"]))
     bot_dc.premium = 0
-    bots_db.update(bot_dc)
+    await bots_db.updateInDB(bot_dc)
     await send_adminbot_panel(cb.from_user.id, bot_dc.id, cb.message.message_id)
 
 
