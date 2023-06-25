@@ -100,7 +100,7 @@ async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
     if greeting.del_delay:
         await sleep(greeting.del_delay)
         try:
-            await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
+            await safe_del_msg(ubot, msg.chat.id, msg.message_id)
         except MessageCantBeDeleted:
             pass
     else:
