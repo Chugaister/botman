@@ -22,7 +22,18 @@ if args.local:
 else:
     from web_config.config import PUBLIC_IP, HOST, PORT
 
-logging.basicConfig(filename='logs/logfile.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(message)s', encoding='utf-8')
+
+import os
+import logging
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+log_directory = os.path.join(current_dir, "logs")
+log_file = os.path.join(log_directory, "logfile.log")
+
+os.makedirs(log_directory, exist_ok=True)
+
+logging.basicConfig(filename=log_file, level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(message)s', encoding='utf-8')
 def custom_exception_handler(exc_type, exc_value, exc_traceback):
     logging.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
 
