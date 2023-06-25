@@ -6,7 +6,7 @@ from datetime import datetime
 
 async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.Mail | None:
     try:
-        mail = mails_db.get(mail_id)
+        mail = await mails_db.getFromDB(mail_id)
         return mail
     except data_exc.RecordIsMissing:
         if cb_id:
@@ -26,8 +26,8 @@ async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> mod
 @dp.callback_query_handler(bot_action.filter(action="mails"), state="*")
 async def open_mail_list(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     await state.set_state(None)
-    bot_dc = bots_db.get(int(callback_data["id"]))
-    mails = mails_db.get_by(bot=int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(int(callback_data["id"]))
+    mails = await mails_db.get_by_fromDB(bot=int(callback_data["id"]))
     await cb.message.answer(
         "{text6}\nРозсилки:",
         reply_markup=kb.gen_mail_list(bot_dc, mails)
@@ -37,7 +37,7 @@ async def open_mail_list(cb: CallbackQuery, callback_data: dict, state: FSMConte
 
 @dp.callback_query_handler(bot_action.filter(action="add_mail"))
 async def add_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    bot_dc = bots_db.get(int(callback_data["id"]))
+    bot_dc = await bots_db.getFromDB(int(callback_data["id"]))
     msg = await cb.message.answer(
         "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
@@ -53,12 +53,12 @@ async def add_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
 
 
 async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
-    mail = mails_db.get(mail_id)
+    mail = await mails_db.getFromDB(mail_id)
     if mail.send_dt != None:
         if mail.text == None:
             mail.text = ""
         mail.text += f"\n\n<i>Заплановано на: {mail.send_dt.strftime(models.DT_FORMAT)}</i>"
-    bot_dc = bots_db.get(mail.bot)
+    bot_dc = await bots_db.getFromDB(mail.bot)
     if mail.photo:
         file = await file_manager.get_file(mail.photo)
         await bot.send_photo(
@@ -109,7 +109,7 @@ async def mail_input_text(msg: Message, state: FSMContext):
         bot=state_data["bot_id"],
         text=msg.text
     )
-    mails_db.add(mail)
+    await mails_db.addToBD(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -125,7 +125,7 @@ async def mail_input_photo(msg: Message, state: FSMContext):
         text=msg.caption,
         photo=await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
     )
-    mails_db.add(mail)
+    await mails_db.addToBD(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -140,7 +140,7 @@ async def mail_input_video(msg: Message, state: FSMContext):
         text=msg.caption,
         video=await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
     )
-    mails_db.add(mail)
+    await mails_db.addToBD(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -155,7 +155,7 @@ async def mail_input_gif(msg: Message, state: FSMContext):
         text=msg.caption,
         gif=await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
     )
-    mails_db.add(mail)
+    await mails_db.addToBD(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -191,7 +191,7 @@ def button_input_filter(msg: Message) -> bool:
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.mail_buttons)
 async def mail_buttons_input(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    mail = mails_db.get(state_data["mail_id"])
+    mail = await mails_db.getFromDB(state_data["mail_id"])
     await msg.delete()
     try:
         mail.buttons = models.deserialize_buttons(msg.text)
@@ -211,7 +211,7 @@ async def mail_buttons_input(msg: Message, state: FSMContext):
         except MessageNotModified:
             pass
         return
-    mails_db.update(mail)
+    await mails_db.updateInDB(mail)
     await state.set_state(None)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
 
@@ -221,12 +221,12 @@ async def delete_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext)
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not mail:
         return
-    mails_db.delete(mail.id)
+    await mails_db.deleteFromDB(mail.id)
     await open_mail_list(cb, {"id": mail.bot}, state)
 
 
 async def mail_schedule_menu(uid: int, mail_id: int, msg_id: int):
-    mail = mails_db.get(mail_id)
+    mail = await mails_db.getFromDB(mail_id)
     await bot.send_message(
         uid,
         f"<i>📩Час надсилання: {mail.send_dt.strftime(models.DT_FORMAT) if mail.send_dt else 'немає'}\n\
@@ -289,7 +289,7 @@ async def edit_send_dt(msg: Message, state: FSMContext):
         )
         return
     await state.set_state(None)
-    mails_db.update(mail)
+    await mails_db.updateInDB(mail)
     await mail_schedule_menu(msg.from_user.id, mail.id, state_data["msg_id"])
 
 
@@ -299,7 +299,7 @@ async def del_send_dt(cb: CallbackQuery, callback_data: dict):
     if not mail:
         return
     mail.send_dt = None
-    mails_db.update(mail)
+    await mails_db.updateInDB(mail)
     await mail_schedule_menu(cb.from_user.id, mail.id, cb.message.message_id)
 
 
@@ -308,7 +308,7 @@ async def edit_del_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext)
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not mail:
         return
-    bot_dc = bots_db.get(mail.bot)
+    bot_dc = await bots_db.getFromDB(mail.bot)
     if bot_dc.premium <= 0:
         await cb.answer("⭐️Лише для преміум ботів")
         return
@@ -370,7 +370,7 @@ async def edit_del_dt(msg: Message, state: FSMContext):
             pass
         return
     await state.set_state(None)
-    mails_db.update(mail)
+    await mails_db.updateInDB(mail)
     await mail_schedule_menu(msg.from_user.id, mail.id, state_data["msg_id"])
 
 
@@ -379,12 +379,12 @@ async def del_del_dt(cb: CallbackQuery, callback_data: dict):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not mail:
         return
-    bot_dc = bots_db.get(mail.bot)
+    bot_dc = await bots_db.getFromDB(mail.bot)
     if bot_dc.premium <= 0:
         await cb.answer("⭐️Лише для преміум ботів")
         return
     mail.del_dt = None
-    mails_db.update(mail)
+    await mails_db.updateInDB(mail)
     await mail_schedule_menu(cb.from_user.id, mail.id, cb.message.message_id)
 
 
@@ -393,8 +393,8 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not mail:
         return
-    bot_dc = bots_db.get(mail.bot)
-    mails_db.delete(mail.id)
+    bot_dc = await bots_db.getFromDB(mail.bot)
+    await mails_db.deleteFromDB(mail.id)
     await cb.message.answer(
         "Вам прийде повідомлення після закінчення розсилки",
         reply_markup=gen_ok(bot_action.new(

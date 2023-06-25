@@ -7,7 +7,7 @@ from bot.keyboards import gen_cancel
 @dp.message_handler(commands="start")
 async def send_start(msg: Message):
     try:
-        admins_db.add(
+        await admins_db.addToBD(
             models.Admin(
                 msg.from_user.id,
                 msg.from_user.username,
@@ -27,7 +27,7 @@ async def send_start(msg: Message):
 @dp.callback_query_handler(lambda cb: cb.data == "open_bot_list", state="*")
 async def open_bot_list(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
-    bots = bots_db.get_by(admin=cb.from_user.id)
+    bots = await bots_db.get_by_fromDB(admin=cb.from_user.id)
     await cb.message.answer(
         "{text2}\nСписок ботів:",
         reply_markup=kb.gen_bot_list(bots)
@@ -80,8 +80,8 @@ async def token_input(msg: Message, state: FSMContext):
         msg.from_user.id,
     )
     try:
-        bots_db.add(bot_dc)
-        captchas = captchas_db.get_by(bot=bot_dc.id)
+        await bots_db.addToBD(bot_dc)
+        captchas = await captchas_db.get_by_fromDB(bot=bot_dc.id)
         if captchas == []:
             captcha = models.Captcha(
                 0,
@@ -89,12 +89,12 @@ async def token_input(msg: Message, state: FSMContext):
                 text="Аби увійти в канал, підтвердіть, що ви не робот",
                 buttons="✅ Я не робот"
             )
-            captchas_db.add(captcha)
+            await captchas_db.addToBD(captcha)
     except data_exc.RecordAlreadyExists:
-        bot_dc = bots_db.get(info["id"])
+        bot_dc = await bots_db.getFromDB(info["id"])
         bot_dc.admin = msg.from_user.id
         bot_dc.status = 1
-        bots_db.update(bot_dc)
+        await bots_db.updateInDB(bot_dc)
     manager.register_handlers([bot_dc])
     await manager.set_webhook([bot_dc])
     await state.set_state(None)
@@ -102,14 +102,14 @@ async def token_input(msg: Message, state: FSMContext):
 
 
 async def open_bot_menu(uid: int, bot_id: int, msg_id: int, callback_query_id: int = None):
-    bot_dc = bots_db.get(bot_id)
+    bot_dc = await bots_db.getFromDB(bot_id)
     if bot_dc.status == -1 and uid not in config.admin_list:
         return
     try:
-        admin = admins_db.get(bot_dc.admin)
+        admin = await admins_db.getFromDB(bot_dc.admin)
     except data_exc.RecordIsMissing:
         admin = models.Admin(0, "видалено", "", "")
-    users = user_db.get_by(bot=bot_dc.id)
+    users = await user_db.get_by_fromDB(bot=bot_dc.id)
     all_users, active, dead, joined_today, joined_week, joined_month = gen_stats(users)
     table = PrettyTable()
     table.field_names = ["Юзери", "Кількість"]

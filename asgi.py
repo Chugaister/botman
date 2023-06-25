@@ -13,6 +13,7 @@ from asyncio import create_task
 import argparse
 import logging
 import sys
+import os
 parser = argparse.ArgumentParser()
 parser.add_argument('--local', action='store_true', help='Run in local mode')
 
@@ -21,10 +22,6 @@ if args.local:
     from web_config.local_config import PUBLIC_IP, HOST, PORT
 else:
     from web_config.config import PUBLIC_IP, HOST, PORT
-
-
-import os
-import logging
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -50,7 +47,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def on_startup():
     await main_bot.set_webhook(url=f"https://{PUBLIC_IP}/bot/{main_token}", drop_pending_updates=True)
-    ubots = bots_db.get_by(status=1)
+    ubots = await bots_db.get_by_fromDB(status=1)
     main_dp.register_errors_handler(log_exception)
     bot_manager.register_handlers(ubots)
     await bot_manager.set_webhook(ubots)
@@ -77,7 +74,7 @@ async def bot_webhook(token, update: dict):
 @app.on_event("shutdown")
 async def on_shutdown():
     await main_bot.delete_webhook()
-    await bot_manager.delete_webhooks(bots_db.get_all())
+    await bot_manager.delete_webhooks(await bots_db.get_all_fromDB())
 
 
 certfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "certificate.crt")
