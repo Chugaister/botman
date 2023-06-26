@@ -32,7 +32,7 @@ class CaptchaStatesGroup(StatesGroup):
 
 async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User):
     # checking advanced settings
-    captcha = await captchas_db.get_by_fromDB(bot=ubot.id)[0]
+    captcha = (await captchas_db.get_by_fromDB(bot=ubot.id))[0]
     if not captcha.active:
         return
     if captcha.text:
