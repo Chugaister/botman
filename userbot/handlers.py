@@ -32,7 +32,7 @@ class CaptchaStatesGroup(StatesGroup):
 
 async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User):
     # checking advanced settings
-    captcha = await captchas_db.get_by_fromDB(bot=ubot.id)[0]
+    captcha = (await captchas_db.get_by_fromDB(bot=ubot.id))[0]
     if not captcha.active:
         return
     if captcha.text:
@@ -119,7 +119,7 @@ async def send_all_greeting(ubot: Bot, uid: int):
 
 # chat_join_request_handler
 async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, state: FSMContext):
-    captcha = await captchas_db.get_by_fromDB(bot=ubot.id)[0]
+    captcha = (await captchas_db.get_by_fromDB(bot=ubot.id))[0]
     user = models.User(
         request.from_user.id,
         ubot.id,
