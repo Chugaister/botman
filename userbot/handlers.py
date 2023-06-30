@@ -154,7 +154,7 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
     await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
     await ubot.delete_message(msg.from_user.id, state_data["msg_id"])
     await state.set_state(None)
-    await send_all_greeting(ubot, msg.from_user.id)
+    create_task(send_all_greeting(ubot, msg.from_user.id))
 
 
 # message_handler command /start
