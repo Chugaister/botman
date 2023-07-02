@@ -156,7 +156,8 @@ class Captcha:
         "photo",
         "video",
         "gif",
-        "buttons"
+        "buttons",
+        "del_delay"
     )
 
     def __init__(
@@ -168,7 +169,8 @@ class Captcha:
             photo: str = None,
             video: str = None,
             gif: str = None,
-            buttons: str = None
+            buttons: str = None,
+            del_delay: int = None
     ):
         self.id = _id
         self.bot = bot
@@ -178,9 +180,10 @@ class Captcha:
         self.video = video
         self.gif = gif
         self.buttons = deserialize_reply_buttons(buttons)
+        self.del_delay = del_delay
 
     def get_tuple(self):
-        return self.bot, self.active, self.text, self.photo, self.video, self.gif, serialize_reply_buttons(self.buttons)
+        return self.bot, self.active, self.text, self.photo, self.video, self.gif, serialize_reply_buttons(self.buttons), self.del_delay
 
 
 class Greeting:

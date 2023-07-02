@@ -137,6 +137,7 @@ async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, stat
 
 # message_handler state=captcha
 async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMContext):
+    captcha = (await captchas_db.get_by_fromDB(bot=ubot.id))[0]
     user = models.User(
         msg.from_user.id,
         ubot.id,
@@ -151,10 +152,12 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
     except data_exc.RecordAlreadyExists:
         pass
     state_data = await state.get_data()
-    await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
-    await ubot.delete_message(msg.from_user.id, state_data["msg_id"])
     await state.set_state(None)
     create_task(send_all_greeting(ubot, msg.from_user.id))
+    if captcha.del_delay:
+        await sleep(captcha.del_delay)
+    await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
+    await safe_del_msg(ubot, msg.from_user.id, state_data["msg_id"])
 
 
 # message_handler command /start

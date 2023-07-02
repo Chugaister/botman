@@ -16,6 +16,7 @@ class InputStateGroup(StatesGroup):
 
     captcha = State()
     captcha_buttons = State()
+    captcha_del_delay = State()
 
     purge_sched_dt = State()
 

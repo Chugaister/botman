@@ -25,6 +25,10 @@ def gen_captcha_menu(bot: models.Bot, captcha: models.Captcha) -> InlineKeyboard
         InlineKeyboardButton(
             "✏️Змінити вміст",
             callback_data=captcha_action.new(captcha.id, "set_captcha")
+        ),
+        InlineKeyboardButton(
+            "🕑Планування",
+            callback_data=captcha_action.new(captcha.id, "schedule")
         )
     )
     captcha_menu.add(
@@ -35,3 +39,34 @@ def gen_captcha_menu(bot: models.Bot, captcha: models.Captcha) -> InlineKeyboard
         switch_button
     )
     return captcha_menu
+
+
+def gen_timings_menu(captcha: models.Captcha) -> InlineKeyboardMarkup:
+    timings_menu = InlineKeyboardMarkup()
+    timings_menu.add(
+        InlineKeyboardButton(
+            "✏️Автовидалення",
+            callback_data=captcha_action.new(
+                captcha.id,
+                "edit_del_delay"
+            )
+        ),
+        InlineKeyboardButton(
+            "🗑Автовидалення",
+            callback_data=captcha_action.new(
+                captcha.id,
+                "del_del_delay"
+            )
+        )
+    )
+    timings_menu.add(
+        InlineKeyboardButton(
+            "⬅️Назад",
+            callback_data=bot_action.new(
+                captcha.bot,
+                "captcha"
+            )
+        )
+    )
+    print(timings_menu)
+    return timings_menu
