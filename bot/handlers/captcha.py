@@ -158,7 +158,7 @@ async def reply_button_info(cb: CallbackQuery):
 
 
 async def captcha_schedule_menu(uid: int, captcha_id: int, msg_id: int):
-    captcha = await captchas_db.getFromDB(captcha_id)
+    captcha = await captchas_db.get(captcha_id)
     await bot.send_message(
         uid,
         f"<i>♻️Затримка автовидалення: {f'{captcha.del_delay // 60} хв. {captcha.del_delay % 60} сек.' if captcha.del_delay else 'немає'}</i>",
@@ -167,20 +167,21 @@ async def captcha_schedule_menu(uid: int, captcha_id: int, msg_id: int):
     await safe_del_msg(uid, msg_id)
 
 
-@dp.callback_query_handler(captcha_action.filter(action="schedule"))
-async def schedule_captcha(cb: CallbackQuery, callback_data: dict):
+@dp.callback_query_handler(captcha_action.filter(action="schedule"), state="*")
+async def schedule_captcha(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    await state.set_state(None)
     await captcha_schedule_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
 
 
 @dp.callback_query_handler(captcha_action.filter(action="edit_del_delay"))
 async def edit_del_delay(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    captcha = await captchas_db.getFromDB(int(callback_data["id"]))
+    captcha = await captchas_db.get(int(callback_data["id"]))
     msg = await cb.message.answer(
         'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
         reply_markup=gen_cancel(
-            callback_data=bot_action.new(
-                id=captcha.bot,
-                action="captcha"
+            callback_data=captcha_action.new(
+                id=captcha.id,
+                action="schedule"
             )
         )
     )
@@ -192,24 +193,24 @@ async def edit_del_delay(cb: CallbackQuery, callback_data: dict, state: FSMConte
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.captcha_del_delay)
 async def edit_del_delay(msg: Message, state: FSMContext):
     state_data = await state.get_data()
+    captcha = await captchas_db.get(state_data["captcha_id"])
     if re.match(r'^\d{2}:\d{2}$', msg.text) and 0 < convert_to_seconds(msg.text) < 3600:
         await state.set_state(None)
-        captcha = await captchas_db.getFromDB(state_data["captcha_id"])
         captcha.del_delay = int(convert_to_seconds(msg.text))
-        await captchas_db.updateInDB(captcha)
+        await captchas_db.update(captcha)
         await msg.delete()
         await captcha_schedule_menu(msg.from_user.id, captcha.id, state_data["msg_id"])
     else:
         await safe_del_msg(msg.from_user.id, msg.message_id)
         try:
             await bot.edit_message_text(
-                'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
+                '❗️Невірний формат. Спробуйте ще раз\nВведіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
                 msg.from_user.id,
                 state_data["msg_id"],
                 reply_markup=gen_cancel(
                     callback_data=captcha_action.new(
-                        state_data["captcha_id"],
-                        "schedule"
+                        id=captcha.id,
+                        action="schedule"
                     )
                 )
             )
@@ -219,9 +220,9 @@ async def edit_del_delay(msg: Message, state: FSMContext):
 
 @dp.callback_query_handler(captcha_action.filter(action="del_del_delay"))
 async def del_del_delay(cb: CallbackQuery, callback_data: dict):
-    captcha = await captchas_db.getFromDB(int(callback_data["id"]))
+    captcha = await captchas_db.get(int(callback_data["id"]))
     captcha.del_delay = None
-    await captchas_db.updateInDB(captcha)
+    await captchas_db.update(captcha)
     await captcha_schedule_menu(cb.from_user.id, captcha.id, cb.message.message_id)
 
 
