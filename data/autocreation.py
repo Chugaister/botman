@@ -31,6 +31,7 @@ queries = [
         "video"	TEXT,
         "gif"	TEXT,
         "buttons"	TEXT NOT NULL,
+        "del_delay" INTEGER,
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
         PRIMARY KEY("id" AUTOINCREMENT)
     );
