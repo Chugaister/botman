@@ -68,5 +68,4 @@ def gen_timings_menu(captcha: models.Captcha) -> InlineKeyboardMarkup:
             )
         )
     )
-    print(timings_menu)
     return timings_menu
