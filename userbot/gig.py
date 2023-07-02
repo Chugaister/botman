@@ -12,7 +12,7 @@ from .utils import gen_dynamic_text
 
 
 async def send_mail(ubot: Bot, mail: models.Mail):
-    users = await user_db.get_by_fromDB(bot=mail.bot)
+    users = await user_db.get_by(bot=mail.bot)
     sent_num = 0
     blocked_num = 0
     error_num = 0
@@ -58,11 +58,11 @@ async def send_mail(ubot: Bot, mail: models.Mail):
                 mail_copy.bot,
                 mail_copy.del_dt.strftime(models.DT_FORMAT) if mail_copy.del_dt != None else None
             )
-            await msgs_db.addToBD(msg_dc)
+            await msgs_db.add(msg_dc)
             sent_num += 1
         except BotBlocked:
             user.status = 0
-            await user_db.updateInDB(user)
+            await user_db.update(user)
             blocked_num += 1
         except:
             error_num += 1
@@ -70,7 +70,7 @@ async def send_mail(ubot: Bot, mail: models.Mail):
 
 
 async def clean(ubot: Bot, purge: models.Purge):
-    msgs = await msgs_db.get_by_fromDB(bot=purge.bot)
+    msgs = await msgs_db.get_by(bot=purge.bot)
     cleared_num = 0
     error_num = 0
     for msg in msgs:
@@ -84,6 +84,6 @@ async def clean(ubot: Bot, purge: models.Purge):
         except:
             error_num += 1
     for msg in msgs:
-        await msgs_db.deleteFromDB(msg.id)
+        await msgs_db.delete(msg.id)
     return cleared_num, error_num
 

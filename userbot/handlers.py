@@ -32,7 +32,7 @@ class CaptchaStatesGroup(StatesGroup):
 
 async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User):
     # checking advanced settings
-    captcha = (await captchas_db.get_by_fromDB(bot=ubot.id))[0]
+    captcha = (await captchas_db.get_by(bot=ubot.id))[0]
     if not captcha.active:
         return
     if captcha.text:
@@ -60,7 +60,7 @@ async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
     if not greeting.active:
         return
     if greeting.text:
-        user = await user_db.getFromDB(uid)
+        user = await user_db.get(uid)
         greeting.text = gen_dynamic_text(greeting.text, user)
     if greeting.send_delay:
         await sleep(greeting.send_delay)
@@ -109,17 +109,17 @@ async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
             uid,
             ubot.id
         )
-        await msgs_db.addToBD(msg_dc)
+        await msgs_db.add(msg_dc)
 
 
 async def send_all_greeting(ubot: Bot, uid: int):
-    greetings = await greeting_db.get_by_fromDB(bot=ubot.id)
+    greetings = await greeting_db.get_by(bot=ubot.id)
     await gather(*[send_greeting(ubot, uid, greeting) for greeting in greetings])
 
 
 # chat_join_request_handler
 async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, state: FSMContext):
-    captcha = (await captchas_db.get_by_fromDB(bot=ubot.id))[0]
+    captcha = (await captchas_db.get_by(bot=ubot.id))[0]
     user = models.User(
         request.from_user.id,
         ubot.id,
@@ -148,7 +148,7 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
         datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
     try:
-        await user_db.addToBD(user)
+        await user_db.add(user)
     except data_exc.RecordAlreadyExists:
         pass
     state_data = await state.get_data()
@@ -172,7 +172,7 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
         datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
     try:
-        await user_db.addToBD(user)
+        await user_db.add(user)
     except data_exc.RecordAlreadyExists:
         pass
     create_task(send_all_greeting(ubot, msg.from_user.id))
