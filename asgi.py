@@ -46,7 +46,8 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def on_startup():
-    await main_bot.set_webhook(url=f"https://{PUBLIC_IP}/bot/{main_token}", drop_pending_updates=True)
+    allowed_updates = ["message", "chat_join_request", "callback_query"]
+    await main_bot.set_webhook(url=f"https://{PUBLIC_IP}/bot/{main_token}", drop_pending_updates=True, allowed_updates=allowed_updates)
     ubots = await bots_db.get_by_fromDB(status=1)
     main_dp.register_errors_handler(log_exception)
     bot_manager.register_handlers(ubots)
