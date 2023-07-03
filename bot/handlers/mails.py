@@ -118,7 +118,6 @@ async def mail_input_text(msg: Message, state: FSMContext):
 @dp.message_handler(content_types=ContentTypes.PHOTO, state=states.InputStateGroup.mail)
 async def mail_input_photo(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    print(f"Photo sent with text: {msg.caption}")
     mail = models.Mail(
         _id=0,
         bot=state_data["bot_id"],

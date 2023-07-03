@@ -30,7 +30,6 @@ async def set_premium(cb: CallbackQuery, state: FSMContext):
     for ubot_dc in ubot_dc_list:
         text += "\t@" + ubot_dc.username + "\n\n"
     text += "Введіть юзернейм бота"
-    print(text)
     msg = await cb.message.answer(
         text,
         reply_markup=gen_cancel("admin")
