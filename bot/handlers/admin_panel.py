@@ -25,8 +25,14 @@ async def send_admin_panel(msg: Message):
 
 @dp.callback_query_handler(lambda cb: cb.data == "bots_admin")
 async def set_premium(cb: CallbackQuery, state: FSMContext):
+    text = "Боти в системі:\n\n"
+    ubot_dc_list = await bots_db.get_all()
+    for ubot_dc in ubot_dc_list:
+        text += "\t@" + ubot_dc.username + "\n\n"
+    text += "Введіть юзернейм бота"
+    print(text)
     msg = await cb.message.answer(
-        "Введіть юзернейм бота",
+        text,
         reply_markup=gen_cancel("admin")
     )
     await state.set_state(states.InputStateGroup.bot_username)
