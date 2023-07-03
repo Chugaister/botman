@@ -31,7 +31,7 @@ class Manager:
     async def delete_webhook(self, bot: models.Bot):
         ubot = Bot(bot.token)
         await ubot.delete_webhook()
-        await ubot.session.close()
+        ubot.get_session().close()
 
     async def delete_webhooks(self, bots: list[models.Bot]):
         for bot in bots:
