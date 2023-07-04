@@ -56,6 +56,13 @@ def gen_greeting_menu(bot: models.Bot, greeting: models.Greeting) -> InlineKeybo
     )
     greeting_menu.add(
         InlineKeyboardButton(
+            "✏️Редагувати",
+            callback_data=greeting_action.new(
+                greeting.id,
+                "edit_greeting"
+            )
+        ),
+        InlineKeyboardButton(
             "➕Додати кнопки",
             callback_data=greeting_action.new(
                 greeting.id,

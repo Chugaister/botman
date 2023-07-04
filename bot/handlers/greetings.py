@@ -1,4 +1,3 @@
-import bot.handlers.greetings
 from bot.misc import *
 from bot.keyboards import greetings as kb
 from bot.keyboards import bot_action, greeting_action, gen_cancel
@@ -76,22 +75,48 @@ async def add_greeting(cb: CallbackQuery, callback_data: dict, state: FSMContext
         )
     )
     await state.set_state(states.InputStateGroup.greeting)
-    await state.set_data({"msg_id": msg.message_id, "bot_id": bot_dc.id})
+    await state.set_data({"msg_id": msg.message_id, "bot_id": bot_dc.id, "edit": None})
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+
+@dp.callback_query_handler(greeting_action.filter(action="edit_greeting"))
+async def edit_gereting(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    greeting = await greeting_db.get(int(callback_data["id"]))
+    msg = await cb.message.answer(
+        "Надішліть текст, гіф, фото або відео з підписом.\n\
+Динамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+        reply_markup=gen_cancel(
+            greeting_action.new(
+                id=greeting.id,
+                action="open_greeting_menu"
+            )
+        )
+    )
+    await state.set_state(states.InputStateGroup.greeting)
+    await state.set_data({"msg_id": msg.message_id, "bot_id": greeting.bot, "edit": greeting.id})
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.greeting)
 async def greeting_input_text(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    greeting = models.Greeting(
-        _id=0,
-        bot=state_data["bot_id"],
-        text=msg.text,
-        photo=None,
-        video=None,
-        gif=None
-    )
-    await greeting_db.add(greeting)
+    if state_data["edit"]:
+        greeting = await greeting_db.get(state_data["edit"])
+        greeting.text = msg.text
+        greeting.photo = None
+        greeting.video = None
+        greeting.gif = None
+        await greeting_db.update(greeting)
+    else:
+        greeting = models.Greeting(
+            _id=0,
+            bot=state_data["bot_id"],
+            text=msg.text,
+            photo=None,
+            video=None,
+            gif=None
+        )
+        await greeting_db.add(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -100,15 +125,24 @@ async def greeting_input_text(msg: Message, state: FSMContext):
 @dp.message_handler(content_types=ContentTypes.PHOTO, state=states.InputStateGroup.greeting)
 async def greeting_input_photo(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    greeting = models.Greeting(
-        _id=0,
-        bot=state_data["bot_id"],
-        text=msg.caption,
-        photo=await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id),
-        video=None,
-        gif=None
-    )
-    await greeting_db.add(greeting)
+    filename = await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
+    if state_data["edit"]:
+        greeting = await greeting_db.get(state_data["edit"])
+        greeting.text = msg.caption
+        greeting.photo = filename
+        greeting.video = None
+        greeting.gif = None
+        await greeting_db.update(greeting)
+    else:
+        greeting = models.Greeting(
+            _id=0,
+            bot=state_data["bot_id"],
+            text=msg.caption,
+            photo=filename,
+            video=None,
+            gif=None
+        )
+        await greeting_db.add(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -117,15 +151,24 @@ async def greeting_input_photo(msg: Message, state: FSMContext):
 @dp.message_handler(content_types=ContentTypes.VIDEO, state=states.InputStateGroup.greeting)
 async def greeting_input_video(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    greeting = models.Greeting(
-        _id=0,
-        bot=state_data["bot_id"],
-        text=msg.caption,
-        photo=None,
-        video=await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id),
-        gif=None
-    )
-    await greeting_db.add(greeting)
+    filename = await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
+    if state_data["edit"]:
+        greeting = await greeting_db.get(state_data["edit"])
+        greeting.text = msg.caption
+        greeting.photo = None
+        greeting.video = filename
+        greeting.gif = None
+        await greeting_db.update(greeting)
+    else:
+        greeting = models.Greeting(
+            _id=0,
+            bot=state_data["bot_id"],
+            text=msg.caption,
+            photo=None,
+            video=filename,
+            gif=None
+        )
+        await greeting_db.add(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -134,15 +177,24 @@ async def greeting_input_video(msg: Message, state: FSMContext):
 @dp.message_handler(content_types=ContentTypes.ANIMATION, state=states.InputStateGroup.greeting)
 async def greeting_input_gif(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    greeting = models.Greeting(
-        _id=0,
-        bot=state_data["bot_id"],
-        text=msg.caption,
-        photo=None,
-        video=None,
-        gif=await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
-    )
-    await greeting_db.add(greeting)
+    filename = await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
+    if state_data["edit"]:
+        greeting = await greeting_db.get(state_data["edit"])
+        greeting.text = msg.caption
+        greeting.photo = None
+        greeting.video = None
+        greeting.gif = filename
+        await greeting_db.update(greeting)
+    else:
+        greeting = models.Greeting(
+            _id=0,
+            bot=state_data["bot_id"],
+            text=msg.caption,
+            photo=None,
+            video=None,
+            gif=await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
+        )
+        await greeting_db.add(greeting)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -352,6 +404,7 @@ async def del_del_delay(cb: CallbackQuery, callback_data: dict):
     greeting.del_delay = None
     await greeting_db.update(greeting)
     await greeting_schedule_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
+
 
 def convert_to_seconds(time_str):
     minutes, seconds = map(int, time_str.split(':'))

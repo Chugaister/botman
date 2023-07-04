@@ -43,6 +43,13 @@ def gen_mail_menu(bot: models.Bot, mail: models.Mail) -> InlineKeyboardMarkup:
         mail_menu.row(*row_buttons)
     mail_menu.add(
         InlineKeyboardButton(
+            "✏️Редагувати",
+            callback_data=mail_action.new(
+                mail.id,
+                "edit_mail"
+            )
+        ),
+        InlineKeyboardButton(
             "➕Додати кнопки",
             callback_data=mail_action.new(
                 mail.id,
