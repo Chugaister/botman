@@ -50,7 +50,24 @@ async def add_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
         )
     )
     await state.set_state(states.InputStateGroup.mail)
-    await state.set_data({"msg_id": msg.message_id, "bot_id": bot_dc.id})
+    await state.set_data({"msg_id": msg.message_id, "bot_id": bot_dc.id, "edit": None})
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+
+@dp.callback_query_handler(mail_action.filter(action="edit_mail"))
+async def edit_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    mail = await mails_db.get(int(callback_data["id"]))
+    msg = await cb.message.answer(
+        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+        reply_markup=gen_cancel(
+            callback_data=mail_action.new(
+                id=mail.id,
+                action="open_mail_menu"
+            )
+        )
+    )
+    await state.set_state(states.InputStateGroup.mail)
+    await state.set_data({"msg_id": msg.message_id, "bot_id": mail.bot, "edit": mail.id})
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
@@ -106,12 +123,20 @@ async def open_mail_menu_cb(cb: CallbackQuery, callback_data: dict):
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.mail)
 async def mail_input_text(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    mail = models.Mail(
-        _id=0,
-        bot=state_data["bot_id"],
-        text=msg.text
-    )
-    await mails_db.add(mail)
+    if state_data["edit"]:
+        mail = await mails_db.get(state_data["edit"])
+        mail.text = msg.text
+        mail.photo = None
+        mail.video = None
+        mail.gif = None
+        await mails_db.update(mail)
+    else:
+        mail = models.Mail(
+            _id=0,
+            bot=state_data["bot_id"],
+            text=msg.text
+        )
+        await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -120,13 +145,22 @@ async def mail_input_text(msg: Message, state: FSMContext):
 @dp.message_handler(content_types=ContentTypes.PHOTO, state=states.InputStateGroup.mail)
 async def mail_input_photo(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    mail = models.Mail(
-        _id=0,
-        bot=state_data["bot_id"],
-        text=msg.caption,
-        photo=await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
-    )
-    await mails_db.add(mail)
+    filename = await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
+    if state_data["edit"]:
+        mail = await mails_db.get(state_data["edit"])
+        mail.text = msg.caption
+        mail.photo = filename
+        mail.video = None
+        mail.gif = None
+        await mails_db.update(mail)
+    else:
+        mail = models.Mail(
+            _id=0,
+            bot=state_data["bot_id"],
+            text=msg.caption,
+            photo=filename
+        )
+        await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -135,13 +169,22 @@ async def mail_input_photo(msg: Message, state: FSMContext):
 @dp.message_handler(content_types=ContentTypes.VIDEO, state=states.InputStateGroup.mail)
 async def mail_input_video(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    mail = models.Mail(
-        _id=0,
-        bot=state_data["bot_id"],
-        text=msg.caption,
-        video=await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
-    )
-    await mails_db.add(mail)
+    filename = await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
+    if state_data["edit"]:
+        mail = await mails_db.get(state_data["edit"])
+        mail.text = msg.caption
+        mail.photo = None
+        mail.video = filename
+        mail.gif = None
+        await mails_db.update(mail)
+    else:
+        mail = models.Mail(
+            _id=0,
+            bot=state_data["bot_id"],
+            text=msg.caption,
+            video=filename
+        )
+        await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
@@ -150,13 +193,22 @@ async def mail_input_video(msg: Message, state: FSMContext):
 @dp.message_handler(content_types=ContentTypes.ANIMATION, state=states.InputStateGroup.mail)
 async def mail_input_gif(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    mail = models.Mail(
-        _id=0,
-        bot=state_data["bot_id"],
-        text=msg.caption,
-        gif=await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
-    )
-    await mails_db.add(mail)
+    filename = await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
+    if state_data["edit"]:
+        mail = await mails_db.get(state_data["edit"])
+        mail.text = msg.caption
+        mail.photo = None
+        mail.video = None
+        mail.gif = filename
+        await mails_db.update(mail)
+    else:
+        mail = models.Mail(
+            _id=0,
+            bot=state_data["bot_id"],
+            text=msg.caption,
+            gif=filename
+        )
+        await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
     await state.set_state(None)
     await msg.delete()
