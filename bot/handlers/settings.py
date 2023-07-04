@@ -9,7 +9,8 @@ from bot.handlers.menu import open_bot_list
 async def open_settings(cb: CallbackQuery, callback_data: dict):
     bot_dc = await bots_db.get(int(callback_data["id"]))
     await cb.message.answer(
-        "{text9}Налаштування",
+        "<b>⚙️Меню налаштувань:</b>\n\n\
+<i>▸ Видалити бота- видаляє бота з профілю. Видаленого бота можна заново додати в профіль без втрати даних.\n</i>",
         reply_markup=kb.gen_settings_menu(bot_dc)
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)

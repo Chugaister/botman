@@ -29,7 +29,9 @@ async def open_mail_list(cb: CallbackQuery, callback_data: dict, state: FSMConte
     bot_dc = await bots_db.get(int(callback_data["id"]))
     mails = await mails_db.get_by(bot=int(callback_data["id"]))
     await cb.message.answer(
-        "{text6}\nРозсилки:",
+        "<i>💡В цьому меню, можна створити, редагувати та запускати розсилки користувачам, які є у базі цього бота. \
+</i>\n\n\
+<b>📩Розсилки:</b>",
         reply_markup=kb.gen_mail_list(bot_dc, mails)
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)

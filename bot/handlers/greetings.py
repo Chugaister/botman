@@ -10,7 +10,11 @@ async def greeting_list(cb: CallbackQuery, callback_data: dict, state: FSMContex
     bot_dc = await bots_db.get(int(callback_data["id"]))
     greetings = await greeting_db.get_by(bot=int(callback_data["id"]))
     await cb.message.answer(
-        "{text4}Привітання:",
+        "<i>💡Привітання- це повідомлення, які приходитимуть користувачу після проходження каптчі, \
+якщо вона активна, інакше- після подачі заявки на вступ до каналу. \
+У вас є можливість створювати довільну кількість привітань, налаштовувати час надсилання та видалення, \
+прикріпляти кнопки-посилання. Не забудьте увімкнути привітання після його створення.</i>\n\n\
+<b>👋Список привітань</b>:",
         reply_markup=kb.gen_greeting_list(bot_dc, greetings)
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
@@ -62,7 +66,8 @@ async def send_greeting_menu_cb(cb: CallbackQuery, callback_data: dict, state: F
 async def add_greeting(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     bot_dc = await bots_db.get(int(callback_data["id"]))
     msg = await cb.message.answer(
-        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+        "Надішліть текст, гіф, фото або відео з підписом.\n\
+Динамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
             bot_action.new(
                 id=bot_dc.id,
@@ -170,7 +175,8 @@ async def greeting_on(cb: CallbackQuery, callback_data: dict, state: FSMContext)
 @dp.callback_query_handler(greeting_action.filter(action="add_greeting_buttons"))
 async def add_greeting_buttons(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     msg = await cb.message.answer(
-        "Щоб додати кнопки-посилання надішліть список у форматі\n<b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
+        "Щоб додати кнопки-посилання надішліть список у форматі\n<b>\
+text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
         reply_markup=gen_cancel(
             greeting_action.new(
                 id=callback_data["id"],
@@ -201,7 +207,8 @@ async def greeting_buttons_input(msg: Message, state: FSMContext):
     except ValueError:
         try:
             await bot.edit_message_text(
-                "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n<b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
+                "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n\
+<b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
                 msg.from_user.id,
                 state_data["msg_id"],
                 reply_markup=gen_cancel(
@@ -223,8 +230,9 @@ async def greeting_schedule_menu(uid: int, greeting_id: int, msg_id: int):
     greeting = await greeting_db.get(greeting_id)
     await bot.send_message(
         uid,
-        f"/text5/\n<i>📩Затримка надсилання: {f'{greeting.send_delay // 60} хв. {greeting.send_delay % 60} сек.' if greeting.send_delay else 'немає'}\n\
-♻️Затримка автовидалення: {f'{greeting.del_delay // 60 } хв. {greeting.del_delay % 60} сек.' if greeting.del_delay else 'немає'}</i>",
+        f"💡<i>В цьому меню ви можете налаштувати затримку надсилання та видалення привітання</i>\n\n\
+📩Затримка надсилання: {f'{greeting.send_delay // 60} хв. {greeting.send_delay % 60} сек.' if greeting.send_delay else 'немає'}\n\
+♻️Затримка автовидалення: {f'{greeting.del_delay // 60 } хв. {greeting.del_delay % 60} сек.' if greeting.del_delay else 'немає'}",
         reply_markup=kb.gen_timings_menu(greeting)
     )
     await safe_del_msg(uid, msg_id)
@@ -239,7 +247,8 @@ async def greeting_schedule_menu_cb(cb: CallbackQuery, callback_data: dict, stat
 @dp.callback_query_handler(greeting_action.filter(action="edit_send_delay"))
 async def edit_send_delay(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     msg = await cb.message.answer(
-        'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
+        'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\n\
+Час затримки не може перевищувати 1 години.',
         reply_markup=gen_cancel(
             callback_data=greeting_action.new(
                 callback_data["id"],
@@ -266,7 +275,8 @@ async def edit_send_delay(msg: Message, state: FSMContext):
         await safe_del_msg(msg.from_user.id, msg.message_id)
         try:
             await bot.edit_message_text(
-                '❗️Невірний формат\nВведіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
+                '❗️Невірний формат\nВведіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\n\
+Час затримки не може перевищувати 1 години.',
                 msg.from_user.id,
                 state_data["msg_id"],
                 reply_markup=gen_cancel(
@@ -293,7 +303,8 @@ async def edit_del_delay(cb: CallbackQuery, callback_data: dict, state: FSMConte
     greeting = await greeting_db.get(int(callback_data["id"]))
     bot_dc = await bots_db.get(greeting.bot)
     msg = await cb.message.answer(
-        'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
+        'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\n\
+Час затримки не може перевищувати 1 години.',
         reply_markup=gen_cancel(
             callback_data=greeting_action.new(
                 callback_data["id"],
@@ -320,7 +331,8 @@ async def edit_del_delay(msg: Message, state: FSMContext):
         await safe_del_msg(msg.from_user.id, msg.message_id)
         try:
             await bot.edit_message_text(
-                'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\nЧас затримки не може перевищувати 1 години.',
+                'Введіть затримку надсилання у форматі "mm:ss", наприклад 05:30.\n\
+Час затримки не може перевищувати 1 години.',
                 msg.from_user.id,
                 state_data["msg_id"],
                 reply_markup=gen_cancel(
