@@ -56,7 +56,9 @@ async def add_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
 
 @dp.callback_query_handler(mail_action.filter(action="edit_mail"))
 async def edit_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    mail = await mails_db.get(int(callback_data["id"]))
+    mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not mail:
+        return
     msg = await cb.message.answer(
         "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
