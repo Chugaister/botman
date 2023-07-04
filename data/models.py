@@ -1,31 +1,11 @@
 from datetime import datetime
 
 import requests.exceptions
-from requests import get
 
 
 DT_FORMAT = "%H:%M %d.%m.%Y"
 
 
-# def deserialize_buttons(text: str) -> list[dict]:
-#     buttons = []
-#     if text is None:
-#         return buttons
-#     for row in text.split("\n"):
-#         caption, link = row.split(" - ")
-#         if not "https://" in link:
-#             link = "https://" + link
-#         try:
-#             req = get(link)
-#         except requests.exceptions.ConnectionError:
-#             raise ValueError
-#         if not req.ok:
-#             raise ValueError
-#         buttons.append({
-#             "caption": caption,
-#             "link": link
-#         })
-#     return buttons
 def deserialize_buttons(text: str) -> list[list[dict]]:
     buttons = []
     if text is None:
@@ -47,12 +27,7 @@ def deserialize_buttons(text: str) -> list[list[dict]]:
     return buttons
 
 
-# def serialize_buttons(buttons: list[dict]) -> str:
-#     if buttons == []:
-#         return None
-#     text = "\n".join([f"{button['caption']} - {button['link']}" for button in buttons])
-#     return text
-def serialize_buttons(buttons: list[list[dict]]) -> str:
+def serialize_buttons(buttons: list[list[dict]]) -> str | None:
     if not buttons:
         return None
     serialized_rows = []
@@ -69,6 +44,7 @@ def deserialize_reply_buttons(text: str) -> list[list[str]]:
         captions = row.split(" | ")
         reply_buttons.append(captions)
     return reply_buttons
+
 
 def serialize_reply_buttons(buttons: list[list[str]]) -> str:
     rows = []
@@ -109,17 +85,17 @@ class Bot:
         "settings"
     )
 
-    def __init__(self, _id: int, token: str, username: str, admin: int, status: int = 1, premium: int = 0, settings: int = 0):
+    def __init__(self, _id: int, token: str, username: str, admin: int, status: int = 1, premium: int = 0, settings: int = 2):
         self.id = _id
         self.token = token
         self.username = username
         self.admin = admin
         self.status = status
         self.premium = premium
-        self.settings = settings
+        self.settings = Settings(settings)
 
     def get_tuple(self):
-        return self.id, self.token, self.username, self.admin, self.status, self.premium, self.settings
+        return self.id, self.token, self.username, self.admin, self.status, self.premium, self.settings.data
 
 
 class User:
@@ -265,7 +241,7 @@ class Mail:
             photo: str = None,
             video: str = None,
             gif: str = None,
-            buttons: list[dict[str, str]] = None,
+            buttons: str = None,
             sched_dt: str = None,
             del_dt: str = None,
             status: bool = False,
@@ -369,3 +345,29 @@ class Msg:
         return self.id, self.user, self.bot, self.del_dt.strftime(DT_FORMAT) if self.del_dt else None,
 
 
+class Settings:
+
+    def __init__(self, data: int):
+        self.data = data
+
+    def read_bit(self, index: int) -> bool:
+        mask = 1 << index
+        bit = (self.data & mask) >> index
+        return bool(bit)
+
+    def write_bit(self, index: int, value: bool) -> None:
+        mask = 1 << index
+        cleared_integer = self.data & ~mask
+        self.data = cleared_integer | (int(value) << index)
+
+    def get_autoapprove(self) -> bool:
+        return self.read_bit(0)
+
+    def set_autoapprove(self, value: bool) -> None:
+        self.write_bit(0, value)
+
+    def get_users_collect(self) -> bool:
+        return self.read_bit(1)
+
+    def set_users_collect(self, value: bool) -> None:
+        self.write_bit(1, value)

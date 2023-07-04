@@ -30,7 +30,7 @@ class CaptchaStatesGroup(StatesGroup):
     captcha = State()
 
 
-async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User):
+async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: ChatJoinRequest):
     # checking advanced settings
     captcha = (await captchas_db.get_by(bot=ubot.id))[0]
     if not captcha.active:
@@ -53,7 +53,7 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User):
         return
     state = udp.current_state(chat=user.id, user=user.id)
     await state.set_state(CaptchaStatesGroup.captcha)
-    await state.set_data({"msg_id": msg.message_id})
+    await state.set_data({"msg_id": msg.message_id, "channel_id": request.chat.id})
 
 
 async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
@@ -119,6 +119,7 @@ async def send_all_greeting(ubot: Bot, uid: int):
 
 # chat_join_request_handler
 async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, state: FSMContext):
+    bot_dc = await bots_db.get(ubot.id)
     captcha = (await captchas_db.get_by(bot=ubot.id))[0]
     user = models.User(
         request.from_user.id,
@@ -130,13 +131,16 @@ async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, stat
         datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
     if captcha.active:
-        await send_captcha(ubot, udp, user)
+        await send_captcha(ubot, udp, user, request)
     else:
         create_task(send_all_greeting(ubot, request.from_user.id))
+        if bot_dc.settings.get_autoapprove():
+            await request.approve()
 
 
 # message_handler state=captcha
 async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMContext):
+    bot_dc = await bots_db.get(ubot.id)
     captcha = (await captchas_db.get_by(bot=ubot.id))[0]
     user = models.User(
         msg.from_user.id,
@@ -147,12 +151,18 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
         True,
         datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
-    try:
-        await user_db.add(user)
-    except data_exc.RecordAlreadyExists:
-        pass
+    if bot_dc.settings.get_users_collect():
+        try:
+            await user_db.add(user)
+        except data_exc.RecordAlreadyExists:
+            pass
     state_data = await state.get_data()
     await state.set_state(None)
+    if bot_dc.settings.get_autoapprove():
+        await ubot.approve_chat_join_request(
+            state_data["channel_id"],
+            msg.from_user.id
+        )
     create_task(send_all_greeting(ubot, msg.from_user.id))
     if captcha.del_delay:
         await sleep(captcha.del_delay)
@@ -162,6 +172,7 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
 
 # message_handler command /start
 async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
+    bot_dc = await bots_db.get(ubot.id)
     user = models.User(
         msg.from_user.id,
         ubot.id,
@@ -171,9 +182,10 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
         True,
         datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
-    try:
-        await user_db.add(user)
-    except data_exc.RecordAlreadyExists:
-        pass
+    if bot_dc.settings.get_users_collect():
+        try:
+            await user_db.add(user)
+        except data_exc.RecordAlreadyExists:
+            pass
     create_task(send_all_greeting(ubot, msg.from_user.id))
     await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
