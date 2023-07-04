@@ -137,7 +137,7 @@ async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, stat
 
 # message_handler state=captcha
 async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMContext):
-    captcha = (await captchas_db.get_by_fromDB(bot=ubot.id))[0]
+    captcha = (await captchas_db.get_by(bot=ubot.id))[0]
     user = models.User(
         msg.from_user.id,
         ubot.id,
