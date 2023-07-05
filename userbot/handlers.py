@@ -56,11 +56,10 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: C
     await state.set_data({"msg_id": msg.message_id, "channel_id": request.chat.id})
 
 
-async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
+async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting):
     if not greeting.active:
         return
     if greeting.text:
-        user = await user_db.get(uid)
         greeting.text = gen_dynamic_text(greeting.text, user)
     if greeting.send_delay:
         await sleep(greeting.send_delay)
@@ -68,7 +67,7 @@ async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
         if greeting.photo:
             file = await file_manager.get_file(greeting.photo)
             msg = await ubot.send_photo(
-                uid,
+                user.id,
                 file,
                 caption=greeting.text,
                 reply_markup=gen_custom_buttons(greeting.buttons)
@@ -76,7 +75,7 @@ async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
         elif greeting.video:
             file = await file_manager.get_file(greeting.video)
             msg = await ubot.send_video(
-                uid,
+                user.id,
                 file,
                 caption=greeting.text,
                 reply_markup=gen_custom_buttons(greeting.buttons)
@@ -84,14 +83,14 @@ async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
         elif greeting.gif:
             file = await file_manager.get_file(greeting.gif)
             msg = await ubot.send_animation(
-                uid,
+                user.id,
                 file,
                 caption=greeting.text,
                 reply_markup=gen_custom_buttons(greeting.buttons)
             )
         elif greeting.text:
             msg = await ubot.send_message(
-                uid,
+                user.id,
                 greeting.text,
                 reply_markup=gen_custom_buttons(greeting.buttons)
             )
@@ -106,15 +105,15 @@ async def send_greeting(ubot: Bot, uid: int, greeting: models.Greeting):
     else:
         msg_dc = models.Msg(
             msg.message_id,
-            uid,
+            user.id,
             ubot.id
         )
         await msgs_db.add(msg_dc)
 
 
-async def send_all_greeting(ubot: Bot, uid: int):
+async def send_all_greeting(ubot: Bot, user: models.User):
     greetings = await greeting_db.get_by(bot=ubot.id)
-    await gather(*[send_greeting(ubot, uid, greeting) for greeting in greetings])
+    await gather(*[send_greeting(ubot, user, greeting) for greeting in greetings])
 
 
 # chat_join_request_handler
@@ -133,7 +132,7 @@ async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, stat
     if captcha.active:
         await send_captcha(ubot, udp, user, request)
     else:
-        create_task(send_all_greeting(ubot, request.from_user.id))
+        create_task(send_all_greeting(ubot, user))
         if bot_dc.settings.get_autoapprove():
             await request.approve()
 
@@ -154,6 +153,7 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
     if bot_dc.settings.get_users_collect():
         try:
             await user_db.add(user)
+            user.id = msg.from_user.id
         except data_exc.RecordAlreadyExists:
             pass
     state_data = await state.get_data()
@@ -163,7 +163,7 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
             state_data["channel_id"],
             msg.from_user.id
         )
-    create_task(send_all_greeting(ubot, msg.from_user.id))
+    create_task(send_all_greeting(ubot, user))
     if captcha.del_delay:
         await sleep(captcha.del_delay)
     await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
@@ -185,7 +185,8 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
     if bot_dc.settings.get_users_collect():
         try:
             await user_db.add(user)
+            user.id = msg.from_user.id
         except data_exc.RecordAlreadyExists:
             pass
-    create_task(send_all_greeting(ubot, msg.from_user.id))
+    create_task(send_all_greeting(ubot, user))
     await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
