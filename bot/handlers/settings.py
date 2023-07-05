@@ -10,7 +10,9 @@ async def open_settings(cb: CallbackQuery, callback_data: dict):
     bot_dc = await bots_db.get(int(callback_data["id"]))
     await cb.message.answer(
         "<b>⚙️Меню налаштувань:</b>\n\n\
-<i>▸ Видалити бота- видаляє бота з профілю. Видаленого бота можна заново додати в профіль без втрати даних.\n</i>",
+<i>▸ Автоприйом- бот автоматично приймає заявки на вступ в канал.\n\
+▸ Збір користувачів- бот записує в базу даних користувачів після проходження капчі.\n\
+▸ Видалити бота- видаляє бота з профілю. Видаленого бота можна заново додати в профіль без втрати даних.\n</i>",
         reply_markup=kb.gen_settings_menu(bot_dc)
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
@@ -38,3 +40,36 @@ async def deletion_confirm(cb: CallbackQuery, callback_data: dict, state: FSMCon
     bot_status = 0
     await bots_db.update(bot_dc)
     await open_bot_list(cb, state)
+
+
+@dp.callback_query_handler(bot_action.filter(action="autoapprove_on"))
+async def approve_on(cb: CallbackQuery, callback_data: dict):
+    bot_dc = await bots_db.get(int(callback_data["id"]))
+    bot_dc.settings.set_autoapprove(True)
+    await bots_db.update(bot_dc)
+    await open_settings(cb, callback_data)
+
+
+@dp.callback_query_handler(bot_action.filter(action="autoapprove_off"))
+async def approve_off(cb: CallbackQuery, callback_data: dict):
+    bot_dc = await bots_db.get(int(callback_data["id"]))
+    bot_dc.settings.set_autoapprove(False)
+    await bots_db.update(bot_dc)
+    await open_settings(cb, callback_data)
+
+
+@dp.callback_query_handler(bot_action.filter(action="users_collect_on"))
+async def users_collect_on(cb: CallbackQuery, callback_data: dict):
+    bot_dc = await bots_db.get(int(callback_data["id"]))
+    bot_dc.settings.set_users_collect(True)
+    await bots_db.update(bot_dc)
+    await open_settings(cb, callback_data)
+
+
+@dp.callback_query_handler(bot_action.filter(action="users_collect_off"))
+async def users_collect_off(cb: CallbackQuery, callback_data: dict):
+    # await cb.answer("👩‍💻In development")
+    bot_dc = await bots_db.get(int(callback_data["id"]))
+    bot_dc.settings.set_users_collect(False)
+    await bots_db.update(bot_dc)
+    await open_settings(cb, callback_data)
