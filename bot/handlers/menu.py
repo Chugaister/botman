@@ -18,21 +18,45 @@ async def send_start(msg: Message):
     except data_exc.RecordAlreadyExists:
         pass
     await msg.answer(
-        "{text1}\nОпис",
+        "<b>🚀Сервіс автоматизованої реклами</b>\n\n\
+<i>💡Аби скористатися сервісом, вам потрібно створити власного бота, \
+додати його в адміністратори каналу і у наш сервіс. \
+Варто зазначити, що канал повинен бути закритим (доступ лише після подачі заявки на вступ)</i>\n\n\
+Доступний функціонал:\n\
+    ▸ Каптча\n\
+    ▸ Привітання\n\
+    ▸ Розсилка\n\
+    ▸ Чистка\n\
+",
         reply_markup=kb.go_to_bot_list
     )
     await safe_del_msg(msg.from_user.id, msg.message_id)
 
 
-@dp.callback_query_handler(lambda cb: cb.data == "open_bot_list", state="*")
-async def open_bot_list(cb: CallbackQuery, state: FSMContext):
-    await state.set_state(None)
-    bots = await bots_db.get_by(admin=cb.from_user.id)
-    await cb.message.answer(
-        "{text2}\nСписок ботів:",
+async def open_bot_list(uid: int, msg_id: int):
+    bots = await bots_db.get_by(admin=uid)
+    await bot.send_message(
+        uid,
+        "<b>🤖Меню ботів</b>\n\n\
+<i>💡Ви можете додавати до нашого сервісу довільну кількість ботів. \
+Варто нагадати, що на один канал має припадати не більше одного бота-адміністратора, \
+але один бот може бути адміністратором декількох каналів. \
+Важливо щоб бот був підключений лише до нашого сервісу, інакше виникатимуть конфілкти</i>",
         reply_markup=kb.gen_bot_list(bots)
     )
-    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+    await safe_del_msg(uid, msg_id)
+
+
+@dp.callback_query_handler(lambda cb: cb.data == "open_bot_list", state="*")
+async def open_bot_list_cb(cb: CallbackQuery, state: FSMContext):
+    await state.set_state(None)
+    await open_bot_list(cb.from_user.id, cb.message.message_id)
+
+
+@dp.message_handler(commands="mybots")
+async def open_bot_list_msg(msg: Message, state: FSMContext):
+    await state.set_state(None)
+    await open_bot_list(msg.from_user.id, msg.message_id)
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "start_msg")
@@ -44,7 +68,8 @@ async def back_to_start_msg(cb: CallbackQuery):
 @dp.callback_query_handler(lambda cb: cb.data == "add_bot")
 async def add_bot(cb: CallbackQuery, state: FSMContext):
     msg = await cb.message.answer(
-        "{text3}\nНадішліть токен бота",
+        "💡Аби скористатися сервісом вам потрібно створити бота за допомогою @BotFather і додати його в адміністратори каналу. \
+Після створення бота скопіюйте токен бота і надішліть його сюди",
         reply_markup=gen_cancel("open_bot_list")
     )
     await state.set_state(states.InputStateGroup.token)
@@ -64,7 +89,9 @@ async def token_input(msg: Message, state: FSMContext):
     if not req.ok:
         try:
             await bot.edit_message_text(
-                "Невірний формат. Повторіть спробу\nНадішліть токен бота",
+                "❗️Помилка, спробуйте ще раз.\n\
+💡Аби скористатися сервісом вам потрібно створити бота за допомогою @BotFather і додати його в адміністратори каналу. \
+Після створення бота скопіюйте токен бота і надішліть його сюди",
                 msg.from_user.id,
                 state_data["msg_id"],
                 reply_markup=gen_cancel("open_bot_list")

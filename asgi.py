@@ -1,4 +1,5 @@
 from aiogram import types, Dispatcher, Bot
+from aiogram.types.bot_command import BotCommand
 from asyncio import create_task
 import uvicorn
 from fastapi import FastAPI
@@ -51,6 +52,13 @@ app = FastAPI()
 @app.on_event("startup")
 async def on_startup():
     allowed_updates = ["message", "chat_join_request", "callback_query"]
+    await main_bot.set_my_commands(
+        commands=[
+            BotCommand("start", "перезапустити сервіс"),
+            BotCommand("mybots", "меню ботів")
+            # BotCommand("premium", "інформація про преміум")
+        ]
+    )
     await main_bot.set_webhook(
         url=f"https://{PUBLIC_IP}/bot/{main_token}",
         drop_pending_updates=True,
