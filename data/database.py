@@ -10,6 +10,7 @@ import os
 
 source_folder="source"
 tables_with_media = ["captchas", "greetings", "mails"]
+tables_with_dual_foreign_keys = ["msgs", "users"]
 def create_db(source):
     path = join(DIR, source)
     if not exists(path):
@@ -54,7 +55,10 @@ class Database:
 
     async def update(self, object):
         data_tuple = object.get_tuple()
-        query = f"UPDATE {self.table_name} SET {', '.join([f'{cl_name}=?' for cl_name, value in zip(object.columns, data_tuple)])} WHERE id={object.id}"
+        if self.table_name in tables_with_dual_foreign_keys:
+            query = f"UPDATE {self.table_name} SET {', '.join([f'{cl_name}=?' for cl_name, value in zip(object.columns, data_tuple)])} WHERE id={object.id} AND bot={object.bot}"
+        else:
+            query = f"UPDATE {self.table_name} SET {', '.join([f'{cl_name}=?' for cl_name, value in zip(object.columns, data_tuple)])} WHERE id={object.id}"
         logging.debug(f"UPDATE: {query} {data_tuple}")
         await self.conn.execute(query, data_tuple)
         await self.conn.commit()
