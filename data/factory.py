@@ -4,8 +4,7 @@ from data.file_manager import FileManager
 import asyncio
 
 
-async def main():
-    source = "source"
+async def main(source):
     create_db(source)
     db_conn = await get_db(source)
 
@@ -21,4 +20,4 @@ async def main():
     return file_manager, admins_db, bots_db, user_db, captchas_db, greeting_db, mails_db, purges_db, msgs_db
 source = "source"
 create_db(source)
-file_manager, admins_db, bots_db, user_db, captchas_db, greeting_db, mails_db, purges_db, msgs_db = asyncio.run(main())
+file_manager, admins_db, bots_db, user_db, captchas_db, greeting_db, mails_db, purges_db, msgs_db = asyncio.run(main(source))
