@@ -449,7 +449,6 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
     if not mail:
         return
     bot_dc = await bots_db.get(mail.bot)
-    await mails_db.delete(mail.id)
     await cb.message.answer(
         "Вам прийде повідомлення після закінчення розсилки",
         reply_markup=gen_ok(bot_action.new(
@@ -459,6 +458,7 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
     sent_num, blocked_num, error_num = await gig.send_mail(manager.bot_dict[bot_dc.token][0], mail)
+    await mails_db.delete(mail.id)
     await cb.message.answer(
         f"Розсилка {hex(mail.id*1234)} закінчена\nНадіслано: {sent_num}\nЗаблоковано:{blocked_num}\nПомилка:{error_num}",
         reply_markup=gen_ok("hide")

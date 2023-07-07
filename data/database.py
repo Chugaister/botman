@@ -5,8 +5,11 @@ from . import DIR, exists, join, makedirs
 from .exceptions import *
 from . import autocreation
 import logging
+import os
 
 
+source_folder="source"
+tables_with_media = ["captchas", "greetings", "mails"]
 def create_db(source):
     path = join(DIR, source)
     if not exists(path):
@@ -21,7 +24,6 @@ def create_db(source):
 
 async def get_db(source) -> aiosqlite.Connection:
     return await aiosqlite.connect(join(DIR, source, "base.db"))
-
 
 
 class Database:
@@ -58,6 +60,14 @@ class Database:
         await self.conn.commit()
 
     async def delete(self, _id: int):
+        records = None
+        if self.table_name in tables_with_media:
+            query = f"SELECT photo, video, gif FROM {self.table_name} WHERE {_id}"
+            cur = await self.conn.execute(query)
+            records = await cur.fetchall()
+            for record in records[0]:
+                if record is not None:
+                    os.remove(join(DIR, source_folder, "media", record))
         query = f"DELETE FROM {self.table_name} WHERE id={_id}"
         logging.debug(f"DELETE: {query}")
         await self.conn.execute(query)
