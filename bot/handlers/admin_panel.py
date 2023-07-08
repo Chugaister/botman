@@ -1,6 +1,7 @@
 import bot.handlers.settings
 from bot.misc import *
 from bot.keyboards import admin_panel as kb
+from bot.keyboards import admin_mail as adm
 from bot.keyboards import gen_cancel, admin_bot_action, gen_ok
 
 
@@ -102,7 +103,6 @@ async def premium_sub(cb: CallbackQuery, callback_data: dict):
     await send_adminbot_panel(cb.from_user.id, bot_dc.id, cb.message.message_id)
 
 
-@dp.callback_query_handler(lambda cb: cb.data == "admin_mail")
 @dp.callback_query_handler(lambda cb: cb.data == "admin_notification")
 async def in_development(cb: CallbackQuery):
     await cb.answer("In development...")
