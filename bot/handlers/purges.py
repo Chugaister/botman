@@ -146,9 +146,4 @@ async def run(cb: CallbackQuery, callback_data: dict):
         ))
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
-    cleared_num, error_num = await gig.clean(manager.bot_dict[bot_dc.token][0], purge)
-    await cb.message.answer(
-        f"Чистка {hex(purge.id*1234)} закінчена\nОчищено: {cleared_num}\nПомилка:{error_num}",
-        reply_markup=gen_ok("hide")
-    )
-
+    create_task(gig.clean(manager.bot_dict[bot_dc.token][0], purge, cb.from_user.id))

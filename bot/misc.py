@@ -8,7 +8,7 @@ import re
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from pytz import timezone
 from datetime import datetime
-from asyncio import sleep, get_event_loop
+from asyncio import sleep, get_event_loop, create_task
 import logging
 from requests import get
 from prettytable import PrettyTable

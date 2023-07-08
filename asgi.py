@@ -12,7 +12,13 @@ import colorama
 from bot.misc import bot as main_bot, dp as main_dp
 from bot.config import token as main_token
 from bot.misc import manager as bot_manager, bots_db
-from bot.listeners import listen_mails, listen_purges, listen_autodeletion
+from bot.listeners import (
+    listen_mails,
+    listen_purges,
+    listen_autodeletion,
+    listen_mails_stats,
+    listen_purges_stats
+)
 import bot.handlers
 
 parser = argparse.ArgumentParser()
@@ -71,6 +77,8 @@ async def on_startup():
     create_task(listen_mails())
     create_task(listen_purges())
     create_task(listen_autodeletion())
+    create_task(listen_mails_stats())
+    create_task(listen_purges_stats())
 
 
 @app.post("/bot/{token}")

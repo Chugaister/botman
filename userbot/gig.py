@@ -11,7 +11,11 @@ from .keyboards import gen_custom_buttons
 from .utils import gen_dynamic_text
 
 
-async def send_mail(ubot: Bot, mail: models.Mail):
+mails_stats_buffer = []
+purges_stats_buffer = []
+
+
+async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     users = await user_db.get_by(bot=mail.bot)
     sent_num = 0
     blocked_num = 0
@@ -64,12 +68,19 @@ async def send_mail(ubot: Bot, mail: models.Mail):
             user.status = 0
             await user_db.update(user)
             blocked_num += 1
-        except:
-            error_num += 1
-    return sent_num, blocked_num, error_num
+        # except:
+        #     error_num += 1
+    mails_stats_buffer.append({
+        "admin_id": admin_id,
+        "mail_id": mail.id,
+        "sent_num": sent_num,
+        "blocked_num": blocked_num,
+        "error_num": error_num
+    })
+    await mails_db.delete(mail.id)
 
 
-async def clean(ubot: Bot, purge: models.Purge):
+async def clean(ubot: Bot, purge: models.Purge, admin_id: int):
     msgs = await msgs_db.get_by(bot=purge.bot)
     cleared_num = 0
     error_num = 0
@@ -85,5 +96,10 @@ async def clean(ubot: Bot, purge: models.Purge):
             error_num += 1
     for msg in msgs:
         await msgs_db.delete(msg.id)
-    return cleared_num, error_num
+    purges_stats_buffer.append({
+        "admin_id": admin_id,
+        "purge_id": purge.id,
+        "cleared_num": cleared_num,
+        "error_num": error_num
+    })
 
