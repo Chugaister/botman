@@ -15,6 +15,7 @@ async def main(source):
     captchas_db = Database("captchas", db_conn, models.Captcha)
     greeting_db = Database("greetings", db_conn, models.Greeting)
     mails_db = Database("mails", db_conn, models.Mail)
+    admin_mails_db = Database("admin_mails", db_conn, models.Admin_mail)
     purges_db = Database("purges", db_conn, models.Purge)
     msgs_db = Database("msgs", db_conn, models.Msg)
     return file_manager, admins_db, bots_db, user_db, captchas_db, greeting_db, mails_db, purges_db, msgs_db
