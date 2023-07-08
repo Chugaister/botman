@@ -68,8 +68,8 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
             user.status = 0
             await user_db.update(user)
             blocked_num += 1
-        # except:
-        #     error_num += 1
+        except:
+            error_num += 1
     mails_stats_buffer.append({
         "admin_id": admin_id,
         "mail_id": mail.id,
