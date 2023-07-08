@@ -5,10 +5,7 @@ from datetime import datetime
 
 
 async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.Mail | None:
-    try:
-        mail = await mails_db.get(mail_id)
-        return mail
-    except data_exc.RecordIsMissing:
+    async def alert():
         if cb_id:
             await bot.answer_callback_query(
                 cb_id,
@@ -20,7 +17,16 @@ async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> mod
                 "❗️Помилка",
                 reply_markup=gen_ok("open_bot_list", "↩️Головне меню")
             )
+    try:
+        mail = await mails_db.get(mail_id)
+    except data_exc.RecordIsMissing:
+        await alert()
         return None
+    if mail.active == 1:
+        await alert()
+        return None
+    return mail
+
 
 
 @dp.callback_query_handler(bot_action.filter(action="mails"), state="*")
@@ -446,6 +452,8 @@ async def del_del_dt(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(mail_action.filter(action="sendout"))
 async def sendout(cb: CallbackQuery, callback_data: dict):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    mail.active = 1
+    await mails_db.update(mail)
     if not mail:
         return
     bot_dc = await bots_db.get(mail.bot)
@@ -457,9 +465,4 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
         ))
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
-    sent_num, blocked_num, error_num = await gig.send_mail(manager.bot_dict[bot_dc.token][0], mail)
-    await mails_db.delete(mail.id)
-    await cb.message.answer(
-        f"Розсилка {hex(mail.id*1234)} закінчена\nНадіслано: {sent_num}\nЗаблоковано:{blocked_num}\nПомилка:{error_num}",
-        reply_markup=gen_ok("hide")
-    )
+    create_task(gig.send_mail(manager.bot_dict[bot_dc.token][0], mail, cb.from_user.id))

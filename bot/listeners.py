@@ -9,12 +9,7 @@ async def listen_purges():
             if purge.sched_dt and datetime.now(tz=ukraine_tz) > ukraine_tz.localize(purge.sched_dt):
                 bot_dc = await bots_db.get(purge.bot)
                 await purges_db.delete(purge.id)
-                cleared_num, error_num = await gig.clean(manager.bot_dict[bot_dc.token][0], purge)
-                await bot.send_message(
-                    bot_dc.admin,
-                    f"Чистка {hex(purge.id * 1234)} закінчена\nОчищено: {cleared_num}\nПомилка:{error_num}",
-                    reply_markup=gen_ok("hide")
-                )
+                create_task(gig.clean(manager.bot_dict[bot_dc.token][0], purge, bot_dc.admin))
         await sleep(5)
 
 
@@ -24,13 +19,9 @@ async def listen_mails():
         for mail in mails:
             if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > ukraine_tz.localize(mail.send_dt):
                 bot_dc = await bots_db.get(mail.bot)
-                await mails_db.delete(mail.id)
-                sent_num, blocked_num, error_num = await gig.send_mail(manager.bot_dict[bot_dc.token][0], mail)
-                await bot.send_message(
-                    bot_dc.admin,
-                    f"Розсилка {hex(mail.id * 1234)} закінчена\nНадіслано: {sent_num}\nЗаблоковано:{blocked_num}\nПомилка:{error_num}",
-                    reply_markup=gen_ok("hide")
-                )
+                mail.active = 1
+                await mails_db.update(mail)
+                create_task(gig.send_mail(manager.bot_dict[bot_dc.token][0], mail, bot_dc.admin))
         await sleep(5)
 
 
@@ -48,4 +39,32 @@ async def listen_autodeletion():
                 except:
                     pass
                 await msgs_db.delete(msg.id)
+        await sleep(5)
+
+
+async def listen_mails_stats():
+    while True:
+        if gig.mails_stats_buffer != []:
+            for mail_stats in gig.mails_stats_buffer:
+                await bot.send_message(
+                    mail_stats["admin_id"],
+                    f"Розсилка {hex(mail_stats['mail_id'] * 1234)} закінчена\nНадіслано: {mail_stats['sent_num']}\n\
+Заблоковано: {mail_stats['blocked_num']}\nПомилка: {mail_stats['error_num']}",
+                    reply_markup=gen_ok("hide")
+                )
+            gig.mails_stats_buffer = []
+        await sleep(5)
+
+
+async def listen_purges_stats():
+    while True:
+        if gig.purges_stats_buffer != []:
+            for purge_stats in gig.purges_stats_buffer:
+                await bot.send_message(
+                    purge_stats["admin_id"],
+                    f"Чистка {hex(purge_stats['purge_id']*1234)} закінчена\n\
+Очищено: {purge_stats['cleared_num']}\nПомилка: {purge_stats['error_num']}",
+                    reply_markup=gen_ok("hide")
+                )
+            gig.purges_stats_buffer = []
         await sleep(5)
