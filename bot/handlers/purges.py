@@ -4,10 +4,7 @@ import bot.keyboards.purges as kb
 
 
 async def safe_get_purge(uid: int, purge_id: int, cb_id: int | None = None) -> models.Purge | None:
-    try:
-        purge = await purges_db.get(purge_id)
-        return purge
-    except data_exc.RecordIsMissing:
+    async def alert():
         if cb_id:
             await bot.answer_callback_query(
                 cb_id,
@@ -19,7 +16,15 @@ async def safe_get_purge(uid: int, purge_id: int, cb_id: int | None = None) -> m
                 "❗️Помилка",
                 reply_markup=gen_ok("open_bot_list", "↩️Головне меню")
             )
+    try:
+        purge = await purges_db.get(purge_id)
+    except data_exc.RecordIsMissing:
+        await alert()
         return None
+    if purge.active == 1:
+        await alert()
+        return None
+    return purge
 
 
 @dp.callback_query_handler(bot_action.filter(action="purges"))
@@ -102,30 +107,26 @@ async def edit_sched_dt(msg: Message, state: FSMContext):
     if not purge:
         return
     try:
-        if datetime.strptime(msg.text, models.DT_FORMAT) > datetime.now():     
-            purge.sched_dt = datetime.strptime(msg.text, models.DT_FORMAT)
-        else:
-            try:
-                await bot.edit_message_text(
-                "Невірний формат. Введена дата мусить бути пізнішою ніж поточна.\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-                msg.from_user.id,
-                state_data["msg_id"],
-                reply_markup=gen_cancel(purge_action.new(purge.id, "open_menu"))
-                )
-            except MessageNotModified:
-                pass
-            return
+        input_dt = datetime.strptime(msg.text, models.DT_FORMAT)
     except ValueError:
-        try:
-            await bot.edit_message_text(
-                "Невірний формат. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-                msg.from_user.id,
-                state_data["msg_id"],
-                reply_markup=gen_cancel(purge_action.new(purge.id, "open_menu"))
-            )
-        except MessageNotModified:
-            pass
+        await safe_edit_message(
+            "❗️Невірний формат. Спробуйте ще раз\n\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\n\
+Приклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(purge_action.new(purge.id, "open_menu"))
+        )
         return
+    if tz.localize(input_dt) < datetime.now(tz=tz):
+        await safe_edit_message(
+            "❗️Введена дата не може бути у минулому. Спробуйте ще раз\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(purge_action.new(purge.id, "open_menu"))
+        )
+        return
+    purge.sched_dt = datetime.strptime(msg.text, models.DT_FORMAT)
     await state.set_state(None)
     await purges_db.update(purge)
     await open_purge_menu(msg.from_user.id, purge.id, state_data["msg_id"])
@@ -137,9 +138,8 @@ async def run(cb: CallbackQuery, callback_data: dict):
     if not purge:
         return
     bot_dc = await bots_db.get(purge.bot)
-    await purges_db.delete(purge.id)
     await cb.message.answer(
-        "Вам прийде повідомлення після закінчення розсилки",
+        f"🚀Чистка {gen_hex_caption(purge.id)} розпочата. Вам прийде повідомлення після її закінчення",
         reply_markup=gen_ok(bot_action.new(
             bot_dc.id,
             "purges"

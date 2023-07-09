@@ -1,6 +1,5 @@
 from aiogram import types, Dispatcher, Bot
 from aiogram.types.bot_command import BotCommand
-from asyncio import create_task
 import uvicorn
 from fastapi import FastAPI
 import argparse
@@ -12,13 +11,7 @@ import colorama
 from bot.misc import bot as main_bot, dp as main_dp
 from bot.config import token as main_token
 from bot.misc import manager as bot_manager, bots_db
-from bot.listeners import (
-    listen_mails,
-    listen_purges,
-    listen_autodeletion,
-    listen_mails_stats,
-    listen_purges_stats
-)
+from bot.listeners import run_listeners
 import bot.handlers
 
 parser = argparse.ArgumentParser()
@@ -74,11 +67,7 @@ async def on_startup():
     main_dp.register_errors_handler(log_exception)
     bot_manager.register_handlers(ubots)
     await bot_manager.set_webhook(ubots)
-    create_task(listen_mails())
-    create_task(listen_purges())
-    create_task(listen_autodeletion())
-    create_task(listen_mails_stats())
-    create_task(listen_purges_stats())
+    await run_listeners()
 
 
 @app.post("/bot/{token}")

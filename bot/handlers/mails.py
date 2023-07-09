@@ -28,7 +28,6 @@ async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> mod
     return mail
 
 
-
 @dp.callback_query_handler(bot_action.filter(action="mails"), state="*")
 async def open_mail_list(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     await state.set_state(None)
@@ -47,7 +46,8 @@ async def open_mail_list(cb: CallbackQuery, callback_data: dict, state: FSMConte
 async def add_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     bot_dc = await bots_db.get(int(callback_data["id"]))
     msg = await cb.message.answer(
-        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
+<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
             bot_action.new(
                 id=bot_dc.id,
@@ -66,7 +66,8 @@ async def edit_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     if not mail:
         return
     msg = await cb.message.answer(
-        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
+<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
             callback_data=mail_action.new(
                 id=mail.id,
@@ -125,7 +126,6 @@ async def open_mail_menu_cb(cb: CallbackQuery, callback_data: dict):
     if not mail:
         return
     await open_mail_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
-
 
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.mail)
@@ -228,7 +228,8 @@ async def add_buttons(cb: CallbackQuery, callback_data: dict, state: FSMContext)
     if not mail:
         return
     msg = await cb.message.answer(
-        "Щоб додати кнопки-посилання надішліть список у форматі\n<b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
+        "Щоб додати кнопки-посилання надішліть список у форматі\n\
+<b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
         reply_markup=gen_cancel(
             mail_action.new(
                 id=callback_data["id"],
@@ -255,23 +256,22 @@ async def mail_buttons_input(msg: Message, state: FSMContext):
     mail = await mails_db.get(state_data["mail_id"])
     await msg.delete()
     try:
-        mail.buttons = models.deserialize_buttons(msg.text)
+        input_buttons = models.deserialize_buttons(msg.text)
     except ValueError:
-        try:
-            await bot.edit_message_text(
-                "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n<i><b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b></i>",
-                msg.from_user.id,
-                state_data["msg_id"],
-                reply_markup=gen_cancel(
-                    mail_action.new(
-                        id=mail.id,
-                        action="open_mail_menu"
-                    )
+        await safe_edit_message(
+            "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n\
+<i><b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b></i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(
+                mail_action.new(
+                    id=mail.id,
+                    action="open_mail_menu"
                 )
             )
-        except MessageNotModified:
-            pass
+        )
         return
+    mail.buttons = input_buttons
     await mails_db.update(mail)
     await state.set_state(None)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -326,29 +326,37 @@ async def edit_send_dt(msg: Message, state: FSMContext):
     mail = await safe_get_mail(msg.from_user.id, state_data["mail_id"])
     if not mail:
         return
+    await safe_del_msg(msg.from_user.id, msg.message_id)
     try:
-        await msg.delete()
-    except MessageToDeleteNotFound:
-        pass
-    try:
-        if ukraine_tz.localize(datetime.strptime(msg.text, models.DT_FORMAT)) > datetime.now(tz=timezone('Europe/Kiev')):
-            mail.send_dt = datetime.strptime(msg.text, models.DT_FORMAT)
-        else:
-            await bot.edit_message_text(
-            "❗️Дата розсилки не може бути у минулому.Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
-        )
-            return
+        input_dt = datetime.strptime(msg.text, models.DT_FORMAT)
     except ValueError:
-        await bot.edit_message_text(
-            "Невірний формат. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+        await safe_edit_message(
+            "❗️Невірний формат. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
             msg.from_user.id,
             state_data["msg_id"],
             reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
         )
         return
+    if tz.localize(input_dt) < datetime.now(tz=tz):
+        await safe_edit_message(
+            "❗️Введена дата не може бути у минулому. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
+        )
+        return
+    if mail.del_dt and (mail.del_dt - input_dt).total_seconds() / 3600 > 47.75:
+        await safe_edit_message(
+            "❗️Різниця між часом надсилання та часом автовидалення не може перевищувати 48 годин. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
+        )
+        return
+    mail.send_dt = input_dt
     await state.set_state(None)
     await mails_db.update(mail)
     await mail_schedule_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -390,48 +398,37 @@ async def edit_del_dt(msg: Message, state: FSMContext):
     if not mail:
         return
     try:
-        if ukraine_tz.localize(datetime.strptime(msg.text, models.DT_FORMAT)) > datetime.now(tz=timezone('Europe/Kiev')):
-            if mail.send_dt:
-                if ((datetime.strptime(msg.text, models.DT_FORMAT) - mail.send_dt).total_seconds() / 3600) > 47.75:
-                    try:
-                        await bot.edit_message_text(
-                        "Різниця між часом надсилання та часом автовидалення не може перевищувати 48 годин. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-                        msg.from_user.id,
-                        state_data["msg_id"],
-                        reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
-                    )
-                    except MessageNotModified:
-                        pass
-                    return
-                else:
-                    mail.del_dt = datetime.strptime(msg.text, models.DT_FORMAT)
-            else:   
-                mail.del_dt = datetime.strptime(msg.text, models.DT_FORMAT)
-        else:
-            try:
-                await bot.edit_message_text(
-                "Дата видалення не може бути у минулому. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-                msg.from_user.id,
-                state_data["msg_id"],
-                reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
-            )
-            except MessageNotModified:
-                pass
-            return
-    
+        input_dt = datetime.strptime(msg.text, models.DT_FORMAT)
     except ValueError:
-        try:
-            await bot.edit_message_text(
-                "Невірний формат. Спробуйте ще раз\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-                msg.from_user.id,
-                state_data["msg_id"],
-                reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
-            )
-        except MessageNotModified:
-            pass
+        await safe_edit_message(
+            "❗️Невірний формат. Спробуйте ще раз\n\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\n\
+Приклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
+        )
         return
-    await state.set_state(None)
+    if tz.localize(input_dt) < datetime.now(tz=tz):
+        await safe_edit_message(
+            "❗️Введена дата не може бути у минулому. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
+        )
+        return
+    if mail.send_dt and (input_dt - mail.send_dt).total_seconds() / 3600 > 47.75:
+        await safe_edit_message(
+            "❗️Різниця між часом надсилання та часом автовидалення не може перевищувати 48 годин. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(mail_action.new(mail.id, "schedule"))
+        )
+        return
+    mail.del_dt = input_dt
     await mails_db.update(mail)
+    await state.set_state(None)
     await mail_schedule_menu(msg.from_user.id, mail.id, state_data["msg_id"])
 
 
@@ -452,13 +449,11 @@ async def del_del_dt(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(mail_action.filter(action="sendout"))
 async def sendout(cb: CallbackQuery, callback_data: dict):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
-    mail.active = 1
-    await mails_db.update(mail)
     if not mail:
         return
     bot_dc = await bots_db.get(mail.bot)
     await cb.message.answer(
-        "Вам прийде повідомлення після закінчення розсилки",
+        f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
         reply_markup=gen_ok(bot_action.new(
             bot_dc.id,
             "mails"

@@ -4,6 +4,7 @@ from asyncio import sleep
 from datetime import datetime
 from pytz import timezone
 from copy import copy
+from time import time
 
 from data import models
 from data.factory import *
@@ -16,10 +17,18 @@ purges_stats_buffer = []
 
 
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
+    mail.active = 1
+    await mails_db.update(mail)
     users = await user_db.get_by(bot=mail.bot)
     sent_num = 0
     blocked_num = 0
     error_num = 0
+    if mail.photo:
+        file = await file_manager.get_file(mail.photo)
+    elif mail.video:
+        file = await file_manager.get_file(mail.video)
+    elif mail.gif:
+        file = await file_manager.get_file(mail.gif)
     for user in users:
         await sleep(0.035)
         mail_copy = copy(mail)
@@ -27,7 +36,6 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
             mail_copy.text = gen_dynamic_text(mail_copy.text, user)
         try:
             if mail_copy.photo:
-                file = await file_manager.get_file(mail_copy.photo)
                 msg = await ubot.send_photo(
                     user.id,
                     file,
@@ -35,7 +43,6 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
                     reply_markup=gen_custom_buttons(mail_copy.buttons)
                 )
             elif mail_copy.video:
-                file = await file_manager.get_file(mail_copy.video)
                 msg = await ubot.send_video(
                     user.id,
                     file,
@@ -43,7 +50,6 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
                     reply_markup=gen_custom_buttons(mail_copy.buttons)
                 )
             elif mail_copy.gif:
-                file = await file_manager.get_file(mail_copy.gif)
                 msg = await ubot.send_animation(
                     user.id,
                     file,
@@ -81,6 +87,8 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
 
 
 async def clean(ubot: Bot, purge: models.Purge, admin_id: int):
+    purge.active = 1
+    await purges_db.update(purge)
     msgs = await msgs_db.get_by(bot=purge.bot)
     cleared_num = 0
     error_num = 0
@@ -102,4 +110,5 @@ async def clean(ubot: Bot, purge: models.Purge, admin_id: int):
         "cleared_num": cleared_num,
         "error_num": error_num
     })
+    await purges_db.delete(purge.id)
 
