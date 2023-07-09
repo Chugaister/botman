@@ -1,6 +1,7 @@
 from bot.misc import *
 
 admin_bot_action = CallbackData("admin_bot_action", "id", "action")
+admin_mail_action = CallbackData("admin_mail_action", "id", "action")
 bot_action = CallbackData("bot_action", "id", "action")
 greeting_action = CallbackData("greeting_action", "id", "action")
 mail_action = CallbackData("mail_action", "id", "action")

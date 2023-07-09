@@ -5,7 +5,7 @@ admin_panel_menu = InlineKeyboardMarkup()
 admin_panel_menu.add(
     InlineKeyboardButton(
         "📩Розсилка",
-        callback_data="admin_mail"
+        callback_data="admin_mails"
     ),
     InlineKeyboardButton(
         "💬Сповіщення",

@@ -9,7 +9,7 @@ import os
 
 
 source_folder="source"
-tables_with_media = ["captchas", "greetings", "mails"]
+tables_with_media = ["captchas", "greetings", "mails", "admin_mails"]
 tables_with_dual_foreign_keys = ["msgs", "users"]
 def create_db(source):
     path = join(DIR, source)

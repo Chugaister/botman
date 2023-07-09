@@ -282,7 +282,7 @@ class Mail:
         )
 
 
-class Admin_mail:
+class AdminMail:
     columns = (
             "active",
             "text",

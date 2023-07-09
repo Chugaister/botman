@@ -4,7 +4,7 @@ from bot.keyboards import admin_panel as kb
 from bot.keyboards import gen_cancel, admin_bot_action, gen_ok
 
 
-async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.Admin_mail | None:
+async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.AdminMail | None:
     try:
         mail = await admin_mails_db.get(mail_id)
         return mail
@@ -119,14 +119,6 @@ async def premium_sub(cb: CallbackQuery, callback_data: dict):
     bot_dc.premium = 0
     await bots_db.update(bot_dc)
     await send_adminbot_panel(cb.from_user.id, bot_dc.id, cb.message.message_id)
-
-
-
-
-
-@dp.callback_query_handler(lambda cb: cb.data == "admin_notification")
-async def in_development(cb: CallbackQuery):
-    await cb.answer("In development...")
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "hide", state="*")
