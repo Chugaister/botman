@@ -32,7 +32,7 @@ except ImportError:
     exit()
 
 
-ukraine_tz = timezone('Europe/Kiev')
+tz = timezone('Europe/Kiev')
 
 bot = Bot(config.token, parse_mode="HTML")
 storage = MemoryStorage()
@@ -58,6 +58,18 @@ async def safe_del_msg(uid: int, msg_id: int):
     except MessageCantBeDeleted:
         pass
     except MessageToDeleteNotFound:
+        pass
+
+
+async def safe_edit_message(text: str, chat_id: int, message_id: int, reply_markup):
+    try:
+        await bot.edit_message_text(
+            text,
+            chat_id,
+            message_id,
+            reply_markup=reply_markup
+        )
+    except MessageNotModified:
         pass
 
 

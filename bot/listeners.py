@@ -6,9 +6,16 @@ async def listen_purges():
     while True:
         purges = await purges_db.get_all()
         for purge in purges:
-            if purge.sched_dt and datetime.now(tz=ukraine_tz) > ukraine_tz.localize(purge.sched_dt):
+            if purge.sched_dt and datetime.now(tz=tz) > tz.localize(purge.sched_dt)\
+            and purge.active != 1:
+                purge.active = 1
+                await purges_db.update(purge)
                 bot_dc = await bots_db.get(purge.bot)
-                await purges_db.delete(purge.id)
+                await bot.send_message(
+                    bot_dc.admin,
+                    f"🚀Чистка {gen_hex_caption(purge.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                    reply_markup=gen_ok("hide")
+                )
                 create_task(gig.clean(manager.bot_dict[bot_dc.token][0], purge, bot_dc.admin))
         await sleep(5)
 
@@ -17,10 +24,14 @@ async def listen_mails():
     while True:
         mails = await mails_db.get_all()
         for mail in mails:
-            if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > ukraine_tz.localize(mail.send_dt):
+            if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt)\
+            and mail.active != 1:
                 bot_dc = await bots_db.get(mail.bot)
-                mail.active = 1
-                await mails_db.update(mail)
+                await bot.send_message(
+                    bot_dc.admin,
+                    f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                    reply_markup=gen_ok("hide")
+                )
                 create_task(gig.send_mail(manager.bot_dict[bot_dc.token][0], mail, bot_dc.admin))
         await sleep(5)
 
@@ -29,7 +40,7 @@ async def listen_autodeletion():
     while True:
         msgs = [msg for msg in await msgs_db.get_all() if msg.del_dt != None]
         for msg in msgs:
-            if datetime.now(tz=timezone('Europe/Kiev')) > ukraine_tz.localize(msg.del_dt):
+            if datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(msg.del_dt):
                 bot_dc = await bots_db.get(msg.bot)
                 try:
                     await manager.bot_dict[bot_dc.token][0].delete_message(
@@ -48,8 +59,8 @@ async def listen_mails_stats():
             for mail_stats in gig.mails_stats_buffer:
                 await bot.send_message(
                     mail_stats["admin_id"],
-                    f"Розсилка {hex(mail_stats['mail_id'] * 1234)} закінчена\nНадіслано: {mail_stats['sent_num']}\n\
-Заблоковано: {mail_stats['blocked_num']}\nПомилка: {mail_stats['error_num']}",
+                    f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
+Надіслано: {mail_stats['sent_num']}\nЗаблоковано: {mail_stats['blocked_num']}\nПомилка: {mail_stats['error_num']}",
                     reply_markup=gen_ok("hide")
                 )
             gig.mails_stats_buffer = []
@@ -62,9 +73,17 @@ async def listen_purges_stats():
             for purge_stats in gig.purges_stats_buffer:
                 await bot.send_message(
                     purge_stats["admin_id"],
-                    f"Чистка {hex(purge_stats['purge_id']*1234)} закінчена\n\
+                    f"Чистка {gen_hex_caption(purge_stats['purge_id'])} закінчена\n\
 Очищено: {purge_stats['cleared_num']}\nПомилка: {purge_stats['error_num']}",
                     reply_markup=gen_ok("hide")
                 )
             gig.purges_stats_buffer = []
         await sleep(5)
+
+
+async def run_listeners():
+    create_task(listen_mails())
+    create_task(listen_purges())
+    create_task(listen_autodeletion())
+    create_task(listen_mails_stats())
+    create_task(listen_purges_stats())
