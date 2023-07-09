@@ -1,8 +1,26 @@
 import bot.handlers.settings
 from bot.misc import *
 from bot.keyboards import admin_panel as kb
-from bot.keyboards import admin_mail as adm
 from bot.keyboards import gen_cancel, admin_bot_action, gen_ok
+
+
+async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.Admin_mail | None:
+    try:
+        mail = await admin_mails_db.get(mail_id)
+        return mail
+    except data_exc.RecordIsMissing:
+        if cb_id:
+            await bot.answer_callback_query(
+                cb_id,
+                "❗️Помилка"
+            )
+        else:
+            await bot.send_message(
+                uid,
+                "❗️Помилка",
+                reply_markup=gen_ok("admin", "↩️Адмін меню")
+            )
+        return None
 
 
 @dp.callback_query_handler(lambda cb: cb.from_user.id in config.admin_list and cb.data == "admin", state="*")
@@ -101,6 +119,9 @@ async def premium_sub(cb: CallbackQuery, callback_data: dict):
     bot_dc.premium = 0
     await bots_db.update(bot_dc)
     await send_adminbot_panel(cb.from_user.id, bot_dc.id, cb.message.message_id)
+
+
+
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "admin_notification")
