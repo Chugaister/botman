@@ -1,11 +1,14 @@
 from bot.misc import *
-from bot.keyboards import admin_bot_action, bot_action
+from bot.keyboards import admin_bot_action, bot_action, admin_mail_action
 
 admin_panel_menu = InlineKeyboardMarkup()
 admin_panel_menu.add(
     InlineKeyboardButton(
         "📩Розсилка",
-        callback_data="admin_mails"
+        callback_data=admin_mail_action.new(
+            id=0,
+            action="admin_mails_list"
+        )
     ),
     InlineKeyboardButton(
         "💬Сповіщення",

@@ -9,7 +9,7 @@ def gen_admin_mail_list(admin_mails: list[models.AdminMail]) -> InlineKeyboardMa
             InlineKeyboardButton(
                 f"{admin_mail.text[:20]}..." if admin_mail.text else gen_hex_caption(admin_mail.id),
                 callback_data=admin_mail_action.new(
-                    id=admin_mail.id,
+                    admin_mail.id,
                     action="open_admin_mail_menu"
                 )
             )
@@ -21,7 +21,10 @@ def gen_admin_mail_list(admin_mails: list[models.AdminMail]) -> InlineKeyboardMa
         ),
         InlineKeyboardButton(
             "➕Додати",
-            callback_data="add_admin_mail"
+            callback_data=admin_mail_action.new(
+                id=0,
+                action="add_mail"
+                )
             )
     )
     return mail_list
@@ -37,10 +40,10 @@ def gen_admin_mail_menu(admin_mail: models.AdminMail) -> InlineKeyboardMarkup:
         admin_mail_menu.row(*row_buttons)
     admin_mail_menu.add(
         InlineKeyboardButton(
-            "🔥Запустити",
+            "✏️Редагувати",
             callback_data=admin_mail_action.new(
                 admin_mail.id,
-                "sendout"
+                "edit_admin_mail"
             )
         ),
         InlineKeyboardButton(
@@ -53,8 +56,27 @@ def gen_admin_mail_menu(admin_mail: models.AdminMail) -> InlineKeyboardMarkup:
     )
     admin_mail_menu.add(
         InlineKeyboardButton(
+            "🔥Запустити",
+            callback_data=admin_mail_action.new(
+                admin_mail.id,
+                "sendout"
+            )
+        ),
+        InlineKeyboardButton(
+            "🕑Планування",
+            callback_data=admin_mail_action.new(
+                admin_mail.id,
+                "schedule"
+            )
+        )
+    )
+    admin_mail_menu.add(
+        InlineKeyboardButton(
             "↩️Назад",
-            callback_data="admin_mails"
+            callback_data=admin_mail_action.new(
+                    admin_mail.id,
+                    action="admin_mails_list"
+                )
         ),
         InlineKeyboardButton(
             "🗑Видалити",
