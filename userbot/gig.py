@@ -23,12 +23,6 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     sent_num = 0
     blocked_num = 0
     error_num = 0
-    if mail.photo:
-        file = await file_manager.get_file(mail.photo)
-    elif mail.video:
-        file = await file_manager.get_file(mail.video)
-    elif mail.gif:
-        file = await file_manager.get_file(mail.gif)
     for user in users:
         await sleep(0.035)
         mail_copy = copy(mail)
@@ -36,6 +30,7 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
             mail_copy.text = gen_dynamic_text(mail_copy.text, user)
         try:
             if mail_copy.photo:
+                file = await file_manager.get_file(mail.photo)
                 msg = await ubot.send_photo(
                     user.id,
                     file,
@@ -43,6 +38,7 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
                     reply_markup=gen_custom_buttons(mail_copy.buttons)
                 )
             elif mail_copy.video:
+                file = await file_manager.get_file(mail.video)
                 msg = await ubot.send_video(
                     user.id,
                     file,
@@ -50,6 +46,7 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
                     reply_markup=gen_custom_buttons(mail_copy.buttons)
                 )
             elif mail_copy.gif:
+                file = await file_manager.get_file(mail.gif)
                 msg = await ubot.send_animation(
                     user.id,
                     file,
