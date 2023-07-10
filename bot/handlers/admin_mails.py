@@ -24,7 +24,8 @@ async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) 
 
 
 @dp.callback_query_handler(admin_mail_action.filter(action="admin_mails_list"), state="*")
-async def menu_admin_mails(cb: CallbackQuery):
+async def menu_admin_mails(cb: CallbackQuery, state: FSMContext):
+    await state.set_state(None)
     admin_mails = await admin_mails_db.get_all()
     await cb.message.answer(
         "<i>💡В цьому меню, можна створити, редагувати та запускати розсилки у всі боти. \
@@ -45,8 +46,8 @@ async def add_mail(cb: CallbackQuery, state: FSMContext):
         )
         )
     )
-    await state.set_state(states.InputStateGroup.mail)
-    await state.set_data({"msg_id": msg.message_id, "edit": None})
+    await state.set_state(states.InputStateGroup.admin_mail)
+    await state.set_data({"msg_id": msg.message_id, "bot_id": msg.bot.id, "edit": None})
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
@@ -64,8 +65,8 @@ async def edit_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
             )
         )
     )
-    await state.set_state(states.InputStateGroup.mail)
-    await state.set_data({"msg_id": msg.message_id, "edit": admin_mail.id})
+    await state.set_state(states.InputStateGroup.admin_mail)
+    await state.set_data({"msg_id": msg.message_id, "bot_id": msg.bot.id, "edit": admin_mail.id})
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
@@ -116,7 +117,7 @@ async def open_admin_mail_menu_cb(cb: CallbackQuery, callback_data: dict):
     await open_admin_mail_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
 
 
-@dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.mail)
+@dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.admin_mail)
 async def admin_mail_input_text(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     if state_data["edit"]:
@@ -137,7 +138,7 @@ async def admin_mail_input_text(msg: Message, state: FSMContext):
     await msg.delete()
 
 
-@dp.message_handler(content_types=ContentTypes.PHOTO, state=states.InputStateGroup.mail)
+@dp.message_handler(content_types=ContentTypes.PHOTO, state=states.InputStateGroup.admin_mail)
 async def mail_input_photo(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
@@ -160,7 +161,7 @@ async def mail_input_photo(msg: Message, state: FSMContext):
     await msg.delete()
 
 
-@dp.message_handler(content_types=ContentTypes.VIDEO, state=states.InputStateGroup.mail)
+@dp.message_handler(content_types=ContentTypes.VIDEO, state=states.InputStateGroup.admin_mail)
 async def mail_input_video(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
@@ -183,7 +184,7 @@ async def mail_input_video(msg: Message, state: FSMContext):
     await msg.delete()
 
 
-@dp.message_handler(content_types=ContentTypes.ANIMATION, state=states.InputStateGroup.mail)
+@dp.message_handler(content_types=ContentTypes.ANIMATION, state=states.InputStateGroup.admin_mail)
 async def mail_input_gif(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
@@ -221,7 +222,7 @@ async def add_buttons(cb: CallbackQuery, callback_data: dict, state: FSMContext)
         )
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
-    await state.set_state(states.InputStateGroup.mail_buttons)
+    await state.set_state(states.InputStateGroup.admin_mail_buttons)
     await state.set_data({"msg_id": msg.message_id, "mail_id": callback_data["id"]})
 
 
@@ -233,22 +234,22 @@ def button_input_filter(msg: Message) -> bool:
         return False
 
 
-@dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.mail_buttons)
+@dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.admin_mail_buttons)
 async def mail_buttons_input(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    mail = await admin_mails_db.get(state_data["mail_id"])
+    admin_mail = await admin_mails_db.get(state_data["mail_id"])
     await msg.delete()
     try:
-        mail.buttons = models.deserialize_buttons(msg.text)
+        admin_mail.buttons = models.deserialize_buttons(msg.text)
     except ValueError:
         try:
-            await bot.edit_message_text(
+            await safe_edit_message(
                 "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n<i><b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b></i>",
                 msg.from_user.id,
                 state_data["msg_id"],
                 reply_markup=gen_cancel(
                     admin_mail_action.new(
-                        id=mail.id,
+                        id=admin_mail.id,
                         action="open_mail_menu"
                     )
                 )
@@ -256,6 +257,193 @@ async def mail_buttons_input(msg: Message, state: FSMContext):
         except MessageNotModified:
             pass
         return
-    await mails_db.update(mail)
+    await admin_mails_db.update(admin_mail)
     await state.set_state(None)
-    await open_admin_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
+    await open_admin_mail_menu(msg.from_user.id, admin_mail.id, state_data["msg_id"])
+
+
+@dp.callback_query_handler(admin_mail_action.filter(action="delete_admin_mail"))
+async def delete_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not admin_mail:
+        return
+    await admin_mails_db.delete(admin_mail.id)
+    await menu_admin_mails(cb, state)
+
+
+async def mail_schedule_menu(uid: int, mail_id: int, msg_id: int):
+    admin_mail = await admin_mails_db.get(mail_id)
+    await bot.send_message(
+        uid,
+        f"<i>📩Час надсилання: {admin_mail.send_dt.strftime(models.DT_FORMAT) if admin_mail.send_dt else 'немає'}\n\
+♻️Час видалення: {admin_mail.del_dt.strftime(models.DT_FORMAT) if admin_mail.del_dt else 'немає'}</i>",
+        reply_markup=kb.gen_schedule_menu(admin_mail)
+    )
+    await safe_del_msg(uid, msg_id)
+
+
+@dp.callback_query_handler(admin_mail_action.filter(action="schedule"), state="*")
+async def mail_schedule_menu_cb(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not admin_mail:
+        return
+    await state.set_state(None)
+    await mail_schedule_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
+
+
+@dp.callback_query_handler(admin_mail_action.filter(action="schedule"), state="*")
+async def mail_schedule_menu_cb(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not admin_mail:
+        return
+    await state.set_state(None)
+    await mail_schedule_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
+
+
+@dp.callback_query_handler(admin_mail_action.filter(action="edit_send_dt"))
+async def edit_send_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not admin_mail:
+        return
+    msg = await cb.message.answer(
+        "Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+        reply_markup=gen_cancel(admin_mail_action.new(callback_data["id"], "schedule"))
+    )
+    await state.set_state(states.InputStateGroup.admin_mail_send_dt)
+    await state.set_data({"mail_id": int(callback_data["id"]), "msg_id": msg.message_id})
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+
+@dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.admin_mail_send_dt)
+async def edit_send_dt(msg: Message, state: FSMContext):
+    state_data = await state.get_data()
+    admin_mail = await safe_get_admin_mail(msg.from_user.id, state_data["mail_id"])
+    if not admin_mail:
+        return
+    await safe_del_msg(msg.from_user.id, msg.message_id)
+    try:
+        input_dt = datetime.strptime(msg.text, models.DT_FORMAT)
+    except ValueError:
+        await safe_edit_message(
+            "❗️Невірний формат. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(admin_mail_action.new(admin_mail.id, "schedule"))
+        )
+        return
+    if tz.localize(input_dt) < datetime.now(tz=tz):
+        await safe_edit_message(
+            "❗️Введена дата не може бути у минулому. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(admin_mail_action.new(admin_mail.id, "schedule"))
+        )
+        return
+    if admin_mail.del_dt and (admin_mail.del_dt - input_dt).total_seconds() / 3600 > 47.75:
+        await safe_edit_message(
+            "❗️Різниця між часом надсилання та часом автовидалення не може перевищувати 48 годин. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(admin_mail_action.new(admin_mail.id, "schedule"))
+        )
+        return
+    admin_mail.send_dt = input_dt
+    await state.set_state(None)
+    await admin_mails_db.update(admin_mail)
+    await mail_schedule_menu(msg.from_user.id, admin_mail.id, state_data["msg_id"])
+
+
+@dp.callback_query_handler(admin_mail_action.filter(action="del_send_dt"))
+async def del_send_dt(cb: CallbackQuery, callback_data: dict):
+    admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not admin_mail:
+        return
+    admin_mail.send_dt = None
+    await admin_mails_db.update(admin_mail)
+    await mail_schedule_menu(cb.from_user.id, admin_mail.id, cb.message.message_id)
+
+
+@dp.callback_query_handler(admin_mail_action.filter(action="edit_del_dt"))
+async def edit_del_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not mail:
+        return
+    msg = await cb.message.answer(
+        "Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+        reply_markup=gen_cancel(admin_mail_action.new(callback_data["id"], "schedule"))
+    )
+    await state.set_state(states.InputStateGroup.admin_mail_del_dt)
+    await state.set_data({"mail_id": int(callback_data["id"]), "msg_id": msg.message_id})
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+
+@dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.admin_mail_del_dt)
+async def edit_del_dt(msg: Message, state: FSMContext):
+    await safe_del_msg(msg.from_user.id, msg.message_id)
+    state_data = await state.get_data()
+    mail = await safe_get_admin_mail(msg.from_user.id, state_data["mail_id"])
+    if not mail:
+        return
+    try:
+        input_dt = datetime.strptime(msg.text, models.DT_FORMAT)
+    except ValueError:
+        await safe_edit_message(
+            "❗️Невірний формат. Спробуйте ще раз\n\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\n\
+Приклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(admin_mail_action.new(mail.id, "schedule"))
+        )
+        return
+    if tz.localize(input_dt) < datetime.now(tz=tz):
+        await safe_edit_message(
+            "❗️Введена дата не може бути у минулому. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(admin_mail_action.new(mail.id, "schedule"))
+        )
+        return
+    if mail.send_dt and (input_dt - mail.send_dt).total_seconds() / 3600 > 47.75:
+        await safe_edit_message(
+            "❗️Різниця між часом надсилання та часом автовидалення не може перевищувати 48 годин. Спробуйте ще раз\n\n\
+Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(admin_mail_action.new(mail.id, "schedule"))
+        )
+        return
+    mail.del_dt = input_dt
+    await admin_mails_db.update(mail)
+    await state.set_state(None)
+    await mail_schedule_menu(msg.from_user.id, mail.id, state_data["msg_id"])
+
+
+@dp.callback_query_handler(admin_mail_action.filter(action="del_del_dt"))
+async def del_del_dt(cb: CallbackQuery, callback_data: dict):
+    mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not mail:
+        return
+    mail.del_dt = None
+    await admin_mails_db.update(mail)
+    await mail_schedule_menu(cb.from_user.id, mail.id, cb.message.message_id)
+
+
+@dp.callback_query_handler(admin_mail_action.filter(action="sendout"))
+async def sendout(cb: CallbackQuery, callback_data: dict):
+    admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not admin_mail:
+        return
+
+    await cb.message.answer(
+        f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+        reply_markup=gen_ok("admin", "↩️Адмін панель")
+    )
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+    bots=[]
+    for bot_token in manager.bot_dict.keys():
+        bots.append(manager.bot_dict[bot_token][0])
+    create_task(gig.send_admin_mail(bots, admin_mail, cb.from_user.id))

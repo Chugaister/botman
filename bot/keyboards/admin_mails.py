@@ -87,3 +87,49 @@ def gen_admin_mail_menu(admin_mail: models.AdminMail) -> InlineKeyboardMarkup:
         )
     )
     return admin_mail_menu
+
+
+def gen_schedule_menu(admin_mail: models.AdminMail) -> InlineKeyboardMarkup:
+    schedule_menu = InlineKeyboardMarkup()
+    schedule_menu.add(
+        InlineKeyboardButton(
+            "✏️Надсилання",
+            callback_data=admin_mail_action.new(
+                admin_mail.id,
+                "edit_send_dt"
+            )
+        ),
+        InlineKeyboardButton(
+            "🗑Надсилання",
+            callback_data=admin_mail_action.new(
+                admin_mail.id,
+                "del_send_dt"
+            )
+        )
+    )
+    schedule_menu.add(
+        InlineKeyboardButton(
+            "✏️Автовидалення",
+            callback_data=admin_mail_action.new(
+                admin_mail.id,
+                "edit_del_dt"
+            )
+        ),
+        InlineKeyboardButton(
+            "🗑Автовидалення",
+            callback_data=admin_mail_action.new(
+                admin_mail.id,
+                "del_del_dt"
+            )
+        )
+    )
+    schedule_menu.add(
+        InlineKeyboardButton(
+            "⬅️Назад",
+            callback_data=admin_mail_action.new(
+                id=admin_mail.id,
+                action="open_admin_mail_menu"
+            )
+        )
+    )
+    return schedule_menu
