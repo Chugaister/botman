@@ -36,7 +36,6 @@ class Database:
 
     async def add(self, object):
         query = f"INSERT INTO {self.table_name} {str(object.columns)} VALUES ({'?, '*(len(object.columns)-1)}?)"
-        logging.debug(f"{query}, {object.get_tuple()}")
         try:
             cur = await self.conn.execute(query, object.get_tuple())
         except IntegrityError:
@@ -46,7 +45,6 @@ class Database:
 
     async def get(self, _id: int):
         query = f"SELECT * FROM {self.table_name} WHERE id=?"
-        # logging.debug(f"GET: {query}")
         cur = await self.conn.execute(query, (_id,))
         data = await cur.fetchone()
         if data is None:
@@ -59,7 +57,6 @@ class Database:
             query = f"UPDATE {self.table_name} SET {', '.join([f'{cl_name}=?' for cl_name, value in zip(object.columns, data_tuple)])} WHERE id={object.id} AND bot={object.bot}"
         else:
             query = f"UPDATE {self.table_name} SET {', '.join([f'{cl_name}=?' for cl_name, value in zip(object.columns, data_tuple)])} WHERE id={object.id}"
-        logging.debug(f"UPDATE: {query} {data_tuple}")
         await self.conn.execute(query, data_tuple)
         await self.conn.commit()
 
@@ -73,21 +70,18 @@ class Database:
                 if record is not None:
                     os.remove(join(DIR, source_folder, "media", record))
         query = f"DELETE FROM {self.table_name} WHERE id={_id}"
-        logging.debug(f"DELETE: {query}")
         await self.conn.execute(query)
         await self.conn.commit()
 
     async def get_by(self, **kwargs):
         items = list(kwargs.items())
         query = f"SELECT * FROM {self.table_name} WHERE {' AND '.join([f'{key}=?' for key, value in items])}"
-        # logging.debug(f"GETBY: {query}")
         cur = await self.conn.execute(query, [value for key, value in items])
         records = await cur.fetchall()
         return [self.datatype(*record) for record in records]
 
     async def get_all(self):
         query = f"SELECT * FROM {self.table_name}"
-        # logging.debug(f"GETALL: {query}")
         cur = await self.conn.execute(query)
         records = await cur.fetchall()
         return [self.datatype(*record) for record in records]
