@@ -14,6 +14,11 @@ class InputStateGroup(StatesGroup):
     mail_send_dt = State()
     mail_del_dt = State()
 
+    admin_mail = State()
+    admin_mail_buttons = State()
+    admin_mail_send_dt = State()
+    admin_mail_del_dt = State()
+
     captcha = State()
     captcha_buttons = State()
     captcha_del_delay = State()

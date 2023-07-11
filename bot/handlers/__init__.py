@@ -6,5 +6,6 @@ from . import (
     premium,
     purges,
     settings,
-    admin_panel
+    admin_panel,
+    admin_mails
 )

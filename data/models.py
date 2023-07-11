@@ -282,6 +282,65 @@ class Mail:
         )
 
 
+class AdminMail:
+    columns = (
+            "active",
+            "text",
+            "photo",
+            "video",
+            "gif",
+            "buttons",
+            "send_dt",
+            "status",
+            "sent_num",
+            "blocked_num",
+            "error_num"
+    )
+
+    def __init__(
+            self,
+            _id: int,
+            active: bool = False,
+            text: str = None,
+            photo: str = None,
+            video: str = None,
+            gif: str = None,
+            buttons: str = None,
+            sched_dt: str = None,
+            status: bool = False,
+            sent_num: int = None,
+            blocked_num: int = None,
+            error_num: int = None
+    ):
+        self.id = _id
+        self.active = active
+        self.text = text
+        self.photo = photo
+        self.video = video
+        self.gif = gif
+        self.buttons = deserialize_buttons(buttons)
+        self.send_dt = datetime.strptime(sched_dt, DT_FORMAT) if sched_dt else None
+        self.status = status
+        self.sent_num = sent_num
+        self.blocked_num = blocked_num
+        self.error_num = error_num
+
+    def get_tuple(self):
+        return (
+            self.active,
+            self.text,
+            self.photo,
+            self.video,
+            self.gif,
+            serialize_buttons(self.buttons),
+            self.send_dt.strftime(DT_FORMAT) if self.send_dt else None,
+            self.status,
+            self.sent_num,
+            self.blocked_num,
+            self.error_num
+        )
+
+
 class Purge:
 
     columns = (
