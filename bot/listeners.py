@@ -36,6 +36,25 @@ async def listen_mails():
         await sleep(5)
 
 
+async def listen_admin_mails():
+    while True:
+        admin_mails = await admin_mails_db.get_all()
+        for admin_mail in admin_mails:
+            if admin_mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(admin_mail.send_dt)\
+            and admin_mail.active != 1:
+                bot_dc = await bots_db.get(admin_mail.bot)
+                await bot.send_message(
+                    bot_dc.admin,
+                    f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                    reply_markup=gen_ok("hide")
+                )
+                bots = []
+                for bot_token in manager.bot_dict.keys():
+                    bots.append(manager.bot_dict[bot_token][0])
+                create_task(gig.send_mail(bots, admin_mail, bot_dc.admin))
+        await sleep(5)
+
+
 async def listen_autodeletion():
     while True:
         msgs = [msg for msg in await msgs_db.get_all() if msg.del_dt != None]
@@ -67,6 +86,20 @@ async def listen_mails_stats():
         await sleep(5)
 
 
+async def listen_admin_mails_stats():
+    while True:
+        if gig.admin_mails_stats_buffer != []:
+            for mail_stats in gig.admin_mails_stats_buffer:
+                await bot.send_message(
+                    mail_stats["admin_id"],
+                    f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
+Надіслано: {mail_stats['sent_num']}\nЗаблоковано: {mail_stats['blocked_num']}\nПомилка: {mail_stats['error_num']}",
+                    reply_markup=gen_ok("hide")
+                )
+            gig.admin_mails_stats_buffer = []
+        await sleep(5)
+
+
 async def listen_purges_stats():
     while True:
         if gig.purges_stats_buffer != []:
@@ -83,6 +116,11 @@ async def listen_purges_stats():
 
 async def run_listeners():
     create_task(listen_mails())
+    create_task(listen_admin_mails())
+    create_task(listen_purges())
+    create_task(listen_autodeletion())
+    create_task(listen_mails_stats())
+    create_task(listen_admin_mails_stats())
     create_task(listen_purges())
     create_task(listen_autodeletion())
     create_task(listen_mails_stats())
