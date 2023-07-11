@@ -94,12 +94,6 @@ async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: in
     error_num = 0
     for ubot in bots:
         users = await user_db.get_by(bot=ubot.id)
-        if admin_mail.photo:
-            file = await file_manager.get_file(admin_mail.photo)
-        elif admin_mail.video:
-            file = await file_manager.get_file(admin_mail.video)
-        elif admin_mail.gif:
-            file = await file_manager.get_file(admin_mail.gif)
         for user in users:
             await sleep(0.035)
             if admin_mail.text:
@@ -108,21 +102,21 @@ async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: in
                 if admin_mail.photo:
                     msg = await ubot.send_photo(
                         user.id,
-                        file,
+                        await file_manager.get_file(admin_mail.photo),
                         caption=admin_mail.text,
                         reply_markup=gen_custom_buttons(admin_mail.buttons)
                     )
                 elif admin_mail.video:
                     msg = await ubot.send_video(
                         user.id,
-                        file,
+                        await file_manager.get_file(admin_mail.video),
                         caption=admin_mail.text,
                         reply_markup=gen_custom_buttons(admin_mail.buttons)
                     )
                 elif admin_mail.gif:
                     msg = await ubot.send_animation(
                         user.id,
-                        file,
+                        file_manager.get_file(admin_mail.gif),
                         caption=admin_mail.text,
                         reply_markup=gen_custom_buttons(admin_mail.buttons)
                     )

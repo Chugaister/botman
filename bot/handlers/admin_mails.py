@@ -443,7 +443,9 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
         reply_markup=gen_ok("admin", "↩️Адмін панель")
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
-    bots=[]
+    bots = []
+    bots_without_premium = [bot.token for bot in await bots_db.get_by(premium=0)]
     for bot_token in manager.bot_dict.keys():
-        bots.append(manager.bot_dict[bot_token][0])
+        if bot_token in bots_without_premium:
+            bots.append(manager.bot_dict[bot_token][0])
     create_task(gig.send_admin_mail(bots, admin_mail, cb.from_user.id))
