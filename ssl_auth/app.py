@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 
 @app.route('/')
-def handle_webhook(token):
+def handle_webhook():
     return "OK"
 
 
@@ -18,6 +18,5 @@ def send_auth_file():
 if __name__ == "__main__":
     app.run(
         host=config.HOST,
-        port=config.PORT,
-        ssl_context='adhoc'
+        port=config.PORT
     )
