@@ -109,22 +109,6 @@ def gen_schedule_menu(admin_mail: models.AdminMail) -> InlineKeyboardMarkup:
     )
     schedule_menu.add(
         InlineKeyboardButton(
-            "✏️Автовидалення",
-            callback_data=admin_mail_action.new(
-                admin_mail.id,
-                "edit_del_dt"
-            )
-        ),
-        InlineKeyboardButton(
-            "🗑Автовидалення",
-            callback_data=admin_mail_action.new(
-                admin_mail.id,
-                "del_del_dt"
-            )
-        )
-    )
-    schedule_menu.add(
-        InlineKeyboardButton(
             "⬅️Назад",
             callback_data=admin_mail_action.new(
                 id=admin_mail.id,

@@ -291,7 +291,6 @@ class AdminMail:
             "gif",
             "buttons",
             "send_dt",
-            "del_dt",
             "status",
             "sent_num",
             "blocked_num",
@@ -308,7 +307,6 @@ class AdminMail:
             gif: str = None,
             buttons: str = None,
             sched_dt: str = None,
-            del_dt: str = None,
             status: bool = False,
             sent_num: int = None,
             blocked_num: int = None,
@@ -322,7 +320,6 @@ class AdminMail:
         self.gif = gif
         self.buttons = deserialize_buttons(buttons)
         self.send_dt = datetime.strptime(sched_dt, DT_FORMAT) if sched_dt else None
-        self.del_dt = datetime.strptime(del_dt, DT_FORMAT) if del_dt else None
         self.status = status
         self.sent_num = sent_num
         self.blocked_num = blocked_num
@@ -337,7 +334,6 @@ class AdminMail:
             self.gif,
             serialize_buttons(self.buttons),
             self.send_dt.strftime(DT_FORMAT) if self.send_dt else None,
-            self.del_dt.strftime(DT_FORMAT) if self.del_dt else None,
             self.status,
             self.sent_num,
             self.blocked_num,

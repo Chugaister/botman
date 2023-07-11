@@ -275,8 +275,7 @@ async def mail_schedule_menu(uid: int, mail_id: int, msg_id: int):
     admin_mail = await admin_mails_db.get(mail_id)
     await bot.send_message(
         uid,
-        f"<i>📩Час надсилання: {admin_mail.send_dt.strftime(models.DT_FORMAT) if admin_mail.send_dt else 'немає'}\n\
-♻️Час видалення: {admin_mail.del_dt.strftime(models.DT_FORMAT) if admin_mail.del_dt else 'немає'}</i>",
+        f"<i>📩Час надсилання: {admin_mail.send_dt.strftime(models.DT_FORMAT) if admin_mail.send_dt else 'немає'}",
         reply_markup=kb.gen_schedule_menu(admin_mail)
     )
     await safe_del_msg(uid, msg_id)
@@ -364,73 +363,6 @@ async def del_send_dt(cb: CallbackQuery, callback_data: dict):
     admin_mail.send_dt = None
     await admin_mails_db.update(admin_mail)
     await mail_schedule_menu(cb.from_user.id, admin_mail.id, cb.message.message_id)
-
-
-@dp.callback_query_handler(admin_mail_action.filter(action="edit_del_dt"))
-async def edit_del_dt(cb: CallbackQuery, callback_data: dict, state: FSMContext):
-    mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
-    if not mail:
-        return
-    msg = await cb.message.answer(
-        "Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-        reply_markup=gen_cancel(admin_mail_action.new(callback_data["id"], "schedule"))
-    )
-    await state.set_state(states.InputStateGroup.admin_mail_del_dt)
-    await state.set_data({"mail_id": int(callback_data["id"]), "msg_id": msg.message_id})
-    await safe_del_msg(cb.from_user.id, cb.message.message_id)
-
-
-@dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.admin_mail_del_dt)
-async def edit_del_dt(msg: Message, state: FSMContext):
-    await safe_del_msg(msg.from_user.id, msg.message_id)
-    state_data = await state.get_data()
-    mail = await safe_get_admin_mail(msg.from_user.id, state_data["mail_id"])
-    if not mail:
-        return
-    try:
-        input_dt = datetime.strptime(msg.text, models.DT_FORMAT)
-    except ValueError:
-        await safe_edit_message(
-            "❗️Невірний формат. Спробуйте ще раз\n\nВведіть дату та час у форматі <i>[H:M d.m.Y]</i>\n\
-Приклад: <i>16:20 12.05.2023</i>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(admin_mail_action.new(mail.id, "schedule"))
-        )
-        return
-    if tz.localize(input_dt) < datetime.now(tz=tz):
-        await safe_edit_message(
-            "❗️Введена дата не може бути у минулому. Спробуйте ще раз\n\n\
-Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(admin_mail_action.new(mail.id, "schedule"))
-        )
-        return
-    if mail.send_dt and (input_dt - mail.send_dt).total_seconds() / 3600 > 47.75:
-        await safe_edit_message(
-            "❗️Різниця між часом надсилання та часом автовидалення не може перевищувати 48 годин. Спробуйте ще раз\n\n\
-Введіть дату та час у форматі <i>[H:M d.m.Y]</i>\nПриклад: <i>16:20 12.05.2023</i>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(admin_mail_action.new(mail.id, "schedule"))
-        )
-        return
-    mail.del_dt = input_dt
-    await admin_mails_db.update(mail)
-    await state.set_state(None)
-    await mail_schedule_menu(msg.from_user.id, mail.id, state_data["msg_id"])
-
-
-@dp.callback_query_handler(admin_mail_action.filter(action="del_del_dt"))
-async def del_del_dt(cb: CallbackQuery, callback_data: dict):
-    mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
-    if not mail:
-        return
-    mail.del_dt = None
-    await admin_mails_db.update(mail)
-    await mail_schedule_menu(cb.from_user.id, mail.id, cb.message.message_id)
-
 
 @dp.callback_query_handler(admin_mail_action.filter(action="sendout"))
 async def sendout(cb: CallbackQuery, callback_data: dict):
