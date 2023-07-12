@@ -18,9 +18,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--local', action='store_true', help='Run in local mode')
 args = parser.parse_args()
 if args.local:
-    from web_config.local_config import PUBLIC_IP, HOST, PORT
+    from web_config.local_config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
 else:
-    from web_config.config import PUBLIC_IP, HOST, PORT
+    from web_config.config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
 
 colorama.init()
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,7 +59,7 @@ async def on_startup():
         ]
     )
     await main_bot.set_webhook(
-        url=f"https://{PUBLIC_IP}/bot/{main_token}",
+        url=f"https://{WEBHOOK_HOST}/bot/{main_token}",
         drop_pending_updates=True,
         allowed_updates=allowed_updates
     )

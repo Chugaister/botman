@@ -40,11 +40,11 @@ dp = Dispatcher(bot, storage=storage)
 
 
 if "--local" in sys.argv:
-    from web_config.local_config import PUBLIC_IP
-    manager = Manager([], PUBLIC_IP)
+    from web_config.local_config import WEBHOOK_HOST
+    manager = Manager([], WEBHOOK_HOST)
 else:
-    from web_config.config import PUBLIC_IP
-    manager = Manager([], PUBLIC_IP)
+    from web_config.config import WEBHOOK_HOST
+    manager = Manager([], WEBHOOK_HOST)
     
 # get_event_loop().run_until_complete(manager.set_webhook(ubots))
 
