@@ -133,7 +133,7 @@ async def mail_input_text(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
-        mail.text = msg.text
+        mail.text = msg.parse_entities(as_html=True)
         mail.photo = None
         mail.video = None
         mail.gif = None
@@ -156,7 +156,7 @@ async def mail_input_photo(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
-        mail.text = msg.caption
+        mail.text = msg.parse_entities(as_html=True)
         mail.photo = filename
         mail.video = None
         mail.gif = None
@@ -165,7 +165,7 @@ async def mail_input_photo(msg: Message, state: FSMContext):
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.caption,
+            text=msg.parse_entities(as_html=True),
             photo=filename
         )
         await mails_db.add(mail)
@@ -180,7 +180,7 @@ async def mail_input_video(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
-        mail.text = msg.caption
+        mail.text = msg.parse_entities(as_html=True)
         mail.photo = None
         mail.video = filename
         mail.gif = None
@@ -189,7 +189,7 @@ async def mail_input_video(msg: Message, state: FSMContext):
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.caption,
+            text=msg.parse_entities(as_html=True),
             video=filename
         )
         await mails_db.add(mail)
@@ -204,7 +204,7 @@ async def mail_input_gif(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
-        mail.text = msg.caption
+        mail.text = msg.parse_entities(as_html=True)
         mail.photo = None
         mail.video = None
         mail.gif = filename
@@ -213,7 +213,7 @@ async def mail_input_gif(msg: Message, state: FSMContext):
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.caption,
+            text=msg.parse_entities(as_html=True),
             gif=filename
         )
         await mails_db.add(mail)
@@ -450,6 +450,13 @@ async def del_del_dt(cb: CallbackQuery, callback_data: dict):
 async def sendout(cb: CallbackQuery, callback_data: dict):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not mail:
+        return
+    if mail.del_dt and (tz.localize(mail.del_dt) - datetime.now(tz=tz)).total_seconds() / 3600 > 47.75:
+        await cb.answer(
+            "❗️Різниця між часом надсилання та часом автовидалення не може перевищувати 48 годин.\n\
+Змініть час автовидалення автовидалення",
+            show_alert=True
+        )
         return
     bot_dc = await bots_db.get(mail.bot)
     await cb.message.answer(
