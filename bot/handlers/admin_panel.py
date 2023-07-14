@@ -129,4 +129,4 @@ async def hide(cb: CallbackQuery):
 @dp.callback_query_handler(lambda cb: cb.data == "admin_mails")
 @dp.callback_query_handler(lambda cb: cb.data == "admin_notification")
 async def in_dev(cb: CallbackQuery):
-    cb.answer("🧑‍💻In development, coming soon...", show_alert=True)
+    await cb.answer("🧑‍💻In development, coming soon...", show_alert=True)
