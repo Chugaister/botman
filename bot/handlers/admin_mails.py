@@ -4,7 +4,7 @@ from bot.keyboards import admin_mails as kb
 from bot.keyboards import admin_mail_action, gen_cancel, gen_ok
 
 
-async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.Mail | None:
+async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.AdminMail | None:
     try:
         admin_mail = await admin_mails_db.get(mail_id)
         return admin_mail
