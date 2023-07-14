@@ -11,6 +11,7 @@ import os
 source_folder="source"
 tables_with_media = ["captchas", "greetings", "mails", "admin_mails"]
 tables_with_dual_foreign_keys = ["msgs", "users"]
+tables_tg_id=["admins", "users", "bots", "msgs"]
 def create_db(source):
     path = join(DIR, source)
     if not exists(path):
@@ -40,7 +41,7 @@ class Database:
             cur = await self.conn.execute(query, object.get_tuple())
         except IntegrityError:
             raise RecordAlreadyExists(object)
-        object.id = cur.lastrowid
+        object.id = cur.lastrowid if self.table_name not in tables_tg_id else object.id
         await self.conn.commit()
 
     async def get(self, _id: int):
