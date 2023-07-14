@@ -11,7 +11,7 @@ class Manager:
     def register_handlers(self, bots: list[models.Bot]):
         for bot in bots:
             if bot.token not in self.bot_dict.keys():
-                self.bot_dict[bot.token] = (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage()))
+                self.bot_dict[bot.token] = (Bot(token=bot.token, parse_mode="HTML"), Dispatcher(Bot(token=bot.token), storage=MemoryStorage()))
         for bot, dp in self.bot_dict.values():
             Bot.set_current(bot)
             Dispatcher.set_current(dp)
