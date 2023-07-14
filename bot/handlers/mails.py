@@ -133,7 +133,7 @@ async def mail_input_text(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
-        mail.text = msg.parse_entities(as_html=True)
+        mail.text = msg.parse_entities(as_html=True) if msg.text else None
         mail.photo = None
         mail.video = None
         mail.gif = None
@@ -142,7 +142,7 @@ async def mail_input_text(msg: Message, state: FSMContext):
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.text
+            text=msg.parse_entities(as_html=True) if msg.text else None
         )
         await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -156,7 +156,7 @@ async def mail_input_photo(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
-        mail.text = msg.parse_entities(as_html=True)
+        mail.text = msg.parse_entities(as_html=True) if msg.caption else None
         mail.photo = filename
         mail.video = None
         mail.gif = None
@@ -165,7 +165,7 @@ async def mail_input_photo(msg: Message, state: FSMContext):
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.parse_entities(as_html=True),
+            text=msg.parse_entities(as_html=True) if msg.caption else None,
             photo=filename
         )
         await mails_db.add(mail)
@@ -180,7 +180,7 @@ async def mail_input_video(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
-        mail.text = msg.parse_entities(as_html=True)
+        mail.text = msg.parse_entities(as_html=True) if msg.caption else None
         mail.photo = None
         mail.video = filename
         mail.gif = None
@@ -189,7 +189,7 @@ async def mail_input_video(msg: Message, state: FSMContext):
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.parse_entities(as_html=True),
+            text=msg.parse_entities(as_html=True) if msg.caption else None,
             video=filename
         )
         await mails_db.add(mail)
@@ -204,7 +204,7 @@ async def mail_input_gif(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
-        mail.text = msg.parse_entities(as_html=True)
+        mail.text = msg.parse_entities(as_html=True) if msg.caption else None
         mail.photo = None
         mail.video = None
         mail.gif = filename
@@ -213,7 +213,7 @@ async def mail_input_gif(msg: Message, state: FSMContext):
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.parse_entities(as_html=True),
+            text=msg.parse_entities(as_html=True) if msg.caption else None,
             gif=filename
         )
         await mails_db.add(mail)
