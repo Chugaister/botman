@@ -61,7 +61,7 @@ async def set_captcha_text(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     await state.set_state(None)
     captcha = await captchas_db.get(state_data["captcha_id"])
-    captcha.text = msg.parse_entities(as_html=True)
+    captcha.text = msg.parse_entities(as_html=True) if msg.text else None
     captcha.photo = None
     captcha.video = None
     captcha.gif = None
@@ -75,7 +75,7 @@ async def set_captcha_photo(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     await state.set_state(None)
     captcha = await captchas_db.get(state_data["captcha_id"])
-    captcha.text = msg.parse_entities(as_html=True)
+    captcha.text = msg.parse_entities(as_html=True) if msg.caption else None
     captcha.photo = await file_manager.download_file(bot, captcha.bot, msg.photo[-1].file_id)
     captcha.video = None
     captcha.gif = None
@@ -89,7 +89,7 @@ async def set_captcha_video(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     await state.set_state(None)
     captcha = await captchas_db.get(state_data["captcha_id"])
-    captcha.text = msg.parse_entities(as_html=True)
+    captcha.text = msg.parse_entities(as_html=True) if msg.caption else None
     captcha.photo = None
     captcha.video = await file_manager.download_file(bot, captcha.bot, msg.video.file_id)
     captcha.gif = None
@@ -103,7 +103,7 @@ async def set_captcha_gif(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     await state.set_state(None)
     captcha = await captchas_db.get(state_data["captcha_id"])
-    captcha.text = msg.parse_entities(as_html=True)
+    captcha.text = msg.parse_entities(as_html=True) if msg.caption else None
     captcha.photo = None
     captcha.video = None
     captcha.gif = await file_manager.download_file(bot, captcha.bot, msg.animation.file_id)

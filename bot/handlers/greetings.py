@@ -102,7 +102,7 @@ async def greeting_input_text(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     if state_data["edit"]:
         greeting = await greeting_db.get(state_data["edit"])
-        greeting.text = msg.parse_entities(as_html=True)
+        greeting.text = msg.parse_entities(as_html=True) if msg.text else None
         greeting.photo = None
         greeting.video = None
         greeting.gif = None
@@ -111,7 +111,7 @@ async def greeting_input_text(msg: Message, state: FSMContext):
         greeting = models.Greeting(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.parse_entities(as_html=True),
+            text=msg.parse_entities(as_html=True) if msg.text else None,
             photo=None,
             video=None,
             gif=None
@@ -128,7 +128,7 @@ async def greeting_input_photo(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
     if state_data["edit"]:
         greeting = await greeting_db.get(state_data["edit"])
-        greeting.text = msg.parse_entities(as_html=True)
+        greeting.text = msg.parse_entities(as_html=True) if msg.caption else None
         greeting.photo = filename
         greeting.video = None
         greeting.gif = None
@@ -137,7 +137,7 @@ async def greeting_input_photo(msg: Message, state: FSMContext):
         greeting = models.Greeting(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.parse_entities(as_html=True),
+            text=msg.parse_entities(as_html=True) if msg.caption else None,
             photo=filename,
             video=None,
             gif=None
@@ -154,7 +154,7 @@ async def greeting_input_video(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
     if state_data["edit"]:
         greeting = await greeting_db.get(state_data["edit"])
-        greeting.text = msg.parse_entities(as_html=True)
+        greeting.text = msg.parse_entities(as_html=True) if msg.caption else None
         greeting.photo = None
         greeting.video = filename
         greeting.gif = None
@@ -163,7 +163,7 @@ async def greeting_input_video(msg: Message, state: FSMContext):
         greeting = models.Greeting(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.parse_entities(as_html=True),
+            text=msg.parse_entities(as_html=True) if msg.caption else None,
             photo=None,
             video=filename,
             gif=None
@@ -180,7 +180,7 @@ async def greeting_input_gif(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
     if state_data["edit"]:
         greeting = await greeting_db.get(state_data["edit"])
-        greeting.text = msg.parse_entities(as_html=True)
+        greeting.text = msg.parse_entities(as_html=True) if msg.caption else None
         greeting.photo = None
         greeting.video = None
         greeting.gif = filename
@@ -189,7 +189,7 @@ async def greeting_input_gif(msg: Message, state: FSMContext):
         greeting = models.Greeting(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.parse_entities(as_html=True),
+            text=msg.parse_entities(as_html=True) if msg.caption else None,
             photo=None,
             video=None,
             gif=await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
