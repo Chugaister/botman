@@ -294,7 +294,8 @@ class AdminMail:
             "status",
             "sent_num",
             "blocked_num",
-            "error_num"
+            "error_num",
+            "sender"
     )
 
     def __init__(
@@ -310,7 +311,8 @@ class AdminMail:
             status: bool = False,
             sent_num: int = None,
             blocked_num: int = None,
-            error_num: int = None
+            error_num: int = None,
+            sender: int = None
     ):
         self.id = _id
         self.active = active
@@ -324,6 +326,7 @@ class AdminMail:
         self.sent_num = sent_num
         self.blocked_num = blocked_num
         self.error_num = error_num
+        self.sender = sender
 
     def get_tuple(self):
         return (
@@ -337,7 +340,8 @@ class AdminMail:
             self.status,
             self.sent_num,
             self.blocked_num,
-            self.error_num
+            self.error_num,
+            self.sender
         )
 
 

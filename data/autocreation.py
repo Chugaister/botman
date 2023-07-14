@@ -124,6 +124,7 @@ queries = [
         "sent_num"	INTEGER,
         "blocked_num"	INTEGER,
         "error_num"	INTEGER,
+        "sender" INTEGER,
         PRIMARY KEY("id" AUTOINCREMENT)
     );
     """
