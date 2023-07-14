@@ -1,6 +1,6 @@
 from bot.misc import *
 from bot.keyboards import mails as kb
-from bot.keyboards import bot_action, mail_action, gen_cancel, gen_ok
+from bot.keyboards import bot_action, mail_action, gen_cancel, gen_ok, gen_confirmation
 from datetime import datetime
 
 
@@ -458,6 +458,26 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
             show_alert=True
         )
         return
+    await cb.message.answer(
+        "Ви впевнені, що хочете запустити розсилку?",
+        reply_markup=gen_confirmation(
+            mail_action.new(
+                id=mail.id,
+                action="confirm_sendout"
+            ),
+            mail_action.new(
+                id=mail.id,
+                action="open_mail_menu"
+            )
+        )
+    )
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+
+
+@dp.callback_query_handler(mail_action.filter(action="confirm_sendout"))
+async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
+    mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     bot_dc = await bots_db.get(mail.bot)
     await cb.message.answer(
         f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
