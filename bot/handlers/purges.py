@@ -136,7 +136,7 @@ async def edit_sched_dt(msg: Message, state: FSMContext):
 async def run(cb: CallbackQuery, callback_data: dict):
     purge = await safe_get_purge(cb.from_user.id, int(callback_data["id"]), cb.id)
     await cb.message.answer(
-        "Ви впевнені, що хочете запустити розсилку?",
+        "Ви впевнені, що хочете запустити чистку?",
         reply_markup=gen_confirmation(
             purge_action.new(
                 id=purge.id,

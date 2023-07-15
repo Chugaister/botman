@@ -5,9 +5,10 @@ from . import bot_action, gen_cancel, mail_action
 def gen_mail_list(bot: models.Bot, mails: list[models.Mail]) -> InlineKeyboardMarkup:
     mail_list = InlineKeyboardMarkup()
     for mail in mails:
+        schedule_mark = '🕑' if mail.send_dt or mail.del_dt else ''
         mail_list.add(
             InlineKeyboardButton(
-                f"{mail.text[:20]}..." if mail.text else gen_hex_caption(mail.id),
+                schedule_mark + (f"{mail.text[:20]}..." if mail.text else gen_hex_caption(mail.id)),
                 callback_data=mail_action.new(
                     id=mail.id,
                     action="open_mail_menu"
@@ -128,7 +129,7 @@ def gen_schedule_menu(mail: models.Mail) -> InlineKeyboardMarkup:
     )
     schedule_menu.add(
         InlineKeyboardButton(
-            "⬅️Назад",
+            "📥Зберегти",
             callback_data=mail_action.new(
                 id=mail.id,
                 action="open_mail_menu"

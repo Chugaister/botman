@@ -82,17 +82,20 @@ async def edit_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
 
 async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
     mail = await mails_db.get(mail_id)
-    if mail.send_dt != None:
-        if mail.text == None:
-            mail.text = ""
-        mail.text += f"\n\n<i>Заплановано на: {mail.send_dt.strftime(models.DT_FORMAT)}</i>"
+    sched_text = "\n"
+    if mail.send_dt:
+        sched_text += f"\n<i>🕑Заплановано на: {mail.send_dt.strftime(models.DT_FORMAT)}</i>"
+    if mail.del_dt:
+        sched_text += f"\n<i>🗑Видалення: {mail.del_dt.strftime(models.DT_FORMAT)}</i>"
+    mail_text_content = mail.text if mail.text else ""
+    mail_text_content += sched_text
     bot_dc = await bots_db.get(mail.bot)
     if mail.photo:
         file = await file_manager.get_file(mail.photo)
         await bot.send_photo(
             uid,
             file,
-            caption=mail.text,
+            caption=mail_text_content,
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     elif mail.video:
@@ -100,7 +103,7 @@ async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
         await bot.send_video(
             uid,
             file,
-            caption=mail.text,
+            caption=mail_text_content,
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     elif mail.gif:
@@ -108,13 +111,13 @@ async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
         await bot.send_animation(
             uid,
             file,
-            caption=mail.text,
+            caption=mail_text_content,
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     elif mail.text:
         await bot.send_message(
             uid,
-            mail.text,
+            mail_text_content,
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     await safe_del_msg(uid, msg_id)
@@ -472,7 +475,6 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
         )
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
-
 
 
 @dp.callback_query_handler(mail_action.filter(action="confirm_sendout"))
