@@ -7,5 +7,6 @@ from . import (
     purges,
     settings,
     admin_panel,
-    admin_mails
+    admin_mails,
+    admin_notification
 )

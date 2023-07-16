@@ -70,7 +70,7 @@ class Admin:
         self.last_name = last_name
 
     def get_tuple(self):
-        return self.id, self.username, self.first_name, self.last_name
+        return (self.id, self.username, self.first_name, self.last_name)
 
 
 class Bot:
@@ -294,7 +294,8 @@ class AdminMail:
             "status",
             "sent_num",
             "blocked_num",
-            "error_num"
+            "error_num",
+            "sender"
     )
 
     def __init__(
@@ -310,7 +311,8 @@ class AdminMail:
             status: bool = False,
             sent_num: int = None,
             blocked_num: int = None,
-            error_num: int = None
+            error_num: int = None,
+            sender: int = None
     ):
         self.id = _id
         self.active = active
@@ -324,6 +326,7 @@ class AdminMail:
         self.sent_num = sent_num
         self.blocked_num = blocked_num
         self.error_num = error_num
+        self.sender = sender
 
     def get_tuple(self):
         return (
@@ -337,10 +340,40 @@ class AdminMail:
             self.status,
             self.sent_num,
             self.blocked_num,
-            self.error_num
+            self.error_num,
+            self.sender
         )
 
 
+class AdminNotification:
+    columns = (
+            "text",
+            "photo",
+            "video",
+            "gif"
+    )
+
+    def __init__(
+            self,
+            _id: int,
+            text: str = None,
+            photo: str = None,
+            video: str = None,
+            gif: str = None,
+    ):
+        self.id = _id
+        self.text = text
+        self.photo = photo
+        self.video = video
+        self.gif = gif
+
+    def get_tuple(self):
+        return (
+            self.text,
+            self.photo,
+            self.video,
+            self.gif
+        )
 class Purge:
 
     columns = (

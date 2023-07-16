@@ -120,11 +120,11 @@ queries = [
         "gif"	TEXT,
         "buttons"	TEXT,
         "send_dt"	TEXT,
-        "del_dt"	TEXT,
         "status"	INTEGER NOT NULL,
         "sent_num"	INTEGER,
         "blocked_num"	INTEGER,
         "error_num"	INTEGER,
+        "sender" INTEGER,
         PRIMARY KEY("id" AUTOINCREMENT)
     );
     """

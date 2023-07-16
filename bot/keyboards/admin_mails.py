@@ -5,9 +5,10 @@ from bot.keyboards import admin_mail_action
 def gen_admin_mail_list(admin_mails: list[models.AdminMail]) -> InlineKeyboardMarkup:
     mail_list = InlineKeyboardMarkup()
     for admin_mail in admin_mails:
+        schedule_mark = '🕑' if admin_mail.send_dt or admin_mail.del_dt else ''
         mail_list.add(
             InlineKeyboardButton(
-                f"{admin_mail.text[:20]}..." if admin_mail.text else gen_hex_caption(admin_mail.id),
+                schedule_mark + (f"{admin_mail.text[:20]}..." if admin_mail.text else gen_hex_caption(mail.id)),
                 callback_data=admin_mail_action.new(
                     admin_mail.id,
                     action="open_admin_mail_menu"
@@ -109,7 +110,7 @@ def gen_schedule_menu(admin_mail: models.AdminMail) -> InlineKeyboardMarkup:
     )
     schedule_menu.add(
         InlineKeyboardButton(
-            "⬅️Назад",
+            "📥Зберегти",
             callback_data=admin_mail_action.new(
                 id=admin_mail.id,
                 action="open_admin_mail_menu"
