@@ -1,6 +1,6 @@
 from bot.misc import *
 from bot.keyboards import gen_ok
-
+from bot.handlers import admin_notification
 
 async def listen_purges():
     while True:
@@ -99,6 +99,20 @@ async def listen_admin_mails_stats():
         await sleep(5)
 
 
+async def listen_admin_notification_stats():
+    while True:
+        if admin_notification.admin_notification_stats != []:
+            for notification_stats in admin_notification.admin_notification_stats:
+                await bot.send_message(
+                    notification_stats["admin_id"],
+                    f"Сповіщення адмінів закінчено\n\
+Надіслано: {notification_stats['sent_num']}\nЗаблоковано: {notification_stats['blocked_num']}\nПомилка: {notification_stats['error_num']}",
+                    reply_markup=gen_ok("hide")
+                )
+            admin_notification.admin_notification_stats = []
+        await sleep(5)
+
+
 async def listen_purges_stats():
     while True:
         if gig.purges_stats_buffer != []:
@@ -118,9 +132,9 @@ async def run_listeners():
     create_task(listen_admin_mails())
     create_task(listen_purges())
     create_task(listen_autodeletion())
-    create_task(listen_mails_stats())
     create_task(listen_admin_mails_stats())
     create_task(listen_purges())
     create_task(listen_autodeletion())
     create_task(listen_mails_stats())
     create_task(listen_purges_stats())
+    create_task(listen_admin_notification_stats())

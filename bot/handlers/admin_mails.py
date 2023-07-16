@@ -1,7 +1,7 @@
 import bot.handlers.settings
 from bot.misc import *
 from bot.keyboards import admin_mails as kb
-from bot.keyboards import admin_mail_action, gen_cancel, gen_ok
+from bot.keyboards import admin_mail_action, gen_cancel, gen_ok, gen_confirmation
 
 
 async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.AdminMail | None:
@@ -72,16 +72,17 @@ async def edit_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
 
 async def open_admin_mail_menu(uid: int, mail_id: int, msg_id: int):
     admin_mail = await admin_mails_db.get(mail_id)
-    if admin_mail.send_dt != None:
-        if admin_mail.text == None:
-            admin_mail.text = ""
-        admin_mail.text += f"\n\n<i>Заплановано на: {admin_mail.send_dt.strftime(models.DT_FORMAT)}</i>"
+    sched_text = "\n"
+    if admin_mail.send_dt:
+        sched_text += f"\n<i>🕑Заплановано на: {admin_mail.send_dt.strftime(models.DT_FORMAT)}</i>"
+    admin_mail_text_content = admin_mail.text if admin_mail.text else ""
+    admin_mail_text_content += sched_text
     if admin_mail.photo:
         file = await file_manager.get_file(admin_mail.photo)
         await bot.send_photo(
             uid,
             file,
-            caption=admin_mail.text,
+            caption=admin_mail_text_content,
             reply_markup=kb.gen_admin_mail_menu(admin_mail)
         )
     elif admin_mail.video:
@@ -89,7 +90,7 @@ async def open_admin_mail_menu(uid: int, mail_id: int, msg_id: int):
         await bot.send_video(
             uid,
             file,
-            caption=admin_mail.text,
+            caption=admin_mail_text_content,
             reply_markup=kb.gen_admin_mail_menu(admin_mail)
         )
     elif admin_mail.gif:
@@ -97,13 +98,13 @@ async def open_admin_mail_menu(uid: int, mail_id: int, msg_id: int):
         await bot.send_animation(
             uid,
             file,
-            caption=admin_mail.text,
+            caption=admin_mail_text_content,
             reply_markup=kb.gen_admin_mail_menu(admin_mail)
         )
     elif admin_mail.text:
         await bot.send_message(
             uid,
-            admin_mail.text,
+            admin_mail_text_content,
             reply_markup=kb.gen_admin_mail_menu(admin_mail)
         )
     await safe_del_msg(uid, msg_id)
@@ -365,15 +366,33 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
     admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not admin_mail:
         return
-
     await cb.message.answer(
-        f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-        reply_markup=gen_ok("admin", "↩️Адмін панель")
+        "Ви впевнені, що хочете запустити розсилку?",
+        reply_markup=gen_confirmation(
+            admin_mail_action.new(
+                id=admin_mail.id,
+                action="confirm_sendout"
+            ),
+            admin_mail_action.new(
+                id=admin_mail.id,
+                action="open_admin_mail_menuu"
+            )
+        )
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+
+@dp.callback_query_handler(admin_mail_action.filter(action="confirm_sendout"))
+async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
+    admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     bots = []
     bots_without_premium = [bot.token for bot in await bots_db.get_by(premium=0)]
     for bot_token in manager.bot_dict.keys():
         if bot_token in bots_without_premium:
             bots.append(manager.bot_dict[bot_token][0])
+    await cb.message.answer(
+        f"🚀Розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+        reply_markup=gen_ok("admin", "↩️Адмін панель"
+        ))
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
     create_task(gig.send_admin_mail(bots, admin_mail, admin_mail.sender))

@@ -1,5 +1,5 @@
 from bot.misc import *
-from bot.keyboards import bot_action, purge_action, gen_cancel, gen_ok
+from bot.keyboards import bot_action, purge_action, gen_cancel, gen_ok, gen_confirmation
 import bot.keyboards.purges as kb
 
 
@@ -135,6 +135,24 @@ async def edit_sched_dt(msg: Message, state: FSMContext):
 @dp.callback_query_handler(purge_action.filter(action="run"))
 async def run(cb: CallbackQuery, callback_data: dict):
     purge = await safe_get_purge(cb.from_user.id, int(callback_data["id"]), cb.id)
+    await cb.message.answer(
+        "Ви впевнені, що хочете запустити чистку?",
+        reply_markup=gen_confirmation(
+            purge_action.new(
+                id=purge.id,
+                action="confirm_run"
+            ),
+            purge_action.new(
+                id=purge.id,
+                action="open_menu"
+            )
+        )
+    )
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+@dp.callback_query_handler(purge_action.filter(action="confirm_run"))
+async def confirm_run(cb: CallbackQuery, callback_data: dict):
+    purge = await safe_get_purge(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not purge:
         return
     bot_dc = await bots_db.get(purge.bot)
@@ -147,3 +165,4 @@ async def run(cb: CallbackQuery, callback_data: dict):
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
     create_task(gig.clean(manager.bot_dict[bot_dc.token][0], purge, cb.from_user.id))
+

@@ -70,7 +70,7 @@ class Admin:
         self.last_name = last_name
 
     def get_tuple(self):
-        return self.id, self.username, self.first_name, self.last_name
+        return (self.id, self.username, self.first_name, self.last_name)
 
 
 class Bot:
@@ -345,6 +345,35 @@ class AdminMail:
         )
 
 
+class AdminNotification:
+    columns = (
+            "text",
+            "photo",
+            "video",
+            "gif"
+    )
+
+    def __init__(
+            self,
+            _id: int,
+            text: str = None,
+            photo: str = None,
+            video: str = None,
+            gif: str = None,
+    ):
+        self.id = _id
+        self.text = text
+        self.photo = photo
+        self.video = video
+        self.gif = gif
+
+    def get_tuple(self):
+        return (
+            self.text,
+            self.photo,
+            self.video,
+            self.gif
+        )
 class Purge:
 
     columns = (

@@ -124,3 +124,9 @@ async def premium_sub(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(lambda cb: cb.data == "hide", state="*")
 async def hide(cb: CallbackQuery):
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+
+@dp.callback_query_handler(lambda cb: cb.data == "admin_mails")
+@dp.callback_query_handler(lambda cb: cb.data == "admin_notification")
+async def in_dev(cb: CallbackQuery):
+    await cb.answer("🧑‍💻In development, coming soon...", show_alert=True)

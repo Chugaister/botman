@@ -153,7 +153,6 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
     if bot_dc.settings.get_users_collect():
         try:
             await user_db.add(user)
-            user.id = msg.from_user.id
         except data_exc.RecordAlreadyExists:
             pass
     state_data = await state.get_data()
@@ -185,7 +184,6 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
     if bot_dc.settings.get_users_collect():
         try:
             await user_db.add(user)
-            user.id = msg.from_user.id
         except data_exc.RecordAlreadyExists:
             pass
     create_task(send_all_greeting(ubot, user))
