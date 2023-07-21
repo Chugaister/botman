@@ -1,5 +1,5 @@
 from aiogram import Bot, Dispatcher
-from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, MessageToDeleteNotFound
+from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, MessageToDeleteNotFound, BadRequest, CantInitiateConversation
 from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode
 from aiogram.dispatcher.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -96,6 +96,8 @@ async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting)
             )
     except BotBlocked:
         return
+    except CantInitiateConversation:
+        return
     if greeting.del_delay:
         await sleep(greeting.del_delay)
         try:
@@ -133,8 +135,6 @@ async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, stat
         await send_captcha(ubot, udp, user, request)
     else:
         create_task(send_all_greeting(ubot, user))
-        if bot_dc.settings.get_autoapprove():
-            await request.approve()
 
 
 # message_handler state=captcha
@@ -158,10 +158,13 @@ async def captcha_confirm(ubot: Bot, udp: Dispatcher, msg: Message, state: FSMCo
     state_data = await state.get_data()
     await state.set_state(None)
     if bot_dc.settings.get_autoapprove():
-        await ubot.approve_chat_join_request(
-            state_data["channel_id"],
-            msg.from_user.id
-        )
+        try:
+            await ubot.approve_chat_join_request(
+                state_data["channel_id"],
+                msg.from_user.id
+            )
+        except BadRequest:
+            pass
     create_task(send_all_greeting(ubot, user))
     if captcha.del_delay:
         await sleep(captcha.del_delay)
