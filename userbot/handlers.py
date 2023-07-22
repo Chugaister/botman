@@ -51,6 +51,8 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: C
             msg = await ubot.send_message(user.id, captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
     except BotBlocked:
         return
+    except CantInitiateConversation:
+        return
     state = udp.current_state(chat=user.id, user=user.id)
     await state.set_state(CaptchaStatesGroup.captcha)
     await state.set_data({"msg_id": msg.message_id, "channel_id": request.chat.id})

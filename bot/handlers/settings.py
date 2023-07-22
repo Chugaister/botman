@@ -2,7 +2,7 @@ from bot.misc import *
 from bot.keyboards import bot_action, gen_confirmation
 from bot.keyboards import settings as kb
 
-from bot.handlers.menu import open_bot_list
+from bot.handlers.menu import open_bot_list_cb
 
 
 @dp.callback_query_handler(bot_action.filter(action="settings"))
@@ -39,7 +39,7 @@ async def deletion_confirm(cb: CallbackQuery, callback_data: dict, state: FSMCon
     bot_dc.admin = None
     bot_status = 0
     await bots_db.update(bot_dc)
-    await open_bot_list(cb, state)
+    await open_bot_list_cb(cb, state)
 
 
 @dp.callback_query_handler(bot_action.filter(action="autoapprove_on"))
