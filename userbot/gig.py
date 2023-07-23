@@ -23,9 +23,9 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     mail.active = 1
     await mails_db.update(mail)
     users = await user_db.get_by(bot=mail.bot)
-    sent_num = 0
-    blocked_num = 0
-    error_num = 0
+    mail.sent_num = 0
+    mail.blocked_num = 0
+    mail.error_num = 0
     if mail.photo:
         file = await file_manager.get_file(mail.photo)
     elif mail.video:
@@ -33,7 +33,7 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     elif mail.gif:
         file = await file_manager.get_file(mail.gif)
     for user in users:
-        await sleep(0.035)
+        await sleep(10)
         mail_copy = copy(mail)
         if mail_copy.text:
             mail_copy.text = gen_dynamic_text(mail_copy.text, user)
@@ -75,21 +75,23 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
                 mail_copy.del_dt.strftime(models.DT_FORMAT) if mail_copy.del_dt != None else None
             )
             await msgs_db.add(msg_dc)
-            sent_num += 1
+            mail.sent_num += 1
         except BotBlocked:
             user.status = 0
             await user_db.update(user)
-            blocked_num += 1
+            mail.blocked_num += 1
         except:
-            error_num += 1
+            mail.error_num += 1
     mails_stats_buffer.append({
         "admin_id": admin_id,
         "mail_id": mail.id,
-        "sent_num": sent_num,
-        "blocked_num": blocked_num,
-        "error_num": error_num
+        "sent_num": mail.sent_num,
+        "blocked_num": mail.blocked_num,
+        "error_num": mail.error_num
     })
-    await mails_db.delete(mail.id)
+    mail.status = 1
+    mail.active = 0
+    await mails_db.update(mail)
 
 
 async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: int):

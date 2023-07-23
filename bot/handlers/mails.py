@@ -32,7 +32,7 @@ async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> mod
 async def open_mail_list(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     await state.set_state(None)
     bot_dc = await bots_db.get(int(callback_data["id"]))
-    mails = await mails_db.get_by(bot=int(callback_data["id"]))
+    mails = await mails_db.get_by(bot=int(callback_data["id"]), active=0, status=0)
     await cb.message.answer(
         "<i>💡В цьому меню, можна створити, редагувати та запускати розсилки користувачам, які є у базі цього бота. \
 </i>\n\n\
@@ -481,6 +481,14 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
 async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     bot_dc = await bots_db.get(mail.bot)
+    bot_mails = await mails_db.get_by(bot=mail.bot)
+    for bot_mail in bot_mails:
+        if bot_mail.active:
+            await cb.answer(
+                "❗️Помилка, на даний момент триває інша розсилка. Спробуйте знову після закінчення поточної розсилки",
+                show_alert=True
+            )
+            return
     await cb.message.answer(
         f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
         reply_markup=gen_ok(bot_action.new(

@@ -2,6 +2,7 @@ from bot.misc import *
 from bot.keyboards import gen_ok
 from bot.handlers import admin_notification
 
+
 async def listen_purges():
     while True:
         purges = await purges_db.get_all()
@@ -24,8 +25,13 @@ async def listen_mails():
     while True:
         mails = await mails_db.get_all()
         for mail in mails:
+            bot_mails = await mails_db.get_by(bot=mail.bot)
+            flag = True
+            for bot_mail in bot_mails:
+                if bot_mail.active:
+                    flag = False
             if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt)\
-            and mail.active != 1:
+            and mail.active != 1 and mail.status != 1 and flag:
                 bot_dc = await bots_db.get(mail.bot)
                 await bot.send_message(
                     bot_dc.admin,
