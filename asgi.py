@@ -1,3 +1,4 @@
+from logging.handlers import TimedRotatingFileHandler
 from aiogram import types, Dispatcher, Bot
 from aiogram.types.bot_command import BotCommand
 import uvicorn
@@ -27,23 +28,34 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 log_directory = os.path.join(current_dir, "logs")
 log_file = os.path.join(log_directory, "logfile.log")
 os.makedirs(log_directory, exist_ok=True)
-logging.basicConfig(
-    filename=log_file,
-    level=logging.DEBUG,
-    format='%(asctime)s %(levelname)s:%(message)s',
-    encoding='utf-8'
-)
+# logging.basicConfig(
+#     filename=log_file,
+#     level=logging.INFO,
+#     format='%(asctime)s %(levelname)s:%(message)s',
+#     encoding='utf-8'
+# )
 
+aiogram_logger = logging.getLogger("aiogram")
+aiogram_logger.setLevel(logging.DEBUG)
 
+file_handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7, encoding='utf-8')
+file_handler.suffix = "%Y-%m-%d_%H-%M-%S"  # Add a suffix based on the date
+file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+aiogram_logger.addHandler(file_handler)
 def custom_exception_handler(exc_type, exc_value, exc_traceback):
-    logging.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
+    aiogram_logger.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
 
 
 sys.excepthook = custom_exception_handler
 
 
 async def log_exception(update: types.Update, exception: Exception):
-    logging.error(f"An error occurred in update {update.update_id}: {exception}", exc_info=True)
+    aiogram_logger.error(f"An error occurred in update {update.update_id}: {exception}", exc_info=True)
 
 app = FastAPI()
 
@@ -73,7 +85,7 @@ async def on_startup():
 @app.post("/bot/{token}")
 async def bot_webhook(token, update: dict):
     telegram_update = types.Update(**update)
-    logging.debug(f"Get updates: {telegram_update}")
+    aiogram_logger.debug(f"Get updates: {telegram_update}")
     if token == main_token:
         Dispatcher.set_current(main_dp)
         Bot.set_current(main_bot)

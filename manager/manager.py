@@ -6,6 +6,7 @@ from userbot.handlers import start_handler, req_handler, captcha_confirm, Captch
 import logging
 class Manager:
     def __init__(self, bots: list[models.Bot], webhook_host: str):
+        self.logger = logging.getLogger('aiogram')
         self.bot_dict = {bot.token: (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage())) for bot in bots}
         self.webhook_host = webhook_host
     def register_handlers(self, bots: list[models.Bot]):
@@ -38,7 +39,7 @@ class Manager:
             await self.delete_webhook(bot)
 
     async def log_exception(self, update: types.Update, exception: Exception):
-        logging.error(f"An error occurred in update {update.update_id}: {exception}", exc_info=True)
+        self.logger.error(f"An error occurred in update {update.update_id}: {exception}", exc_info=True)
 
     async def echo_message(self, bot, message: types.Message):
         await message.answer(message.text)
