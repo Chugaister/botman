@@ -1,5 +1,6 @@
 from aiogram import Bot, Dispatcher, types
 from data import models
+from aiogram.utils.exceptions import Unauthorized
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 # from web_config.local_config import PUBLIC_IP
 from userbot.handlers import start_handler, req_handler, captcha_confirm, CaptchaStatesGroup
@@ -26,13 +27,21 @@ class Manager:
             if bot.token not in self.bot_dict.keys():
                 self.bot_dict[bot.token] = ((Bot(token=bot.token)), Dispatcher(Bot(token=bot.token)))  
             ubot = Bot(token=bot.token)
-            await ubot.set_webhook(f"https://{self.webhook_host}/bot/{bot.token}", drop_pending_updates=True)
-            await (await ubot.get_session()).close()
+            try:
+                await ubot.set_webhook(f"https://{self.webhook_host}/bot/{bot.token}", drop_pending_updates=True)
+                await (await ubot.get_session()).close()
+            except Unauthorized:
+                pass
+            
 
     async def delete_webhook(self, bot: models.Bot):
         ubot = Bot(bot.token)
-        await ubot.delete_webhook()
-        ubot.get_session().close()
+        try:
+            await ubot.delete_webhook()
+            ubot.get_session().close()
+        except Unauthorized:
+            pass
+        
 
     async def delete_webhooks(self, bots: list[models.Bot]):
         for bot in bots:
