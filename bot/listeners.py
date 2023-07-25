@@ -25,41 +25,84 @@ async def listen_mails():
     while True:
         mails = await mails_db.get_all()
         for mail in mails:
-            bot_mails = await mails_db.get_by(bot=mail.bot)
-            flag = True
-            for bot_mail in bot_mails:
-                if bot_mail.active:
-                    flag = False
-            if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt)\
-            and mail.active != 1 and mail.status != 1 and flag:
-                bot_dc = await bots_db.get(mail.bot)
+            if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt):
+                users = await user_db.get_by(bot=mail.bot)
+                for user in users:
+                    new_mail_msgs = models.MailsQueue(
+                        _id=0,
+                        bot=mail.bot,
+                        user=user.id,
+                        mail_id=mail.id
+                    )
+                    await mails_queue_db.add(new_mail_msgs)
+                mail.active = 1
+                await mails_db.update(mail)
+            bot_dc = await bots_db.get(mail.bot)
+
+            if not bot_dc.action and mail.active:
+                await bot.send_message(
+                            bot_dc.admin,
+                                 f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                                reply_markup=gen_ok("hide")
+                            )
+                ubot = manager.bot_dict[await bots_db.get_by(id=mail.bot).token][0]
+                create_task(gig.send_mail(mail, bot_dc.admin, ubot))
+
+            elif (bot_dc.action != f"mail_{mail.id}") and bot_dc.action and mail.active and not mail.status:
                 await bot.send_message(
                     bot_dc.admin,
-                    f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                    f"Розсилка {gen_hex_caption(mail.id)} буде розпочата після іншої розсилки, яка вже йде у боті. Вам прийде повідомлення коли розпочнеться розсилка",
                     reply_markup=gen_ok("hide")
                 )
-                create_task(gig.send_mail(manager.bot_dict[bot_dc.token][0], mail, bot_dc.admin))
+                mail.status = 1
+                await mails_db.update(mail)
+            mail_msgs = await mails_queue_db.get_by(mail_id=mail.id, admin_status=False)
+            if bot_dc.action == f"mail_id_{mail.id}" and mail_msgs:
+                ubot = manager.bot_dict[await bots_db.get_by(id=mail.bot).token][0]
+                create_task(gig.send_mail(mail, bot_dc.admin, ubot))
         await sleep(5)
 
 
-async def listen_admin_mails():
-    while True:
-        admin_mails = await admin_mails_db.get_all()
-        for admin_mail in admin_mails:
-            if admin_mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(admin_mail.send_dt)\
-            and admin_mail.active != 1:
-                await bot.send_message(
-                    admin_mail.sender,
-                    f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                    reply_markup=gen_ok("hide")
-                )
-                bots = []
-                for bot_token in manager.bot_dict.keys():
-                    bots.append(manager.bot_dict[bot_token][0])
-                create_task(gig.send_admin_mail(bots, admin_mail, admin_mail.sender))
-        await sleep(5)
-
-
+# async def listen_admin_mails():
+#     while True:
+#         admin_mails = await mails_db.get_all()
+#         for admin_mail in admin_mails:
+#             if admin_mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(admin_mail.send_dt):
+#                 bots = [ubot for ubot in await bots_db.get_by(premium=0)]
+#                 for ubot in bots:
+#                     users = await user_db.get_by(bot=ubot.id)
+#                     for user in users:
+#                         new_mail_msgs = models.MailsQueue(
+#                             _id=0,
+#                             bot=admin_mail.bot,
+#                             user=user.id,
+#                             mail_id=admin_mail.id,
+#                             admin_status=True
+#                         )
+#                         await mails_queue_db.add(new_mail_msgs)
+#                     admin_mail.active = 1
+#                     await mails_db.update(admin_mail)
+#             if admin_mail.active and not admin_mail.status:
+#                 await bot.send_message(
+#                             admin_mail.sender,
+#                                  f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+#                                 reply_markup=gen_ok("hide")
+#                             )
+#                 bots = []
+#                 bots_without_premium = [bot.token for bot in await bots_db.get_by(premium=0)]
+#                 for bot_token in manager.bot_dict.keys():
+#                     if bot_token in bots_without_premium:
+#                         bots.append(manager.bot_dict[bot_token][0])
+#                 create_task(gig.send_mail(admin_mail, admin_mail.sender, bots))
+#                 admin_mail.status = 1
+#                 await admin_mails_db.update(admin_mail)
+#             mail_msgs = await mails_queue_db.get_by(mail_id=admin_mail.id, admin_status=True)
+#             bots = [ubot for ubot in await bots_db.get_by(premium=0)]
+#             for ubot in bots:
+#                 if ubot.action == f"admin_mail_{admin_mail.id}" and mail_msgs:
+#                     create_task(gig.send_mail(admin_mail, admin_mail.sender))
+#
+#
 async def listen_autodeletion():
     while True:
         msgs = [msg for msg in await msgs_db.get_all() if msg.del_dt != None]
@@ -79,7 +122,7 @@ async def listen_autodeletion():
 
 async def listen_mails_stats():
     while True:
-        if gig.mails_stats_buffer != []:
+        if gig.mails_stats_buffer:
             for mail_stats in gig.mails_stats_buffer:
                 await bot.send_message(
                     mail_stats["admin_id"],
@@ -93,7 +136,7 @@ async def listen_mails_stats():
 
 async def listen_admin_mails_stats():
     while True:
-        if gig.admin_mails_stats_buffer != []:
+        if gig.admin_mails_stats_buffer:
             for mail_stats in gig.admin_mails_stats_buffer:
                 await bot.send_message(
                     mail_stats["admin_id"],
@@ -107,7 +150,7 @@ async def listen_admin_mails_stats():
 
 async def listen_admin_notification_stats():
     while True:
-        if admin_notification.admin_notification_stats != []:
+        if admin_notification.admin_notification_stats:
             for notification_stats in admin_notification.admin_notification_stats:
                 await bot.send_message(
                     notification_stats["admin_id"],
@@ -135,12 +178,10 @@ async def listen_purges_stats():
 
 async def run_listeners():
     create_task(listen_mails())
-    create_task(listen_admin_mails())
+    # create_task(listen_admin_mails())
     create_task(listen_purges())
     create_task(listen_autodeletion())
     create_task(listen_admin_mails_stats())
-    create_task(listen_purges())
-    create_task(listen_autodeletion())
     create_task(listen_mails_stats())
     create_task(listen_purges_stats())
     create_task(listen_admin_notification_stats())

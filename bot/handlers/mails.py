@@ -480,21 +480,19 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(mail_action.filter(action="confirm_sendout"))
 async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
-    bot_dc = await bots_db.get(mail.bot)
-    bot_mails = await mails_db.get_by(bot=mail.bot)
-    for bot_mail in bot_mails:
-        if bot_mail.active:
-            await cb.answer(
-                "❗️Помилка, на даний момент триває інша розсилка. Спробуйте знову після закінчення поточної розсилки",
-                show_alert=True
-            )
-            return
-    await cb.message.answer(
-        f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-        reply_markup=gen_ok(bot_action.new(
-            bot_dc.id,
-            "mails"
-        ))
-    )
+    users = await user_db.get_by(bot=mail.bot)
+    for user in users:
+        new_mail_msgs = models.MailsQueue(
+            _id=0,
+            bot=mail.bot,
+            user=user.id,
+            mail_id=mail.id
+        )
+        await mails_queue_db.add(new_mail_msgs)
+    mail.active = 1
+    await mails_db.update(mail)
+    ubot = await bots_db.get(mail.bot)
+    if not ubot.action:
+        ubot.action = f"mail_{mail.id}"
+        await bots_db.update(ubot)
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
-    create_task(gig.send_mail(manager.bot_dict[bot_dc.token][0], mail, cb.from_user.id))
