@@ -480,6 +480,8 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(mail_action.filter(action="confirm_sendout"))
 async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not mail:
+        return
     users = await user_db.get_by(bot=mail.bot)
     for user in users:
         new_mail_msgs = models.MailsQueue(
@@ -491,8 +493,8 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
         await mails_queue_db.add(new_mail_msgs)
     mail.active = 1
     await mails_db.update(mail)
-    ubot = await bots_db.get(mail.bot)
-    if not ubot.action:
-        ubot.action = f"mail_{mail.id}"
-        await bots_db.update(ubot)
+    await cb.message.answer(
+        f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
+        reply_markup=gen_ok("hide")
+    )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)

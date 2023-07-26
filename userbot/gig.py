@@ -17,12 +17,11 @@ purges_stats_buffer = []
 
 
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
-    mails_pending = mails_queue_db.get_by(mail_id=mail, admin_status=0)
+    mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
     for mail_msg in mails_pending:
-        await sleep(0.3)
         mail_copy = copy(mail)
         if mail_copy.text:
-            mail_copy.text = gen_dynamic_text(mail_copy.text, user_db.get(mail_msg.user))
+            mail_copy.text = gen_dynamic_text(mail_copy.text, (await user_db.get(mail_msg.user)))
         try:
             if mail_copy.photo:
                 file = await file_manager.get_file(mail.photo)
@@ -62,15 +61,18 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
             )
             await msgs_db.add(msg_dc)
             mail.sent_num += 1
-            mails_db.update(mail)
+            await mails_db.update(mail)
         except BotBlocked:
             user = user_db.get(mail_msg.user)
             user.status = 0
             await user_db.update(user)
             mail.blocked_num += 1
+            await mails_db.update(mail)
         except:
             mail.error_num += 1
-        await mails_queue_db.delete(mail_msg)
+            await mails_db.update(mail)
+        await mails_queue_db.delete(mail_msg.id)
+        await sleep(20)
     new_action_bot = await bots_db.get(ubot.id)
     new_action_bot.action = None
     await bots_db.update(new_action_bot)
@@ -81,7 +83,9 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
         "blocked_num": mail.blocked_num,
         "error_num": mail.error_num
     })
-    await mails_db.delete(mail)
+    mail.status = 1
+    mail.active = 0
+    await mails_db.update(mail)
 
 
 # async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: int):

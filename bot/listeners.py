@@ -37,29 +37,26 @@ async def listen_mails():
                     await mails_queue_db.add(new_mail_msgs)
                 mail.active = 1
                 await mails_db.update(mail)
-            bot_dc = await bots_db.get(mail.bot)
+                bot_dc = await bots_db.get(mail.bot)
+                await bot.send_message(
+                    bot_dc.admin,
+                    f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
+                    reply_markup=gen_ok("hide")
+                )
 
+            bot_dc = await bots_db.get(mail.bot)
             if not bot_dc.action and mail.active:
                 await bot.send_message(
                             bot_dc.admin,
                                  f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
                                 reply_markup=gen_ok("hide")
-                            )
-                ubot = manager.bot_dict[await bots_db.get_by(id=mail.bot).token][0]
-                create_task(gig.send_mail(mail, bot_dc.admin, ubot))
-
-            elif (bot_dc.action != f"mail_{mail.id}") and bot_dc.action and mail.active and not mail.status:
-                await bot.send_message(
-                    bot_dc.admin,
-                    f"Розсилка {gen_hex_caption(mail.id)} буде розпочата після іншої розсилки, яка вже йде у боті. Вам прийде повідомлення коли розпочнеться розсилка",
-                    reply_markup=gen_ok("hide")
                 )
-                mail.status = 1
-                await mails_db.update(mail)
-            mail_msgs = await mails_queue_db.get_by(mail_id=mail.id, admin_status=False)
-            if bot_dc.action == f"mail_id_{mail.id}" and mail_msgs:
-                ubot = manager.bot_dict[await bots_db.get_by(id=mail.bot).token][0]
-                create_task(gig.send_mail(mail, bot_dc.admin, ubot))
+                if not bot_dc.action:
+                    bot_dc.action = f"mail_{mail.id}"
+                    await bots_db.update(bot_dc)
+                ubot = manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0]
+                create_task(gig.send_mail(ubot, mail, bot_dc.admin))
+
         await sleep(5)
 
 
@@ -176,6 +173,23 @@ async def listen_purges_stats():
         await sleep(5)
 
 
+async def listen_mails_on_startup():
+    print("start listener mails queue")
+    ubots = []
+    ubots_all = await bots_db.get_all()
+    for ubot in ubots_all:
+        if ubot.status == 1 and ubot.admin:
+            ubots.append(ubot)
+    mails = await mails_db.get_all()
+    for mail in mails:
+        mail_msgs = await mails_queue_db.get_by(mail_id=mail.id, admin_status=False)
+        if mail_msgs:
+            for ubot in ubots:
+                if ubot.action == f"mail_{mail.id}" and mail_msgs:
+                    bot_dc = manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0]
+                    create_task(gig.send_mail(bot_dc, mail, ubot.admin))
+
+
 async def run_listeners():
     create_task(listen_mails())
     # create_task(listen_admin_mails())
@@ -185,3 +199,4 @@ async def run_listeners():
     create_task(listen_mails_stats())
     create_task(listen_purges_stats())
     create_task(listen_admin_notification_stats())
+    create_task(listen_mails_on_startup())
