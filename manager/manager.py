@@ -3,6 +3,7 @@ from data import models
 from aiogram.utils.exceptions import Unauthorized
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 # from web_config.local_config import PUBLIC_IP
+from data.factory import *
 from userbot.handlers import start_handler, req_handler, captcha_confirm, CaptchaStatesGroup
 import logging
 class Manager:
@@ -31,8 +32,9 @@ class Manager:
                 await ubot.set_webhook(f"https://{self.webhook_host}/bot/{bot.token}", drop_pending_updates=True)
                 await (await ubot.get_session()).close()
             except Unauthorized:
-                pass
-            
+                bot = await bots_db.get(ubot.id)
+                bot.admin = None
+                await bots_db.update(bot)
 
     async def delete_webhook(self, bot: models.Bot):
         ubot = Bot(bot.token)
@@ -40,7 +42,9 @@ class Manager:
             await ubot.delete_webhook()
             ubot.get_session().close()
         except Unauthorized:
-            pass
+            bot = await bots_db.get(ubot.id)
+            bot.admin = None
+            await bots_db.update(bot)
         
 
     async def delete_webhooks(self, bots: list[models.Bot]):

@@ -76,6 +76,7 @@ async def on_startup():
         allowed_updates=allowed_updates
     )
     ubots = await bots_db.get_by(status=1)
+    ubots = [ubot for ubot in ubots if ubot.admin is not None]
     main_dp.register_errors_handler(log_exception)
     bot_manager.register_handlers(ubots)
     await bot_manager.set_webhook(ubots)
