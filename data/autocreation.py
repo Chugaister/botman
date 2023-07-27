@@ -16,6 +16,7 @@ queries = [
         "admin"	INTEGER,
         "status"	INTEGER NOT NULL,
         "premium"	INTEGER NOT NULL,
+        "action" TEXT,
         "settings"	INTEGER NOT NULL,
         FOREIGN KEY("admin") REFERENCES "admins"("id"),
         PRIMARY KEY("id")
@@ -126,6 +127,18 @@ queries = [
         "error_num"	INTEGER,
         "sender" INTEGER,
         PRIMARY KEY("id" AUTOINCREMENT)
+    );
+    """,
+    """
+        CREATE TABLE IF NOT EXISTS "mails_queue" (
+        "id"	INTEGER NOT NULL UNIQUE,
+        "bot"	INTEGER NOT NULL,
+        "user"	INTEGER NOT NULL,
+        "mail_id" INTEGER NOT NULL,
+        "admin_status"	INTEGER NOT NULL,
+        PRIMARY KEY("id" AUTOINCREMENT),
+        FOREIGN KEY("bot") REFERENCES "bots"("id"),
+        FOREIGN KEY("user") REFERENCES "users"("id")
     );
     """
 ]

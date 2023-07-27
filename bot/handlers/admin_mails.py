@@ -26,7 +26,7 @@ async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) 
 @dp.callback_query_handler(admin_mail_action.filter(action="admin_mails_list"), state="*")
 async def menu_admin_mails(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
-    admin_mails = await admin_mails_db.get_by(sender=cb.from_user.id)
+    admin_mails = await admin_mails_db.get_by(status=0)
     await cb.message.answer(
         "<i>💡В цьому меню, можна створити, редагувати та запускати розсилки у всі боти. \
 </i>\n\n\
@@ -134,7 +134,6 @@ async def admin_mail_input_text(msg: Message, state: FSMContext):
             text=msg.parse_entities(as_html=True) if msg.text else None,
             sender=msg.from_user.id
         )
-        print(admin_mail.get_tuple())
         await admin_mails_db.add(admin_mail)
     await open_admin_mail_menu(msg.from_user.id, admin_mail.id, state_data["msg_id"])
     await state.set_state(None)
@@ -361,6 +360,7 @@ async def del_send_dt(cb: CallbackQuery, callback_data: dict):
     await admin_mails_db.update(admin_mail)
     await mail_schedule_menu(cb.from_user.id, admin_mail.id, cb.message.message_id)
 
+
 @dp.callback_query_handler(admin_mail_action.filter(action="sendout"))
 async def sendout(cb: CallbackQuery, callback_data: dict):
     admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
@@ -375,7 +375,7 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
             ),
             admin_mail_action.new(
                 id=admin_mail.id,
-                action="open_admin_mail_menuu"
+                action="open_admin_mail_menu"
             )
         )
     )
@@ -385,14 +385,22 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(admin_mail_action.filter(action="confirm_sendout"))
 async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
-    bots = []
-    bots_without_premium = [bot.token for bot in await bots_db.get_by(premium=0)]
-    for bot_token in manager.bot_dict.keys():
-        if bot_token in bots_without_premium:
-            bots.append(manager.bot_dict[bot_token][0])
-    await cb.message.answer(
-        f"🚀Розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-        reply_markup=gen_ok("admin", "↩️Адмін панель"
-        ))
+    bots_without_premium = []
+    ubots_all = await bots_db.get_all()
+    for ubot in ubots_all:
+        if ubot.status == 1 and ubot.admin and ubot.premium == 0:
+            bots_without_premium.append(ubot)
+    for ubot in bots_without_premium:
+        users = await user_db.get_by(bot=ubot.id)
+        for user in users:
+            new_mail_msgs = models.MailsQueue(
+                _id=0,
+                bot=ubot.id,
+                user=user.id,
+                mail_id=admin_mail.id,
+                admin_status=True
+            )
+            await mails_queue_db.add(new_mail_msgs)
+    admin_mail.active = 1
+    await admin_mails_db.update(admin_mail)
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
-    create_task(gig.send_admin_mail(bots, admin_mail, admin_mail.sender))
