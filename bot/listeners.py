@@ -51,6 +51,8 @@ async def listen_mails():
                                  f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
                                 reply_markup=gen_ok("hide")
                 )
+                mail.status = 1
+                await mails_db.update(mail)
                 bot_dc.action = f"mail_{mail.id}"
                 await bots_db.update(bot_dc)
                 ubot = manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0]
@@ -187,6 +189,8 @@ async def listen_mails_on_startup():
                 elif ubot.action == f"mail_{mail.id}" and not mail_bot_msgs:
                     ubot.action = None
                     await bots_db.update(ubot)
+
+
 async def listen_admin_mails_on_startup():
     admin_mails = await admin_mails_db.get_all()
     for admin_mail in admin_mails:

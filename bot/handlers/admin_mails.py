@@ -26,7 +26,7 @@ async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) 
 @dp.callback_query_handler(admin_mail_action.filter(action="admin_mails_list"), state="*")
 async def menu_admin_mails(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
-    admin_mails = await admin_mails_db.get_by(sender=cb.from_user.id, status=0)
+    admin_mails = await admin_mails_db.get_by(status=0)
     await cb.message.answer(
         "<i>💡В цьому меню, можна створити, редагувати та запускати розсилки у всі боти. \
 </i>\n\n\
