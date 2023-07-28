@@ -25,7 +25,7 @@ async def listen_mails():
     while True:
         mails = await mails_db.get_all()
         for mail in mails:
-            if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active:
+            if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active and not mail.status:
                 users = await user_db.get_by(bot=mail.bot)
                 for user in users:
                     new_mail_msgs = models.MailsQueue(
@@ -65,7 +65,7 @@ async def listen_admin_mails():
     while True:
         admin_mails = await admin_mails_db.get_all()
         for admin_mail in admin_mails:
-            if admin_mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(admin_mail.send_dt):
+            if admin_mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(admin_mail.send_dt) and not admin_mail.active and not admin_mail.status:
                 bots = [ubot for ubot in await bots_db.get_by(premium=0)]
                 for ubot in bots:
                     users = await user_db.get_by(bot=ubot.id)
