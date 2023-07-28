@@ -8,7 +8,6 @@ import logging
 import sys
 import os
 import colorama
-
 from bot.misc import bot as main_bot, dp as main_dp
 from bot.config import token as main_token
 from bot.misc import manager as bot_manager, bots_db
@@ -17,11 +16,16 @@ import bot.handlers
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--local', action='store_true', help='Run in local mode')
+parser.add_argument('--port', action='store', help='Select the port to run on')
+parser.add_argument('--token', action='store', help='Bot token to run on')
 args = parser.parse_args()
 if args.local:
     from web_config.local_config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
 else:
     from web_config.config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
+    if args.port:
+        PORT = args.port
+        print(PORT)
 
 colorama.init()
 current_dir = os.path.dirname(os.path.abspath(__file__))

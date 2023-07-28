@@ -14,7 +14,7 @@ from requests import get
 from prettytable import PrettyTable
 from os import path
 from sys import exit
-
+import argparse
 from data import exceptions as data_exc
 from data.stats import gen_stats
 from data.factory import *
@@ -33,13 +33,20 @@ except ImportError:
 
 
 tz = timezone('Europe/Kiev')
+parser = argparse.ArgumentParser()
+parser.add_argument('--local', action='store_true', help='Run in local mode')
+parser.add_argument('--token', action='store', help='Bot token to run on')
+args = parser.parse_args()
 
-bot = Bot(config.token, parse_mode="HTML")
+if args.token and not args.local:
+    bot = Bot(args.token, parse_mode='HTML')
+else:
+    bot = Bot(config.token, parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
 
-if "--local" in sys.argv:
+if args.local:
     from web_config.local_config import WEBHOOK_HOST
     manager = Manager([], WEBHOOK_HOST)
 else:
