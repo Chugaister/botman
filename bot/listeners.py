@@ -45,7 +45,7 @@ async def listen_mails():
                 )
 
             bot_dc = await bots_db.get(mail.bot)
-            if not bot_dc.action and mail.active:
+            if not bot_dc.action and mail.active and not mail.status:
                 await bot.send_message(
                             bot_dc.admin,
                                  f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
