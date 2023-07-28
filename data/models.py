@@ -84,7 +84,7 @@ class Bot:
     )
 
     def __init__(self, _id: int, token: str, username: str, admin: int, status: int = 1, premium: int = 0,
-                 action: str = None, settings: int = 2):
+                settings: int = 2, action: str = None):
         self.id = _id
         self.token = token
         self.username = username
