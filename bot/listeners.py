@@ -25,7 +25,7 @@ async def listen_mails():
     while True:
         mails = await mails_db.get_all()
         for mail in mails:
-            if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt):
+            if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active:
                 users = await user_db.get_by(bot=mail.bot)
                 for user in users:
                     new_mail_msgs = models.MailsQueue(
