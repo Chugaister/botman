@@ -38,7 +38,8 @@ parser.add_argument('--local', action='store_true', help='Run in local mode')
 parser.add_argument('--token', action='store', help='Bot token to run on')
 args = parser.parse_args()
 
-if args.token and not args.local:
+if args.token:
+    print(args.token)
     bot = Bot(args.token, parse_mode='HTML')
 else:
     bot = Bot(config.token, parse_mode="HTML")
