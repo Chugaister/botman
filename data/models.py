@@ -2,7 +2,6 @@ from datetime import datetime
 
 import requests.exceptions
 
-
 DT_FORMAT = "%H:%M %d.%m.%Y"
 
 
@@ -55,7 +54,6 @@ def serialize_reply_buttons(buttons: list[list[str]]) -> str:
 
 
 class Admin:
-
     columns = (
         "id",
         "username",
@@ -74,7 +72,6 @@ class Admin:
 
 
 class Bot:
-
     columns = (
         "id",
         "token",
@@ -82,10 +79,12 @@ class Bot:
         "admin",
         "status",
         "premium",
-        "settings"
+        "settings",
+        "action"
     )
 
-    def __init__(self, _id: int, token: str, username: str, admin: int, status: int = 1, premium: int = 0, settings: int = 2):
+    def __init__(self, _id: int, token: str, username: str, admin: int, status: int = 1, premium: int = 0,
+                settings: int = 2, action: str = None):
         self.id = _id
         self.token = token
         self.username = username
@@ -93,13 +92,13 @@ class Bot:
         self.status = status
         self.premium = premium
         self.settings = Settings(settings)
+        self.action = action
 
     def get_tuple(self):
-        return self.id, self.token, self.username, self.admin, self.status, self.premium, self.settings.data
+        return self.id, self.token, self.username, self.admin, self.status, self.premium, self.settings.data,  self.action
 
 
 class User:
-
     columns = (
         "id",
         "bot",
@@ -120,11 +119,11 @@ class User:
         self.join_dt = datetime.strptime(join_dt, DT_FORMAT)
 
     def get_tuple(self):
-        return self.id, self.bot, self.username, self.first_name, self.last_name, self.status, self.join_dt.strftime(DT_FORMAT)
+        return self.id, self.bot, self.username, self.first_name, self.last_name, self.status, self.join_dt.strftime(
+            DT_FORMAT)
 
 
 class Captcha:
-
     columns = (
         "bot",
         "active",
@@ -159,11 +158,11 @@ class Captcha:
         self.del_delay = del_delay
 
     def get_tuple(self):
-        return self.bot, self.active, self.text, self.photo, self.video, self.gif, serialize_reply_buttons(self.buttons), self.del_delay
+        return self.bot, self.active, self.text, self.photo, self.video, self.gif, serialize_reply_buttons(
+            self.buttons), self.del_delay
 
 
 class Greeting:
-
     columns = (
         "bot",
         "active",
@@ -215,21 +214,20 @@ class Greeting:
 
 
 class Mail:
-
     columns = (
-            "bot",
-            "active",
-            "text",
-            "photo",
-            "video",
-            "gif",
-            "buttons",
-            "send_dt",
-            "del_dt",
-            "status",
-            "sent_num",
-            "blocked_num",
-            "error_num"
+        "bot",
+        "active",
+        "text",
+        "photo",
+        "video",
+        "gif",
+        "buttons",
+        "send_dt",
+        "del_dt",
+        "status",
+        "sent_num",
+        "blocked_num",
+        "error_num"
     )
 
     def __init__(
@@ -245,9 +243,9 @@ class Mail:
             sched_dt: str = None,
             del_dt: str = None,
             status: bool = False,
-            sent_num: int = None,
-            blocked_num: int = None,
-            error_num: int = None
+            sent_num: int = 0,
+            blocked_num: int = 0,
+            error_num: int = 0
     ):
         self.id = _id
         self.bot = bot
@@ -284,18 +282,18 @@ class Mail:
 
 class AdminMail:
     columns = (
-            "active",
-            "text",
-            "photo",
-            "video",
-            "gif",
-            "buttons",
-            "send_dt",
-            "status",
-            "sent_num",
-            "blocked_num",
-            "error_num",
-            "sender"
+        "active",
+        "text",
+        "photo",
+        "video",
+        "gif",
+        "buttons",
+        "send_dt",
+        "status",
+        "sent_num",
+        "blocked_num",
+        "error_num",
+        "sender"
     )
 
     def __init__(
@@ -309,9 +307,9 @@ class AdminMail:
             buttons: str = None,
             sched_dt: str = None,
             status: bool = False,
-            sent_num: int = None,
-            blocked_num: int = None,
-            error_num: int = None,
+            sent_num: int = 0,
+            blocked_num: int = 0,
+            error_num: int = 0,
             sender: int = None
     ):
         self.id = _id
@@ -347,10 +345,10 @@ class AdminMail:
 
 class AdminNotification:
     columns = (
-            "text",
-            "photo",
-            "video",
-            "gif"
+        "text",
+        "photo",
+        "video",
+        "gif"
     )
 
     def __init__(
@@ -374,16 +372,17 @@ class AdminNotification:
             self.video,
             self.gif
         )
-class Purge:
 
+
+class Purge:
     columns = (
-            "bot",
-            "active",
-            "sched_dt",
-            "status",
-            "deleted_msgs_num",
-            "cleared_chats_num",
-            "error_num"
+        "bot",
+        "active",
+        "sched_dt",
+        "status",
+        "deleted_msgs_num",
+        "cleared_chats_num",
+        "error_num"
     )
 
     def __init__(
@@ -419,7 +418,6 @@ class Purge:
 
 
 class Msg:
-
     columns = (
         "id",
         "user",
@@ -435,6 +433,37 @@ class Msg:
 
     def get_tuple(self):
         return self.id, self.user, self.bot, self.del_dt.strftime(DT_FORMAT) if self.del_dt else None,
+
+
+class MailsQueue:
+    columns = (
+        "bot",
+        "user",
+        "mail_id",
+        "admin_status"
+    )
+
+    def __init__(
+            self,
+            _id: int,
+            bot: int,
+            user: int,
+            mail_id: int,
+            admin_status: bool = False,
+    ):
+        self.id = _id
+        self.bot = bot
+        self.user = user
+        self.mail_id = mail_id
+        self.admin_status = admin_status
+
+    def get_tuple(self):
+        return (
+            self.bot,
+            self.user,
+            self.mail_id,
+            self.admin_status,
+        )
 
 
 class Settings:
