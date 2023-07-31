@@ -8,6 +8,7 @@ from userbot.handlers import start_handler, req_handler, captcha_confirm, Captch
 import logging
 class Manager:
     def __init__(self, bots: list[models.Bot], webhook_host: str):
+        self.sessions = []
         self.logger = logging.getLogger('aiogram')
         self.bot_dict = {bot.token: (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage())) for bot in bots}
         self.webhook_host = webhook_host
@@ -28,6 +29,7 @@ class Manager:
             if bot.token not in self.bot_dict.keys():
                 self.bot_dict[bot.token] = ((Bot(token=bot.token)), Dispatcher(Bot(token=bot.token)))  
             ubot = Bot(token=bot.token)
+            self.sessions.append(await ubot.get_session())
             try:
                 await ubot.set_webhook(f"https://{self.webhook_host}/bot/{bot.token}", drop_pending_updates=True)
                 await (await ubot.get_session()).close()
@@ -35,12 +37,10 @@ class Manager:
                 bot = await bots_db.get(ubot.id)
                 bot.admin = None
                 await bots_db.update(bot)
-
     async def delete_webhook(self, bot: models.Bot):
         ubot = Bot(bot.token)
         try:
             await ubot.delete_webhook()
-            ubot.get_session().close()
         except Unauthorized:
             bot = await bots_db.get(ubot.id)
             bot.admin = None
@@ -48,6 +48,11 @@ class Manager:
         
 
     async def delete_webhooks(self, bots: list[models.Bot]):
+        for session in self.sessions:
+            try:
+                await session.close()
+            except Exception:
+                pass
         for bot in bots:
             await self.delete_webhook(bot)
 
