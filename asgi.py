@@ -105,6 +105,12 @@ async def bot_webhook(token, update: dict):
 
 @app.on_event("shutdown")
 async def on_shutdown():
+    main_session = await main_bot.get_session()
+    if main_session:
+        try:
+            await main_session.close()
+        except Exception:
+            pass
     await main_bot.delete_webhook()
     await bot_manager.delete_webhooks(await bots_db.get_all())
 
