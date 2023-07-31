@@ -142,7 +142,7 @@ async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: in
                 admin_mail.sent_num += 1
                 await admin_mails_db.update(admin_mail)
             except BotBlocked:
-                user = user_db.get(admin_mail_msg.user)
+                user = await user_db.get(admin_mail_msg.user)
                 user.status = 0
                 await user_db.update(user)
                 admin_mail.blocked_num += 1
