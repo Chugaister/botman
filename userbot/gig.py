@@ -63,7 +63,7 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
             mail.sent_num += 1
             await mails_db.update(mail)
         except BotBlocked:
-            user = user_db.get(mail_msg.user)
+            user = await user_db.get(mail_msg.user)
             user.status = 0
             await user_db.update(user)
             mail.blocked_num += 1
