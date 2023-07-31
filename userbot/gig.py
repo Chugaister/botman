@@ -68,7 +68,7 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
             await user_db.update(user)
             mail.blocked_num += 1
             await mails_db.update(mail)
-        except:
+        except Exception:
             mail.error_num += 1
             await mails_db.update(mail)
         await mails_queue_db.delete(mail_msg.id)
@@ -147,7 +147,7 @@ async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: in
                 await user_db.update(user)
                 admin_mail.blocked_num += 1
                 await admin_mails_db.update(admin_mail)
-            except:
+            except Exception:
                 admin_mail.error_num += 1
                 await admin_mails_db.update(admin_mail)
             await mails_queue_db.delete(admin_mail_msg.id)
@@ -181,7 +181,7 @@ async def clean(ubot: Bot, purge: models.Purge, admin_id: int):
                 msg.id
             )
             cleared_num += 1
-        except:
+        except Exception:
             error_num += 1
         await sleep(0.035)
     for msg in msgs:

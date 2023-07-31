@@ -171,7 +171,7 @@ async def send_notification(admins: list, notification: models.AdminNotification
             sent_num += 1
         except BotBlocked:
             blocked_num += 1
-        except:
+        except Exception:
             error_num += 1
     admin_notification_stats.append({
         "admin_id": uid,
