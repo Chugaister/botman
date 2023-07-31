@@ -479,9 +479,10 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
 
 @dp.callback_query_handler(mail_action.filter(action="confirm_sendout"))
 async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
-    mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
-    if not mail:
-        return
+    # mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    mail = await mails_db.get(int(callback_data["id"]))
+    # if not mail:
+    #     return
     users = await user_db.get_by(bot=mail.bot)
     for user in users:
         new_mail_msgs = models.MailsQueue(
