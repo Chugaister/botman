@@ -109,7 +109,7 @@ async def listen_autodeletion():
                         msg.user,
                         msg.id
                     )
-                except:
+                except Exception:
                     pass
                 await msgs_db.delete(msg.id)
         await sleep(5)
