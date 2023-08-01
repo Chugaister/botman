@@ -26,7 +26,6 @@ else:
     from web_config.config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
     if args.port:
         PORT = args.port
-        print(PORT)
 
 colorama.init()
 current_dir = os.path.dirname(os.path.abspath(__file__))

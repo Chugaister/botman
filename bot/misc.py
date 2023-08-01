@@ -41,7 +41,6 @@ parser.add_argument('--source', action='store', help='Database folder path')
 args = parser.parse_args()
 
 if args.token:
-    print(args.token)
     bot = Bot(args.token, parse_mode='HTML')
 else:
     bot = Bot(config.token, parse_mode="HTML")

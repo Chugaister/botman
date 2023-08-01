@@ -13,7 +13,6 @@ parser.add_argument('--token', action='store', help='Bot token to run on')
 parser.add_argument('--port', action='store', help='Select the port to run on')
 parser.add_argument('--source', action='store', help='Database folder path')
 args = parser.parse_args()
-print(args.source)
 
 source_folder="source" if not args.source else args.source
 tables_with_media = ["captchas", "greetings", "mails", "admin_mails"]
