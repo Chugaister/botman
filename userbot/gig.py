@@ -1,6 +1,6 @@
 from aiogram import Bot
 from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked
-from asyncio import sleep
+from asyncio import sleep, create_task
 from datetime import datetime
 from pytz import timezone
 from copy import copy
@@ -16,63 +16,67 @@ admin_mails_stats_buffer = []
 purges_stats_buffer = []
 
 
+async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
+    try:
+        if mail.photo:
+            file = await file_manager.get_file(mail.photo)
+            msg = await ubot.send_photo(
+                mail_msg.user,
+                file,
+                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        elif mail.video:
+            file = await file_manager.get_file(mail.video)
+            msg = await ubot.send_video(
+                mail_msg.user,
+                file,
+                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        elif mail.gif:
+            file = await file_manager.get_file(mail.gif)
+            msg = await ubot.send_animation(
+                mail_msg.user,
+                file,
+                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        elif mail.text:
+            msg = await ubot.send_message(
+                mail_msg.user,
+                gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        msg_dc = models.Msg(
+            msg.message_id,
+            mail_msg.user,
+            mail.bot,
+            mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
+        )
+        await msgs_db.add(msg_dc)
+        mail.sent_num += 1
+        await mails_db.update(mail)
+    except BotBlocked:
+        user = await user_db.get(mail_msg.user)
+        user.status = 0
+        await user_db.update(user)
+        mail.blocked_num += 1
+        await mails_db.update(mail)
+    except Exception:
+        mail.error_num += 1
+        await mails_db.update(mail)
+    await mails_queue_db.delete(mail_msg.id)
+
+
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
+    start = time()
     for mail_msg in mails_pending:
-        mail_copy = copy(mail)
-        if mail_copy.text:
-            mail_copy.text = gen_dynamic_text(mail_copy.text, (await user_db.get(mail_msg.user)))
-        try:
-            if mail_copy.photo:
-                file = await file_manager.get_file(mail.photo)
-                msg = await ubot.send_photo(
-                    mail_msg.user,
-                    file,
-                    caption=mail_copy.text,
-                    reply_markup=gen_custom_buttons(mail_copy.buttons)
-                )
-            elif mail_copy.video:
-                file = await file_manager.get_file(mail.video)
-                msg = await ubot.send_video(
-                    mail_msg.user,
-                    file,
-                    caption=mail_copy.text,
-                    reply_markup=gen_custom_buttons(mail_copy.buttons)
-                )
-            elif mail_copy.gif:
-                file = await file_manager.get_file(mail.gif)
-                msg = await ubot.send_animation(
-                    mail_msg.user,
-                    file,
-                    caption=mail_copy.text,
-                    reply_markup=gen_custom_buttons(mail_copy.buttons)
-                )
-            elif mail_copy.text:
-                msg = await ubot.send_message(
-                    mail_msg.user,
-                    mail_copy.text,
-                    reply_markup=gen_custom_buttons(mail_copy.buttons)
-                )
-            msg_dc = models.Msg(
-                msg.message_id,
-                mail_msg.user,
-                mail_copy.bot,
-                mail_copy.del_dt.strftime(models.DT_FORMAT) if mail_copy.del_dt is not None else None
-            )
-            await msgs_db.add(msg_dc)
-            mail.sent_num += 1
-            await mails_db.update(mail)
-        except BotBlocked:
-            user = await user_db.get(mail_msg.user)
-            user.status = 0
-            await user_db.update(user)
-            mail.blocked_num += 1
-            await mails_db.update(mail)
-        except Exception:
-            mail.error_num += 1
-            await mails_db.update(mail)
-        await mails_queue_db.delete(mail_msg.id)
+        create_task(send_mail_to_user(ubot, mail_msg, mail))
         await sleep(0.035)
+    print(time() - start)
+    await sleep(3)
     new_action_bot = await bots_db.get(ubot.id)
     new_action_bot.action = None
     await bots_db.update(new_action_bot)
