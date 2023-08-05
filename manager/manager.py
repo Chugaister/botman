@@ -32,14 +32,17 @@ class Manager:
             self.sessions.append(await ubot.get_session())
             try:
                 await ubot.set_webhook(f"https://{self.webhook_host}/bot/{bot.token}", drop_pending_updates=True)
-                await (await ubot.get_session()).close()
             except Unauthorized:
                 bot = await bots_db.get(ubot.id)
                 bot.admin = None
                 await bots_db.update(bot)
     async def delete_webhook(self, bot: models.Bot):
-        ubot = Bot(bot.token)
         try:
+            ubot = self.bot_dict[bot.token][0]
+        except KeyError:
+            ubot = Bot(token=bot.token)
+        try:
+            await (await ubot.get_session()).close()
             await ubot.delete_webhook()
         except Unauthorized:
             bot = await bots_db.get(ubot.id)
@@ -48,11 +51,6 @@ class Manager:
         
 
     async def delete_webhooks(self, bots: list[models.Bot]):
-        for session in self.sessions:
-            try:
-                await session.close()
-            except Exception:
-                pass
         for bot in bots:
             await self.delete_webhook(bot)
 
