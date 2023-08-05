@@ -26,7 +26,7 @@ async def listen_mails():
         mails = await mails_db.get_all()
         for mail in mails:
             if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active and not mail.status:
-                users = await user_db.get_by(bot=mail.bot)
+                users = await user_db.get_by(bot=mail.bot, status=1)
                 for user in users:
                     new_mail_msgs = models.MailsQueue(
                         _id=0,
@@ -47,9 +47,9 @@ async def listen_mails():
             bot_dc = await bots_db.get(mail.bot)
             if not bot_dc.action and mail.active and not mail.status:
                 await bot.send_message(
-                            bot_dc.admin,
-                                 f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                                reply_markup=gen_ok("hide")
+                    bot_dc.admin,
+                     f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                    reply_markup=gen_ok("hide")
                 )
                 mail.status = 1
                 await mails_db.update(mail)
@@ -83,10 +83,10 @@ async def listen_admin_mails():
 
             if admin_mail.active and not admin_mail.status:
                 await bot.send_message(
-                            admin_mail.sender,
-                                 f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                                reply_markup=gen_ok("hide")
-                            )
+                    admin_mail.sender,
+                     f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                    reply_markup=gen_ok("hide")
+                )
                 admin_mail.status = 1
                 await admin_mails_db.update(admin_mail)
                 bots = []

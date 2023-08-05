@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher
 from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, MessageToDeleteNotFound, BadRequest, CantInitiateConversation
-from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode
+from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode, ChatMemberUpdated
 from aiogram.dispatcher.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from asyncio import gather, sleep, create_task
@@ -193,3 +193,15 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
             pass
     create_task(send_all_greeting(ubot, user))
     await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
+
+
+async def my_chat_member_handler(ubot: Bot, udp: Dispatcher, member_updated: ChatMemberUpdated):
+    if member_updated.new_chat_member.status == "kicked":
+        user = (await user_db.get_by(id=member_updated.from_user.id, bot=ubot.id))[0]
+        user.status = False
+        await user_db.update(user)
+    elif member_updated.new_chat_member.status == "member":
+        user = (await user_db.get_by(id=member_updated.from_user.id, bot=ubot.id))[0]
+        user.status = True
+        await user_db.update(user)
+
