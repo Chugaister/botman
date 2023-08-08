@@ -16,6 +16,20 @@ admin_mails_stats_buffer = []
 purges_stats_buffer = []
 
 
+async def enqueue_mail(mail: models.Mail):
+    users = await user_db.get_by(bot=mail.bot, status=1)
+    for user in users:
+        new_mail_msgs = models.MailsQueue(
+            _id=0,
+            bot=mail.bot,
+            user=user.id,
+            mail_id=mail.id
+        )
+        await mails_queue_db.add(new_mail_msgs)
+    mail.active = 1
+    await mails_db.update(mail)
+
+
 async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
     try:
         if mail.photo:

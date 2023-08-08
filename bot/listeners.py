@@ -26,17 +26,7 @@ async def listen_mails():
         mails = await mails_db.get_all()
         for mail in mails:
             if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active and not mail.status:
-                users = await user_db.get_by(bot=mail.bot, status=1)
-                for user in users:
-                    new_mail_msgs = models.MailsQueue(
-                        _id=0,
-                        bot=mail.bot,
-                        user=user.id,
-                        mail_id=mail.id
-                    )
-                    await mails_queue_db.add(new_mail_msgs)
-                mail.active = 1
-                await mails_db.update(mail)
+                await gig.enqueue_mail(mail)
                 bot_dc = await bots_db.get(mail.bot)
                 await bot.send_message(
                     bot_dc.admin,
