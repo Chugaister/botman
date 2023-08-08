@@ -71,11 +71,9 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
 
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
-    start = time()
     for mail_msg in mails_pending:
         create_task(send_mail_to_user(ubot, mail_msg, mail))
         await sleep(0.035)
-    print(time() - start)
     await sleep(3)
     new_action_bot = await bots_db.get(ubot.id)
     new_action_bot.action = None

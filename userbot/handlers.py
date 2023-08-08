@@ -196,12 +196,14 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
 
 
 async def my_chat_member_handler(ubot: Bot, udp: Dispatcher, member_updated: ChatMemberUpdated):
+    users = (await user_db.get_by(id=member_updated.from_user.id, bot=ubot.id))
+    if users == []:
+        return
+    user = users[0]
     if member_updated.new_chat_member.status == "kicked":
-        user = (await user_db.get_by(id=member_updated.from_user.id, bot=ubot.id))[0]
         user.status = False
         await user_db.update(user)
     elif member_updated.new_chat_member.status == "member":
-        user = (await user_db.get_by(id=member_updated.from_user.id, bot=ubot.id))[0]
         user.status = True
         await user_db.update(user)
 
