@@ -384,7 +384,8 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
 
 @dp.callback_query_handler(admin_mail_action.filter(action="confirm_sendout"))
 async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
-    admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    # admin_mail = await safe_get_admin_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    admin_mail = await admin_mails_db.get(int(callback_data["id"]))
     bots_without_premium = []
     ubots_all = await bots_db.get_all()
     for ubot in ubots_all:

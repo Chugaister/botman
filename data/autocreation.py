@@ -16,8 +16,8 @@ queries = [
         "admin"	INTEGER,
         "status"	INTEGER NOT NULL,
         "premium"	INTEGER NOT NULL,
-        "action" TEXT,
         "settings"	INTEGER NOT NULL,
+        "action" TEXT,
         FOREIGN KEY("admin") REFERENCES "admins"("id"),
         PRIMARY KEY("id")
     );

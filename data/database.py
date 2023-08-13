@@ -6,9 +6,15 @@ from .exceptions import *
 from . import autocreation
 import logging
 import os
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--local', action='store_true', help='Run in local mode')
+parser.add_argument('--token', action='store', help='Bot token to run on')
+parser.add_argument('--port', action='store', help='Select the port to run on')
+parser.add_argument('--source', action='store', help='Database folder path')
+args = parser.parse_args()
 
-
-source_folder="source"
+source_folder="source" if not args.source else args.source
 tables_with_media = ["captchas", "greetings", "mails", "admin_mails"]
 tables_with_dual_foreign_keys = ["msgs", "users"]
 tables_tg_id=["admins", "users", "bots", "msgs"]

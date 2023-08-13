@@ -1,11 +1,14 @@
 from aiogram import Bot, Dispatcher, types
 from data import models
+from aiogram.utils.exceptions import Unauthorized
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 # from web_config.local_config import PUBLIC_IP
+from data.factory import *
 from userbot.handlers import start_handler, req_handler, captcha_confirm, CaptchaStatesGroup
 import logging
 class Manager:
     def __init__(self, bots: list[models.Bot], webhook_host: str):
+        self.sessions = []
         self.logger = logging.getLogger('aiogram')
         self.bot_dict = {bot.token: (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage())) for bot in bots}
         self.webhook_host = webhook_host
@@ -26,13 +29,26 @@ class Manager:
             if bot.token not in self.bot_dict.keys():
                 self.bot_dict[bot.token] = ((Bot(token=bot.token)), Dispatcher(Bot(token=bot.token)))  
             ubot = Bot(token=bot.token)
-            await ubot.set_webhook(f"https://{self.webhook_host}/bot/{bot.token}", drop_pending_updates=True)
-            await (await ubot.get_session()).close()
-
+            self.sessions.append(await ubot.get_session())
+            try:
+                await ubot.set_webhook(f"https://{self.webhook_host}/bot/{bot.token}", drop_pending_updates=True)
+            except Unauthorized:
+                bot = await bots_db.get(ubot.id)
+                bot.admin = None
+                await bots_db.update(bot)
     async def delete_webhook(self, bot: models.Bot):
-        ubot = Bot(bot.token)
-        await ubot.delete_webhook()
-        ubot.get_session().close()
+        try:
+            ubot = self.bot_dict[bot.token][0]
+        except KeyError:
+            ubot = Bot(token=bot.token)
+        try:
+            await (await ubot.get_session()).close()
+            await ubot.delete_webhook()
+        except Unauthorized:
+            bot = await bots_db.get(ubot.id)
+            bot.admin = None
+            await bots_db.update(bot)
+        
 
     async def delete_webhooks(self, bots: list[models.Bot]):
         for bot in bots:

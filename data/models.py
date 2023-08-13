@@ -79,23 +79,23 @@ class Bot:
         "admin",
         "status",
         "premium",
-        "action",
-        "settings"
+        "settings",
+        "action"
     )
 
     def __init__(self, _id: int, token: str, username: str, admin: int, status: int = 1, premium: int = 0,
-                 action: str = None, settings: int = 2):
+                settings: int = 2, action: str = None):
         self.id = _id
         self.token = token
         self.username = username
         self.admin = admin
         self.status = status
         self.premium = premium
-        self.action = action
         self.settings = Settings(settings)
+        self.action = action
 
     def get_tuple(self):
-        return self.id, self.token, self.username, self.admin, self.status, self.premium, self.action, self.settings.data
+        return self.id, self.token, self.username, self.admin, self.status, self.premium, self.settings.data,  self.action
 
 
 class User:
