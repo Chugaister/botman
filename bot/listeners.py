@@ -25,8 +25,8 @@ async def listen_mails():
     while True:
         try:
             mails = await mails_db.get_all()
-        except ValueError as e:
-            print(e)
+        except ValueError:
+            print("ERROR: mail buttons deserialization failed")
             await sleep(5)
             continue
         for mail in mails:
