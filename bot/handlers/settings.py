@@ -73,3 +73,19 @@ async def users_collect_off(cb: CallbackQuery, callback_data: dict):
     bot_dc.settings.set_users_collect(False)
     await bots_db.update(bot_dc)
     await open_settings(cb, callback_data)
+
+
+@dp.callback_query_handler(bot_action.filter(action="force_captcha_on"))
+async def force_captcha_on(cb: CallbackQuery, callback_data: dict):
+    bot_dc = await bots_db.get(int(callback_data["id"]))
+    bot_dc.settings.set_force_captcha(True)
+    await bots_db.update(bot_dc)
+    await open_settings(cb, callback_data)
+
+
+@dp.callback_query_handler(bot_action.filter(action="force_captcha_off"))
+async def force_captcha_off(cb: CallbackQuery, callback_data: dict):
+    bot_dc = await bots_db.get(int(callback_data["id"]))
+    bot_dc.settings.set_force_captcha(False)
+    await bots_db.update(bot_dc)
+    await open_settings(cb, callback_data)

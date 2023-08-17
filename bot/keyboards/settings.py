@@ -4,6 +4,19 @@ from . import *
 
 def gen_settings_menu(bot: models.Bot) -> InlineKeyboardMarkup:
     settings_menu = InlineKeyboardMarkup()
+    force_captcha_button = InlineKeyboardButton(
+        "✅Форс-каптча",
+        callback_data=bot_action.new(
+            bot.id,
+            "force_captcha_off"
+        )
+    ) if bot.settings.get_force_captcha() else InlineKeyboardButton(
+        "☑️Форс-каптча",
+        callback_data=bot_action.new(
+            bot.id,
+            "force_captcha_on"
+        )
+    )
     autoapprove_button = InlineKeyboardButton(
         "✅Автоприйом",
         callback_data=bot_action.new(
@@ -29,6 +42,9 @@ def gen_settings_menu(bot: models.Bot) -> InlineKeyboardMarkup:
             bot.id,
             "users_collect_on"
         )
+    )
+    settings_menu.add(
+        force_captcha_button
     )
     settings_menu.add(
         autoapprove_button,
