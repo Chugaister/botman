@@ -30,7 +30,7 @@ class CaptchaStatesGroup(StatesGroup):
     captcha = State()
 
 
-async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: ChatJoinRequest):
+async def send_one_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: ChatJoinRequest):
     # checking advanced settings
     captcha = (await captchas_db.get_by(bot=ubot.id))[0]
     if not captcha.active:
@@ -56,6 +56,21 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: C
     state = udp.current_state(chat=user.id, user=user.id)
     await state.set_state(CaptchaStatesGroup.captcha)
     await state.set_data({"msg_id": msg.message_id, "channel_id": request.chat.id})
+
+
+async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: ChatJoinRequest):
+    bot_dc = await bots_db.get(ubot.id)
+    await send_one_captcha(ubot, udp, user, request)
+    if bot_dc.settings.get_force_captcha():
+        for i in range(4):
+            await sleep(10)
+            state = udp.current_state(chat=user.id, user=user.id)
+            if await state.get_state() == "CaptchaStatesGroup:captcha":
+                await ubot.delete_message(
+                    user.id,
+                    (await state.get_data())["msg_id"]
+                )
+                await send_one_captcha(ubot, udp, user, request)
 
 
 async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting):
@@ -134,7 +149,7 @@ async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, stat
         datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
     if captcha.active:
-        await send_captcha(ubot, udp, user, request)
+        create_task(send_captcha(ubot, udp, user, request))
     else:
         create_task(send_all_greeting(ubot, user))
 

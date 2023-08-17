@@ -492,3 +492,9 @@ class Settings:
 
     def set_users_collect(self, value: bool) -> None:
         self.write_bit(1, value)
+
+    def get_force_captcha(self) -> bool:
+        return self.read_bit(2)
+
+    def set_force_captcha(self, value: bool) -> None:
+        self.write_bit(2, value)
