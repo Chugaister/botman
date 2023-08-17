@@ -8,6 +8,7 @@ parser.add_argument('--local', action='store_true', help='Run in local mode')
 parser.add_argument('--token', action='store', help='Bot token to run on')
 parser.add_argument('--port', action='store', help='Select the port to run on')
 parser.add_argument('--source', action='store', help='Database folder path')
+parser.add_argument('--logs', action='store', help='Logs folder path')
 args = parser.parse_args()
 async def main(source):
     create_db(source)
