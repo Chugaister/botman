@@ -19,19 +19,25 @@ parser.add_argument('--local', action='store_true', help='Run in local mode')
 parser.add_argument('--port', action='store', help='Select the port to run on')
 parser.add_argument('--token', action='store', help='Bot token to run on')
 parser.add_argument('--source', action='store', help='Database folder path')
+parser.add_argument('--logs', action='store', help='Logs folder path')
 args = parser.parse_args()
 if args.local:
     from web_config.local_config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
 else:
     from web_config.config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
     if args.port:
-        PORT = args.port
+        PORT = int(args.port)
 
 colorama.init()
 current_dir = os.path.dirname(os.path.abspath(__file__))
-log_directory = os.path.join(current_dir, "logs")
-log_file = os.path.join(log_directory, "logfile.log")
-os.makedirs(log_directory, exist_ok=True)
+if args.logs:
+    log_directory = os.path.join(current_dir, f'{args.logs}')
+    log_file = os.path.join(log_directory, "logfile.log")
+    os.makedirs(log_directory, exist_ok=True)
+else:
+    log_directory = os.path.join(current_dir, "logs")
+    log_file = os.path.join(log_directory, "logfile.log")
+    os.makedirs(log_directory, exist_ok=True)
 # logging.basicConfig(
 #     filename=log_file,
 #     level=logging.INFO,
