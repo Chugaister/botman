@@ -23,7 +23,12 @@ async def listen_purges():
 
 async def listen_mails():
     while True:
-        mails = await mails_db.get_all()
+        try:
+            mails = await mails_db.get_all()
+        except ValueError as e:
+            print(e)
+            await sleep(5)
+            continue
         for mail in mails:
             if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active and not mail.status:
                 await gig.enqueue_mail(mail)
@@ -47,7 +52,6 @@ async def listen_mails():
                 await bots_db.update(bot_dc)
                 ubot = manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0]
                 create_task(gig.send_mail(ubot, mail, bot_dc.admin))
-
         await sleep(5)
 
 
