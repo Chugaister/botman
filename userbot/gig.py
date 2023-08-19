@@ -1,5 +1,5 @@
 from aiogram import Bot
-from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked
+from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, RetryAfter
 from asyncio import sleep, create_task
 from datetime import datetime
 from pytz import timezone
@@ -29,9 +29,20 @@ async def enqueue_mail(mail: models.Mail):
     mail.active = 1
     await mails_db.update(mail)
 
+#set rate delay
+RATE_LIMIT_DELAY = 0.04
+#set first time last request time
+last_request_time = time()
+
 
 async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
+    global last_request_time
     try:
+        #check if time between requests is bigger than  RATE_LIMIT_DELAY
+        elapsed_time = time() - last_request_time
+        if elapsed_time < RATE_LIMIT_DELAY:
+            await asyncio.sleep(RATE_LIMIT_DELAY - elapsed_time)
+
         if mail.photo:
             file = await file_manager.get_file(mail.photo)
             msg = await ubot.send_photo(
@@ -71,24 +82,36 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
         await msgs_db.add(msg_dc)
         mail.sent_num += 1
         await mails_db.update(mail)
+        last_request_time = time()
     except BotBlocked:
         user = await user_db.get(mail_msg.user)
         user.status = 0
         await user_db.update(user)
         mail.blocked_num += 1
         await mails_db.update(mail)
-    except Exception:
-        mail.error_num += 1
-        await mails_db.update(mail)
+
     await mails_queue_db.delete(mail_msg.id)
 
 
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
-    for mail_msg in mails_pending:
-        create_task(send_mail_to_user(ubot, mail_msg, mail))
-        await sleep(0.035)
+
+    async def process_mail(mail_msg):
+        try:
+            await send_mail_to_user(ubot, mail_msg, mail)
+        except RetryAfter as e:
+            retry_after_seconds = e.timeout
+            await sleep(retry_after_seconds)
+            await process_mail(mail_msg)
+        except Exception:
+            mail.error_num += 1
+            await mails_db.update(mail)
+
+    tasks = [process_mail(mail_msg) for mail_msg in mails_pending]
+    await asyncio.gather(*tasks)
+
     await sleep(3)
+
     new_action_bot = await bots_db.get(ubot.id)
     new_action_bot.action = None
     await bots_db.update(new_action_bot)
