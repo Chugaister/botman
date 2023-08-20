@@ -15,12 +15,12 @@ def deserialize_buttons(text: str) -> list[list[dict]]:
             caption, link = button.split(" - ")
             if not link.startswith("https://"):
                 link = "https://" + link
-            try:
-                req = requests.get(link)
-            except requests.exceptions.ConnectionError:
-                raise ValueError
-            if not req.ok:
-                raise ValueError
+            # try:
+            #     req = requests.get(link)
+            # except requests.exceptions.ConnectionError:
+            #     raise ValueError
+            # if not req.ok:
+            #     raise ValueError
             button_dicts.append({"caption": caption.strip(), "link": link})
         buttons.append(button_dicts)
     return buttons
