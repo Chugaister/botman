@@ -4,7 +4,7 @@ from asyncio import sleep, create_task, Semaphore
 from datetime import datetime
 from pytz import timezone
 from copy import copy
-from time import time
+from time import time, strftime, gmtime
 
 from data import models
 from data.factory import *
@@ -101,12 +101,15 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
 
 
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
+    start_time = time()
     mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
     limiterToSend = RateLimiter(send_mail_to_user, 30, 1)
     for mail_msg in mails_pending:
         await limiterToSend.execute_task(ubot, mail_msg, mail)
-
-    await sleep(3)
+    end_time = time()
+    elapsed_time = end_time - start_time
+    formatted_time = strftime("%H:%M:%S", gmtime(elapsed_time))
+    await sleep(2)
 
     new_action_bot = await bots_db.get(ubot.id)
     new_action_bot.action = None
@@ -116,7 +119,8 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
         "mail_id": mail.id,
         "sent_num": mail.sent_num,
         "blocked_num": mail.blocked_num,
-        "error_num": mail.error_num
+        "error_num": mail.error_num,
+        "elapsed_time": formatted_time
     })
     mail.status = 1
     mail.active = 0

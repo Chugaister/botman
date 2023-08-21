@@ -116,7 +116,8 @@ async def listen_mails_stats():
                 await bot.send_message(
                     mail_stats["admin_id"],
                     f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
-Надіслано: {mail_stats['sent_num']}\nЗаблоковано: {mail_stats['blocked_num']}\nПомилка: {mail_stats['error_num']}",
+✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
+⌛️Час розсилання: {mail_stats['elapsed_time']}",
                     reply_markup=gen_ok("hide")
                 )
             gig.mails_stats_buffer = []
