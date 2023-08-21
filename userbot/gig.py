@@ -29,84 +29,82 @@ async def enqueue_mail(mail: models.Mail):
     mail.active = 1
     await mails_db.update(mail)
 
-# #set rate delay
-# RATE_LIMIT_DELAY = 0.04
-# #set first time last request time
-# last_request_time = time()
+
+class RateLimiter:
+    def __init__(self, task, rate_limit, time_interval):
+        self.semaphore = Semaphore(rate_limit)
+        self.time_interval = time_interval
+        self.task = task
+
+    async def execute_task(self, *args):
+        async with self.semaphore:
+            await self.task(*args)
+            await sleep(self.time_interval)
 
 
-
-async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail, semaphore):
-    # global last_request_time
-    async with semaphore:
-        try:
-            #check if time between requests is bigger than  RATE_LIMIT_DELAY
-            # elapsed_time = time() - last_request_time
-            # if elapsed_time < RATE_LIMIT_DELAY:
-            #     await asyncio.sleep(RATE_LIMIT_DELAY - elapsed_time)
-
-            if mail.photo:
-                file = await file_manager.get_file(mail.photo)
-                msg = await ubot.send_photo(
-                    mail_msg.user,
-                    file,
-                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                    reply_markup=gen_custom_buttons(mail.buttons)
-                )
-            elif mail.video:
-                file = await file_manager.get_file(mail.video)
-                msg = await ubot.send_video(
-                    mail_msg.user,
-                    file,
-                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                    reply_markup=gen_custom_buttons(mail.buttons)
-                )
-            elif mail.gif:
-                file = await file_manager.get_file(mail.gif)
-                msg = await ubot.send_animation(
-                    mail_msg.user,
-                    file,
-                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                    reply_markup=gen_custom_buttons(mail.buttons)
-                )
-            elif mail.text:
-                msg = await ubot.send_message(
-                    mail_msg.user,
-                    gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                    reply_markup=gen_custom_buttons(mail.buttons)
-                )
-            msg_dc = models.Msg(
-                msg.message_id,
+async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
+    try:
+        if mail.photo:
+            file = await file_manager.get_file(mail.photo)
+            msg = await ubot.send_photo(
                 mail_msg.user,
-                mail.bot,
-                mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
+                file,
+                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
             )
-            await msgs_db.add(msg_dc)
-            mail.sent_num += 1
-            await mails_db.update(mail)
-            last_request_time = time()
-        except BotBlocked:
-            user = await user_db.get(mail_msg.user)
-            user.status = 0
-            await user_db.update(user)
-            mail.blocked_num += 1
-            await mails_db.update(mail)
-        except RetryAfter as e:
-            retry_after_seconds = e.timeout
-            await sleep(retry_after_seconds)
-            await send_mail_to_user(ubot, mail_msg, mail, semaphore)
-        except Exception:
-            mail.error_num += 1
-            await mails_db.update(mail)
+        elif mail.video:
+            file = await file_manager.get_file(mail.video)
+            msg = await ubot.send_video(
+                mail_msg.user,
+                file,
+                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        elif mail.gif:
+            file = await file_manager.get_file(mail.gif)
+            msg = await ubot.send_animation(
+                mail_msg.user,
+                file,
+                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        elif mail.text:
+            msg = await ubot.send_message(
+                mail_msg.user,
+                gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        msg_dc = models.Msg(
+            msg.message_id,
+            mail_msg.user,
+            mail.bot,
+            mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
+        )
+        await msgs_db.add(msg_dc)
+        mail.sent_num += 1
+        await mails_db.update(mail)
+    except BotBlocked:
+        user = await user_db.get(mail_msg.user)
+        user.status = 0
+        await user_db.update(user)
+        mail.blocked_num += 1
+        await mails_db.update(mail)
+    except RetryAfter as e:
+        retry_after_seconds = e.timeout
+        await sleep(retry_after_seconds)
+        await send_mail_to_user(ubot, mail_msg, mail)
+    except Exception:
+        mail.error_num += 1
+        await mails_db.update(mail)
 
-        await mails_queue_db.delete(mail_msg.id)
+    await mails_queue_db.delete(mail_msg.id)
 
 
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
-    semaphore = Semaphore(30)
-    tasks = [send_mail_to_user(ubot, mail_msg, mail, semaphore) for mail_msg in mails_pending]
-    await asyncio.gather(*tasks)
+    limiterToSend = RateLimiter(send_mail_to_user, 30, 1)
+    for mail_msg in mails_pending:
+        await limiterToSend.execute_task(ubot, mail_msg, mail)
 
     await sleep(3)
 
