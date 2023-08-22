@@ -1,6 +1,6 @@
 from aiogram import Bot
 from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, RetryAfter
-from asyncio import sleep, create_task, Semaphore
+from asyncio import sleep, create_task, gather
 from datetime import datetime
 from pytz import timezone
 from copy import copy
@@ -30,82 +30,84 @@ async def enqueue_mail(mail: models.Mail):
     await mails_db.update(mail)
 
 
-class RateLimiter:
-    def __init__(self, task, rate_limit, time_interval):
-        self.semaphore = Semaphore(rate_limit)
-        self.time_interval = time_interval
-        self.task = task
-
-    async def execute_task(self, *args):
-        async with self.semaphore:
-            await self.task(*args)
-            await sleep(self.time_interval)
-
-
 async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
-    try:
-        if mail.photo:
-            file = await file_manager.get_file(mail.photo)
-            msg = await ubot.send_photo(
+    for attempt in range(3):
+        try:
+            if mail.photo:
+                file = await file_manager.get_file(mail.photo)
+                msg = await ubot.send_photo(
+                    mail_msg.user,
+                    file,
+                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                    reply_markup=gen_custom_buttons(mail.buttons)
+                )
+            elif mail.video:
+                file = await file_manager.get_file(mail.video)
+                msg = await ubot.send_video(
+                    mail_msg.user,
+                    file,
+                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                    reply_markup=gen_custom_buttons(mail.buttons)
+                )
+            elif mail.gif:
+                file = await file_manager.get_file(mail.gif)
+                msg = await ubot.send_animation(
+                    mail_msg.user,
+                    file,
+                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                    reply_markup=gen_custom_buttons(mail.buttons)
+                )
+            elif mail.text:
+                msg = await ubot.send_message(
+                    mail_msg.user,
+                    gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                    reply_markup=gen_custom_buttons(mail.buttons)
+                )
+            msg_dc = models.Msg(
+                msg.message_id,
                 mail_msg.user,
-                file,
-                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                reply_markup=gen_custom_buttons(mail.buttons)
+                mail.bot,
+                mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
             )
-        elif mail.video:
-            file = await file_manager.get_file(mail.video)
-            msg = await ubot.send_video(
-                mail_msg.user,
-                file,
-                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                reply_markup=gen_custom_buttons(mail.buttons)
-            )
-        elif mail.gif:
-            file = await file_manager.get_file(mail.gif)
-            msg = await ubot.send_animation(
-                mail_msg.user,
-                file,
-                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                reply_markup=gen_custom_buttons(mail.buttons)
-            )
-        elif mail.text:
-            msg = await ubot.send_message(
-                mail_msg.user,
-                gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                reply_markup=gen_custom_buttons(mail.buttons)
-            )
-        msg_dc = models.Msg(
-            msg.message_id,
-            mail_msg.user,
-            mail.bot,
-            mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
-        )
-        await msgs_db.add(msg_dc)
-        mail.sent_num += 1
-        await mails_db.update(mail)
-    except BotBlocked:
-        user = await user_db.get(mail_msg.user)
-        user.status = 0
-        await user_db.update(user)
-        mail.blocked_num += 1
-        await mails_db.update(mail)
-    except RetryAfter as e:
-        retry_after_seconds = e.timeout
-        await sleep(retry_after_seconds)
-        await send_mail_to_user(ubot, mail_msg, mail)
-    except Exception:
+            await msgs_db.add(msg_dc)
+            mail.sent_num += 1
+            await mails_db.update(mail)
+        except BotBlocked:
+            user = await user_db.get(mail_msg.user)
+            user.status = 0
+            await user_db.update(user)
+            mail.blocked_num += 1
+            await mails_db.update(mail)
+        except RetryAfter as e:
+            retry_after_seconds = e.timeout
+            await sleep(retry_after_seconds)
+        except Exception:
+            await sleep(1)
+        else:
+            break
+    else:
         mail.error_num += 1
         await mails_db.update(mail)
-
     await mails_queue_db.delete(mail_msg.id)
 
 
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     start_time = time()
     mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
-    limiterToSend = RateLimiter(send_mail_to_user, 30, 1)
+    bunches_of_tasks = []
+    bunch_of_tasks = []
     for mail_msg in mails_pending:
-        await limiterToSend.execute_task(ubot, mail_msg, mail)
+        task = create_task(send_mail_to_user(ubot, mail_msg, mail))
+        bunch_of_tasks.append(task)
+        if len(bunch_of_tasks) >= 30:
+            bunches_of_tasks.append(bunch_of_tasks)
+            bunch_of_tasks = []
+    if bunch_of_tasks:
+        bunches_of_tasks.append(bunch_of_tasks)
+    for tasks in bunches_of_tasks:
+        start_rate_time = time()
+        await gather(*tasks)
+        await sleep(1 - (time() - start_rate_time))
     end_time = time()
     elapsed_time = end_time - start_time
     formatted_time = strftime("%H:%M:%S", gmtime(elapsed_time))
