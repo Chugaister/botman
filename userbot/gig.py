@@ -78,6 +78,7 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
             await user_db.update(user)
             mail.blocked_num += 1
             await mails_db.update(mail)
+            break
         except RetryAfter as e:
             retry_after_seconds = e.timeout
             await sleep(retry_after_seconds)
