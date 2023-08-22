@@ -1,3 +1,5 @@
+from os import path
+
 from aiogram import Bot
 from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, RetryAfter
 from asyncio import sleep, create_task, gather
@@ -41,6 +43,7 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
                     caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
                     reply_markup=gen_custom_buttons(mail.buttons)
                 )
+                file.close()
             elif mail.video:
                 file = await file_manager.get_file(mail.video)
                 msg = await ubot.send_video(
@@ -49,6 +52,7 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
                     caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
                     reply_markup=gen_custom_buttons(mail.buttons)
                 )
+                file.close()
             elif mail.gif:
                 file = await file_manager.get_file(mail.gif)
                 msg = await ubot.send_animation(
@@ -57,6 +61,7 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
                     caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
                     reply_markup=gen_custom_buttons(mail.buttons)
                 )
+                file.close()
             elif mail.text:
                 msg = await ubot.send_message(
                     mail_msg.user,
