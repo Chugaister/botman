@@ -78,7 +78,7 @@ async def open_admin_mail_menu(uid: int, mail_id: int, msg_id: int):
     admin_mail_text_content = admin_mail.text if admin_mail.text else ""
     admin_mail_text_content += sched_text
     if admin_mail.photo:
-        file = await file_manager.get_file(admin_mail.photo)
+        file = file_manager.get_file(admin_mail.photo)
         await bot.send_photo(
             uid,
             file,
@@ -86,7 +86,7 @@ async def open_admin_mail_menu(uid: int, mail_id: int, msg_id: int):
             reply_markup=kb.gen_admin_mail_menu(admin_mail)
         )
     elif admin_mail.video:
-        file = await file_manager.get_file(admin_mail.video)
+        file = file_manager.get_file(admin_mail.video)
         await bot.send_video(
             uid,
             file,
@@ -94,7 +94,7 @@ async def open_admin_mail_menu(uid: int, mail_id: int, msg_id: int):
             reply_markup=kb.gen_admin_mail_menu(admin_mail)
         )
     elif admin_mail.gif:
-        file = await file_manager.get_file(admin_mail.gif)
+        file = file_manager.get_file(admin_mail.gif)
         await bot.send_animation(
             uid,
             file,

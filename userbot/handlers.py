@@ -39,13 +39,13 @@ async def send_one_captcha(ubot: Bot, udp: Dispatcher, user: models.User, reques
         captcha.text = gen_dynamic_text(captcha.text, user)
     try:
         if captcha.photo:
-            file = await file_manager.get_file(captcha.photo)
+            file = file_manager.get_file(captcha.photo)
             msg = await ubot.send_photo(user.id, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
         elif captcha.video:
-            file = await file_manager.get_file(captcha.video)
+            file = file_manager.get_file(captcha.video)
             msg = await ubot.send_video(user.id, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
         elif captcha.gif:
-            file = await file_manager.get_file(captcha.gif)
+            file = file_manager.get_file(captcha.gif)
             msg = await ubot.send_animation(user.id, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
         elif captcha.text:
             msg = await ubot.send_message(user.id, captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
@@ -82,7 +82,7 @@ async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting)
         await sleep(greeting.send_delay)
     try:
         if greeting.photo:
-            file = await file_manager.get_file(greeting.photo)
+            file = file_manager.get_file(greeting.photo)
             msg = await ubot.send_photo(
                 user.id,
                 file,
@@ -90,7 +90,7 @@ async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting)
                 reply_markup=gen_custom_buttons(greeting.buttons)
             )
         elif greeting.video:
-            file = await file_manager.get_file(greeting.video)
+            file = file_manager.get_file(greeting.video)
             msg = await ubot.send_video(
                 user.id,
                 file,
@@ -98,7 +98,7 @@ async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting)
                 reply_markup=gen_custom_buttons(greeting.buttons)
             )
         elif greeting.gif:
-            file = await file_manager.get_file(greeting.gif)
+            file = file_manager.get_file(greeting.gif)
             msg = await ubot.send_animation(
                 user.id,
                 file,

@@ -23,7 +23,7 @@ async def send_greeting_menu(uid: int, greeting_id: int, msg_id: int):
     greeting = await greeting_db.get(greeting_id)
     bot_dc = await bots_db.get(greeting.bot)
     if greeting.photo:
-        file = await file_manager.get_file(greeting.photo)
+        file = file_manager.get_file(greeting.photo)
         await bot.send_photo(
             uid,
             file,
@@ -31,7 +31,7 @@ async def send_greeting_menu(uid: int, greeting_id: int, msg_id: int):
             reply_markup=kb.gen_greeting_menu(bot_dc, greeting)
         )
     elif greeting.video:
-        file = await file_manager.get_file(greeting.video)
+        file = file_manager.get_file(greeting.video)
         await bot.send_video(
             uid,
             file,
@@ -39,7 +39,7 @@ async def send_greeting_menu(uid: int, greeting_id: int, msg_id: int):
             reply_markup=kb.gen_greeting_menu(bot_dc, greeting)
         )
     elif greeting.gif:
-        file = await file_manager.get_file(greeting.gif)
+        file = file_manager.get_file(greeting.gif)
         await bot.send_animation(
             uid,
             file,

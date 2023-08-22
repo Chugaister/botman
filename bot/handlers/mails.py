@@ -91,7 +91,7 @@ async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
     mail_text_content += sched_text
     bot_dc = await bots_db.get(mail.bot)
     if mail.photo:
-        file = await file_manager.get_file(mail.photo)
+        file = file_manager.get_file(mail.photo)
         await bot.send_photo(
             uid,
             file,
@@ -99,7 +99,7 @@ async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     elif mail.video:
-        file = await file_manager.get_file(mail.video)
+        file = file_manager.get_file(mail.video)
         await bot.send_video(
             uid,
             file,
@@ -107,7 +107,7 @@ async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     elif mail.gif:
-        file = await file_manager.get_file(mail.gif)
+        file = file_manager.get_file(mail.gif)
         await bot.send_animation(
             uid,
             file,
