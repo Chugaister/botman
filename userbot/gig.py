@@ -33,62 +33,57 @@ async def enqueue_mail(mail: models.Mail):
 
 
 async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
-    for attempt in range(3):
-        try:
-            if mail.photo:
-                file = await file_manager.get_file(mail.photo)
-                msg = await ubot.send_photo(
-                    mail_msg.user,
-                    file,
-                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                    reply_markup=gen_custom_buttons(mail.buttons)
-                )
-            elif mail.video:
-                file = await file_manager.get_file(mail.video)
-                msg = await ubot.send_video(
-                    mail_msg.user,
-                    file,
-                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                    reply_markup=gen_custom_buttons(mail.buttons)
-                )
-            elif mail.gif:
-                file = await file_manager.get_file(mail.gif)
-                msg = await ubot.send_animation(
-                    mail_msg.user,
-                    file,
-                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                    reply_markup=gen_custom_buttons(mail.buttons)
-                )
-            elif mail.text:
-                msg = await ubot.send_message(
-                    mail_msg.user,
-                    gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                    reply_markup=gen_custom_buttons(mail.buttons)
-                )
-            msg_dc = models.Msg(
-                msg.message_id,
+    try:
+        if mail.photo:
+            file = await file_manager.get_file(mail.photo)
+            msg = await ubot.send_photo(
                 mail_msg.user,
-                mail.bot,
-                mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
+                file,
+                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
             )
-            await msgs_db.add(msg_dc)
-            mail.sent_num += 1
-            await mails_db.update(mail)
-        except BotBlocked:
-            user = await user_db.get(mail_msg.user)
-            user.status = 0
-            await user_db.update(user)
-            mail.blocked_num += 1
-            await mails_db.update(mail)
-            break
-        except RetryAfter as e:
-            retry_after_seconds = e.timeout
-            await sleep(retry_after_seconds)
-        except Exception:
-            await sleep(1)
-        else:
-            break
-    else:
+        elif mail.video:
+            file = await file_manager.get_file(mail.video)
+            msg = await ubot.send_video(
+                mail_msg.user,
+                file,
+                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        elif mail.gif:
+            file = await file_manager.get_file(mail.gif)
+            msg = await ubot.send_animation(
+                mail_msg.user,
+                file,
+                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        elif mail.text:
+            msg = await ubot.send_message(
+                mail_msg.user,
+                gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                reply_markup=gen_custom_buttons(mail.buttons)
+            )
+        msg_dc = models.Msg(
+            msg.message_id,
+            mail_msg.user,
+            mail.bot,
+            mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
+        )
+        await msgs_db.add(msg_dc)
+        mail.sent_num += 1
+        await mails_db.update(mail)
+    except BotBlocked:
+        user = await user_db.get(mail_msg.user)
+        user.status = 0
+        await user_db.update(user)
+        mail.blocked_num += 1
+        await mails_db.update(mail)
+    except RetryAfter as e:
+        retry_after_seconds = e.timeout
+        await sleep(retry_after_seconds)
+        await send_mail_to_user(ubot, mail_msg, mail)
+    except Exception:
         mail.error_num += 1
         await mails_db.update(mail)
     await mails_queue_db.delete(mail_msg.id)
