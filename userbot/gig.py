@@ -80,9 +80,9 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
         retry_after_seconds = e.timeout
         await sleep(retry_after_seconds)
         await send_mail_to_user(ubot, mail_msg, mail)
-    # except Exception:
-    #     mail.error_num += 1
-    #     await mails_db.update(mail)
+    except Exception:
+        mail.error_num += 1
+        await mails_db.update(mail)
     await mails_queue_db.delete(mail_msg.id)
 
 
