@@ -227,7 +227,8 @@ class Mail:
         "status",
         "sent_num",
         "blocked_num",
-        "error_num"
+        "error_num",
+        "file_id"
     )
 
     def __init__(
@@ -245,7 +246,8 @@ class Mail:
             status: bool = False,
             sent_num: int = 0,
             blocked_num: int = 0,
-            error_num: int = 0
+            error_num: int = 0,
+            file_id: str = None
     ):
         self.id = _id
         self.bot = bot
@@ -261,6 +263,7 @@ class Mail:
         self.sent_num = sent_num
         self.blocked_num = blocked_num
         self.error_num = error_num
+        self.file_id = file_id
 
     def get_tuple(self):
         return (
@@ -276,7 +279,8 @@ class Mail:
             self.status,
             self.sent_num,
             self.blocked_num,
-            self.error_num
+            self.error_num,
+            self.file_id
         )
 
 

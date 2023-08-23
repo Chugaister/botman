@@ -32,26 +32,26 @@ async def enqueue_mail(mail: models.Mail):
     await mails_db.update(mail)
 
 
-async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail, file):
+async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
     try:
         if mail.photo:
             msg = await ubot.send_photo(
                 mail_msg.user,
-                file,
+                mail.file_id,
                 caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
                 reply_markup=gen_custom_buttons(mail.buttons)
             )
         elif mail.video:
             msg = await ubot.send_video(
                 mail_msg.user,
-                file,
+                mail.file_id,
                 caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
                 reply_markup=gen_custom_buttons(mail.buttons)
             )
         elif mail.gif:
             msg = await ubot.send_animation(
                 mail_msg.user,
-                file,
+                mail.file_id,
                 caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
                 reply_markup=gen_custom_buttons(mail.buttons)
             )
@@ -80,9 +80,9 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
         retry_after_seconds = e.timeout
         await sleep(retry_after_seconds)
         await send_mail_to_user(ubot, mail_msg, mail)
-    except Exception:
-        mail.error_num += 1
-        await mails_db.update(mail)
+    # except Exception:
+    #     mail.error_num += 1
+    #     await mails_db.update(mail)
     await mails_queue_db.delete(mail_msg.id)
 
 
@@ -91,29 +91,12 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
     bunches_of_tasks = []
     bunch_of_tasks = []
-    if mail.photo:
-        filename = mail.photo
-    elif mail.video:
-        filename = mail.video
-    elif mail.gif:
-        filename = mail.gif
-    else:
-        filename = None
-    if filename:
-        with file_manager.get_file(filename) as file:
-            for mail_msg in mails_pending:
-                task = create_task(send_mail_to_user(ubot, mail_msg, mail, file))
-                bunch_of_tasks.append(task)
-                if len(bunch_of_tasks) >= 30:
-                    bunches_of_tasks.append(bunch_of_tasks)
-                    bunch_of_tasks = []
-    else:
-        for mail_msg in mails_pending:
-            task = create_task(send_mail_to_user(ubot, mail_msg, mail, None))
-            bunch_of_tasks.append(task)
-            if len(bunch_of_tasks) >= 30:
-                bunches_of_tasks.append(bunch_of_tasks)
-                bunch_of_tasks = []
+    for mail_msg in mails_pending:
+        task = create_task(send_mail_to_user(ubot, mail_msg, mail))
+        bunch_of_tasks.append(task)
+        if len(bunch_of_tasks) >= 30:
+            bunches_of_tasks.append(bunch_of_tasks)
+            bunch_of_tasks = []
     if bunch_of_tasks:
         bunches_of_tasks.append(bunch_of_tasks)
     for tasks in bunches_of_tasks:
