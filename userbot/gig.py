@@ -6,6 +6,7 @@ from asyncio import sleep, create_task, gather
 from datetime import datetime
 from pytz import timezone
 from copy import copy
+from logging import getLogger
 from time import time, strftime, gmtime
 
 from data import models
@@ -17,6 +18,7 @@ mails_stats_buffer = []
 admin_mails_stats_buffer = []
 purges_stats_buffer = []
 
+logger = getLogger("aiogram")
 
 async def enqueue_mail(mail: models.Mail):
     users = await user_db.get_by(bot=mail.bot, status=1)
@@ -67,6 +69,7 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
             mail.bot,
             mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
         )
+        blyat
         await msgs_db.add(msg_dc)
         mail.sent_num += 1
         await mails_db.update(mail)
@@ -80,7 +83,8 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
         retry_after_seconds = e.timeout
         await sleep(retry_after_seconds)
         await send_mail_to_user(ubot, mail_msg, mail)
-    except Exception:
+    except Exception as e:
+        logger.error(f"Exception occurred while sending out mail {mail_msg.id}: {e}", exc_info=True)
         mail.error_num += 1
         await mails_db.update(mail)
     await mails_queue_db.delete(mail_msg.id)
@@ -184,6 +188,7 @@ async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: in
                 admin_mail.blocked_num += 1
                 await admin_mails_db.update(admin_mail)
             except Exception:
+                logging.ERROR()
                 admin_mail.error_num += 1
                 await admin_mails_db.update(admin_mail)
             await mails_queue_db.delete(admin_mail_msg.id)
