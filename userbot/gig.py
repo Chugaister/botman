@@ -69,7 +69,6 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
             mail.bot,
             mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
         )
-        blyat
         await msgs_db.add(msg_dc)
         mail.sent_num += 1
         await mails_db.update(mail)
