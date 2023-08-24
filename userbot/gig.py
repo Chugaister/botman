@@ -2,7 +2,7 @@ from os import path
 
 from aiogram import Bot
 from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, RetryAfter
-from asyncio import sleep, create_task, gather
+from asyncio import sleep, create_task, gather, Semaphore
 from datetime import datetime
 from pytz import timezone
 from copy import copy
@@ -19,6 +19,8 @@ admin_mails_stats_buffer = []
 purges_stats_buffer = []
 
 logger = getLogger("aiogram")
+semaphore = Semaphore(800)
+
 
 async def enqueue_mail(mail: models.Mail):
     users = await user_db.get_by(bot=mail.bot, status=1)
@@ -36,42 +38,43 @@ async def enqueue_mail(mail: models.Mail):
 
 async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
     try:
-        if mail.photo:
-            msg = await ubot.send_photo(
+        async with semaphore:
+            if mail.photo:
+                msg = await ubot.send_photo(
+                    mail_msg.user,
+                    mail.file_id,
+                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                    reply_markup=gen_custom_buttons(mail.buttons)
+                )
+            elif mail.video:
+                msg = await ubot.send_video(
+                    mail_msg.user,
+                    mail.file_id,
+                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                    reply_markup=gen_custom_buttons(mail.buttons)
+                )
+            elif mail.gif:
+                msg = await ubot.send_animation(
+                    mail_msg.user,
+                    mail.file_id,
+                    caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                    reply_markup=gen_custom_buttons(mail.buttons)
+                )
+            elif mail.text:
+                msg = await ubot.send_message(
+                    mail_msg.user,
+                    gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
+                    reply_markup=gen_custom_buttons(mail.buttons)
+                )
+            msg_dc = models.Msg(
+                msg.message_id,
                 mail_msg.user,
-                mail.file_id,
-                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                reply_markup=gen_custom_buttons(mail.buttons)
+                mail.bot,
+                mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
             )
-        elif mail.video:
-            msg = await ubot.send_video(
-                mail_msg.user,
-                mail.file_id,
-                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                reply_markup=gen_custom_buttons(mail.buttons)
-            )
-        elif mail.gif:
-            msg = await ubot.send_animation(
-                mail_msg.user,
-                mail.file_id,
-                caption=gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                reply_markup=gen_custom_buttons(mail.buttons)
-            )
-        elif mail.text:
-            msg = await ubot.send_message(
-                mail_msg.user,
-                gen_dynamic_text(mail.text, (await user_db.get(mail_msg.user))) if mail.text else None,
-                reply_markup=gen_custom_buttons(mail.buttons)
-            )
-        msg_dc = models.Msg(
-            msg.message_id,
-            mail_msg.user,
-            mail.bot,
-            mail.del_dt.strftime(models.DT_FORMAT) if mail.del_dt is not None else None
-        )
-        await msgs_db.add(msg_dc)
-        mail.sent_num += 1
-        await mails_db.update(mail)
+            await msgs_db.add(msg_dc)
+            mail.sent_num += 1
+            await mails_db.update(mail)
     except BotBlocked:
         user = await user_db.get(mail_msg.user)
         user.status = 0
