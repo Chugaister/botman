@@ -1,4 +1,4 @@
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler
 from aiogram import types, Dispatcher, Bot
 from aiogram.types.bot_command import BotCommand
 import uvicorn
@@ -48,8 +48,11 @@ else:
 aiogram_logger = logging.getLogger("aiogram")
 aiogram_logger.setLevel(logging.DEBUG)
 
-file_handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7, encoding='utf-8')
-file_handler.suffix = "%Y-%m-%d_%H-%M-%S"  # Add a suffix based on the date
+max_log_size = 100 * 1024 * 1024
+
+
+file_handler = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=7, encoding='utf-8')
+file_handler.suffix = "%Y-%m-%d_%H-%M-%S"  
 file_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)

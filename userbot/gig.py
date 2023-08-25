@@ -1,7 +1,7 @@
 from os import path
 
 from aiogram import Bot
-from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, RetryAfter
+from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, RetryAfter, UserDeactivated
 from asyncio import sleep, create_task, gather, Semaphore
 from datetime import datetime
 from pytz import timezone
@@ -37,6 +37,18 @@ async def enqueue_mail(mail: models.Mail):
 
 
 async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
+    async def kill_user(user_id):
+        user_to_kill = await user_db.get(user_id)
+        user_to_kill.status = 0
+        await user_db.update(user_to_kill)
+        mail.blocked_num += 1
+        await mails_db.update(mail)
+
+    async def del_user(user_id):
+        await user_db.delete(user_id)
+        mail.blocked_num += 1
+        await mails_db.update(mail)
+
     try:
         async with semaphore:
             if mail.photo:
@@ -76,17 +88,15 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
             mail.sent_num += 1
             await mails_db.update(mail)
     except BotBlocked:
-        user = await user_db.get(mail_msg.user)
-        user.status = 0
-        await user_db.update(user)
-        mail.blocked_num += 1
-        await mails_db.update(mail)
+        await kill_user(mail_msg.user)
+    except UserDeactivated:
+        await del_user(mail_msg.user)
     except RetryAfter as e:
         retry_after_seconds = e.timeout
         await sleep(retry_after_seconds)
         await send_mail_to_user(ubot, mail_msg, mail)
     except Exception as e:
-        logger.error(f"Exception occurred while sending out mail {mail_msg.id}: {e}", exc_info=True)
+        logger.error(f"Exception occurred while sending out mail {mail.id}: {e}", exc_info=True)
         mail.error_num += 1
         await mails_db.update(mail)
     await mails_queue_db.delete(mail_msg.id)
