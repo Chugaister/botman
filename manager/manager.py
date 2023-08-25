@@ -4,7 +4,7 @@ from aiogram.utils.exceptions import Unauthorized
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 # from web_config.local_config import PUBLIC_IP
 from data.factory import *
-from userbot.handlers import start_handler, req_handler, captcha_confirm, CaptchaStatesGroup
+from userbot.handlers import start_handler, req_handler, captcha_confirm, CaptchaStatesGroup, my_chat_member_handler
 import logging
 class Manager:
     def __init__(self, bots: list[models.Bot], webhook_host: str):
@@ -23,6 +23,7 @@ class Manager:
             dp.register_message_handler(lambda msg: start_handler(Bot.get_current(), Dispatcher.get_current(), msg), commands="start")
             dp.register_chat_join_request_handler(lambda req, state: req_handler(Bot.get_current(), Dispatcher.get_current(), req, state))
             dp.register_message_handler(lambda msg, state: captcha_confirm(Bot.get_current(), Dispatcher.get_current(), msg, state), state=CaptchaStatesGroup.captcha)
+            dp.register_my_chat_member_handler(lambda member_update: my_chat_member_handler(Bot.get_current(), Dispatcher.get_current(), member_update))
             dp.register_errors_handler(self.log_exception)
     async def set_webhook(self, bots: list[models.Bot]):
         for bot in bots:
@@ -31,7 +32,11 @@ class Manager:
             ubot = Bot(token=bot.token)
             self.sessions.append(await ubot.get_session())
             try:
-                await ubot.set_webhook(f"https://{self.webhook_host}/bot/{bot.token}", drop_pending_updates=True)
+                await ubot.set_webhook(
+                    f"https://{self.webhook_host}/bot/{bot.token}",
+                    allowed_updates=["message", "chat_join_request", "my_chat_member"],
+                    drop_pending_updates=True)
+                await (await ubot.get_session()).close()
             except Unauthorized:
                 bot = await bots_db.get(ubot.id)
                 bot.admin = None

@@ -23,20 +23,15 @@ async def listen_purges():
 
 async def listen_mails():
     while True:
-        mails = await mails_db.get_all()
+        try:
+            mails = await mails_db.get_all()
+        except ValueError:
+            print("ERROR: mail buttons deserialization failed")
+            await sleep(5)
+            continue
         for mail in mails:
             if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active and not mail.status:
-                users = await user_db.get_by(bot=mail.bot)
-                for user in users:
-                    new_mail_msgs = models.MailsQueue(
-                        _id=0,
-                        bot=mail.bot,
-                        user=user.id,
-                        mail_id=mail.id
-                    )
-                    await mails_queue_db.add(new_mail_msgs)
-                mail.active = 1
-                await mails_db.update(mail)
+                await gig.enqueue_mail(mail)
                 bot_dc = await bots_db.get(mail.bot)
                 await bot.send_message(
                     bot_dc.admin,
@@ -47,9 +42,9 @@ async def listen_mails():
             bot_dc = await bots_db.get(mail.bot)
             if not bot_dc.action and mail.active and not mail.status:
                 await bot.send_message(
-                            bot_dc.admin,
-                                 f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                                reply_markup=gen_ok("hide")
+                    bot_dc.admin,
+                     f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                    reply_markup=gen_ok("hide")
                 )
                 mail.status = 1
                 await mails_db.update(mail)
@@ -57,7 +52,6 @@ async def listen_mails():
                 await bots_db.update(bot_dc)
                 ubot = manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0]
                 create_task(gig.send_mail(ubot, mail, bot_dc.admin))
-
         await sleep(5)
 
 
@@ -83,10 +77,10 @@ async def listen_admin_mails():
 
             if admin_mail.active and not admin_mail.status:
                 await bot.send_message(
-                            admin_mail.sender,
-                                 f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                                reply_markup=gen_ok("hide")
-                            )
+                    admin_mail.sender,
+                     f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                    reply_markup=gen_ok("hide")
+                )
                 admin_mail.status = 1
                 await admin_mails_db.update(admin_mail)
                 bots = []
@@ -122,7 +116,8 @@ async def listen_mails_stats():
                 await bot.send_message(
                     mail_stats["admin_id"],
                     f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
-Надіслано: {mail_stats['sent_num']}\nЗаблоковано: {mail_stats['blocked_num']}\nПомилка: {mail_stats['error_num']}",
+✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
+⌛️Час розсилання: {mail_stats['elapsed_time']}",
                     reply_markup=gen_ok("hide")
                 )
             gig.mails_stats_buffer = []

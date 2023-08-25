@@ -38,7 +38,7 @@ async def add_mail(cb: CallbackQuery, state: FSMContext):
 
 async def open_admin_notification_send_menu(uid: int, admin_notification: models.AdminNotification, msg_id: int, state: FSMContext):
     if admin_notification.photo:
-        file = await file_manager.get_file(admin_notification.photo)
+        file = file_manager.get_file(admin_notification.photo)
         await bot.send_photo(
             uid,
             file,
@@ -46,7 +46,7 @@ async def open_admin_notification_send_menu(uid: int, admin_notification: models
             reply_markup=kb.admin_notification_confirm()
         )
     elif admin_notification.video:
-        file = await file_manager.get_file(admin_notification.video)
+        file = file_manager.get_file(admin_notification.video)
         await bot.send_video(
             uid,
             file,
@@ -54,7 +54,7 @@ async def open_admin_notification_send_menu(uid: int, admin_notification: models
             reply_markup=kb.admin_notification_confirm()
         )
     elif admin_notification.gif:
-        file = await file_manager.get_file(admin_notification.gif)
+        file = file_manager.get_file(admin_notification.gif)
         await bot.send_animation(
             uid,
             file,
@@ -148,13 +148,13 @@ async def send_notification(admins: list, notification: models.AdminNotification
             if notification.photo:
                 await bot.send_photo(
                     admin.id,
-                    await file_manager.get_file(notification.photo),
+                    file_manager.get_file(notification.photo),
                     caption=notification.text
                 )
             elif notification.video:
                 await bot.send_video(
                     admin.id,
-                    await file_manager.get_file(notification.video),
+                    file_manager.get_file(notification.video),
                     caption=notification.text
                 )
             elif notification.gif:
