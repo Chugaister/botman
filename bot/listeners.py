@@ -2,6 +2,27 @@ from bot.misc import *
 from bot.keyboards import gen_ok
 from bot.handlers import admin_notification
 
+from logging import getLogger
+import subprocess
+import os
+
+
+def count_output_lines(command):
+    try:
+        # Run the system command and capture its output
+        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        # Check if the command was successful
+        if result.returncode == 0:
+            # Split the output into lines and count the number of lines
+            output_lines = result.stdout.splitlines()
+            num_lines = len(output_lines)
+            return num_lines
+        else:
+            return None
+    except Exception as e:
+        return None
+
 
 async def listen_purges():
     while True:
@@ -20,9 +41,11 @@ async def listen_purges():
                 create_task(gig.clean(manager.bot_dict[bot_dc.token][0], purge, bot_dc.admin))
         await sleep(5)
 
-
+logger = getLogger("aiogram")
 async def listen_mails():
     while True:
+        cmd = f"sudo lsof -p {os.getpid()}"
+        logger.debug(f"Number of open files: {count_output_lines(cmd)}")
         try:
             mails = await mails_db.get_all()
         except ValueError:
