@@ -1,6 +1,7 @@
 from data import models
 import re
 
+
 def clean_string_double_tags(input_string: str):
     pattern = r'<[^>]+>'
     words_with_angle_brackets = re.findall(pattern, input_string)
@@ -19,10 +20,10 @@ def clean_string_double_tags(input_string: str):
             if word[-2] == '/':
                 words_with_angle_brackets.remove(word)
     string_arr =input_string.split(" ")
-    for word in string_arr:
+    for index, word in enumerate(string_arr):
         for tag in words_with_angle_brackets:
             if tag in word:
-                string_arr.remove(word)
+                string_arr[index] = word.replace('<', '').replace('>', '')
     return ' '.join(string_arr)
 
 def clean_string_single_tag(input_string: str):
