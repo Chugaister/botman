@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher
 from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, MessageToDeleteNotFound, BadRequest, CantInitiateConversation
-from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode
+from aiogram.types import Message, CallbackQuery, ChatJoinRequest, ContentTypes, ParseMode, ChatMemberUpdated
 from aiogram.dispatcher.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from asyncio import gather, sleep, create_task
@@ -30,7 +30,7 @@ class CaptchaStatesGroup(StatesGroup):
     captcha = State()
 
 
-async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: ChatJoinRequest):
+async def send_one_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: ChatJoinRequest):
     # checking advanced settings
     captcha = (await captchas_db.get_by(bot=ubot.id))[0]
     if not captcha.active:
@@ -39,13 +39,13 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: C
         captcha.text = gen_dynamic_text(captcha.text, user)
     try:
         if captcha.photo:
-            file = await file_manager.get_file(captcha.photo)
+            file = file_manager.get_file(captcha.photo)
             msg = await ubot.send_photo(user.id, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
         elif captcha.video:
-            file = await file_manager.get_file(captcha.video)
+            file = file_manager.get_file(captcha.video)
             msg = await ubot.send_video(user.id, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
         elif captcha.gif:
-            file = await file_manager.get_file(captcha.gif)
+            file = file_manager.get_file(captcha.gif)
             msg = await ubot.send_animation(user.id, file, caption=captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
         elif captcha.text:
             msg = await ubot.send_message(user.id, captcha.text, reply_markup=gen_custom_reply_buttons(captcha.buttons))
@@ -58,6 +58,21 @@ async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: C
     await state.set_data({"msg_id": msg.message_id, "channel_id": request.chat.id})
 
 
+async def send_captcha(ubot: Bot, udp: Dispatcher, user: models.User, request: ChatJoinRequest):
+    bot_dc = await bots_db.get(ubot.id)
+    await send_one_captcha(ubot, udp, user, request)
+    if bot_dc.settings.get_force_captcha():
+        for i in range(4):
+            await sleep(10)
+            state = udp.current_state(chat=user.id, user=user.id)
+            if await state.get_state() == "CaptchaStatesGroup:captcha":
+                await ubot.delete_message(
+                    user.id,
+                    (await state.get_data())["msg_id"]
+                )
+                await send_one_captcha(ubot, udp, user, request)
+
+
 async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting):
     if not greeting.active:
         return
@@ -67,7 +82,7 @@ async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting)
         await sleep(greeting.send_delay)
     try:
         if greeting.photo:
-            file = await file_manager.get_file(greeting.photo)
+            file = file_manager.get_file(greeting.photo)
             msg = await ubot.send_photo(
                 user.id,
                 file,
@@ -75,7 +90,7 @@ async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting)
                 reply_markup=gen_custom_buttons(greeting.buttons)
             )
         elif greeting.video:
-            file = await file_manager.get_file(greeting.video)
+            file = file_manager.get_file(greeting.video)
             msg = await ubot.send_video(
                 user.id,
                 file,
@@ -83,7 +98,7 @@ async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting)
                 reply_markup=gen_custom_buttons(greeting.buttons)
             )
         elif greeting.gif:
-            file = await file_manager.get_file(greeting.gif)
+            file = file_manager.get_file(greeting.gif)
             msg = await ubot.send_animation(
                 user.id,
                 file,
@@ -134,7 +149,7 @@ async def req_handler(ubot: Bot, udp: Dispatcher, request: ChatJoinRequest, stat
         datetime.now(tz=timezone('Europe/Kiev')).strftime(models.DT_FORMAT)
     )
     if captcha.active:
-        await send_captcha(ubot, udp, user, request)
+        create_task(send_captcha(ubot, udp, user, request))
     else:
         create_task(send_all_greeting(ubot, user))
 
@@ -193,3 +208,17 @@ async def start_handler(ubot: Bot, udp: Dispatcher, msg: Message):
             pass
     create_task(send_all_greeting(ubot, user))
     await safe_del_msg(ubot, msg.from_user.id, msg.message_id)
+
+
+async def my_chat_member_handler(ubot: Bot, udp: Dispatcher, member_updated: ChatMemberUpdated):
+    users = (await user_db.get_by(id=member_updated.from_user.id, bot=ubot.id))
+    if users == []:
+        return
+    user = users[0]
+    if member_updated.new_chat_member.status == "kicked":
+        user.status = False
+        await user_db.update(user)
+    elif member_updated.new_chat_member.status == "member":
+        user.status = True
+        await user_db.update(user)
+

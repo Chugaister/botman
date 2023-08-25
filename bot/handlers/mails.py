@@ -2,6 +2,7 @@ from bot.misc import *
 from bot.keyboards import mails as kb
 from bot.keyboards import bot_action, mail_action, gen_cancel, gen_ok, gen_confirmation
 from datetime import datetime
+from aiogram.utils.exceptions import ChatNotFound, BotBlocked
 
 
 async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.Mail | None:
@@ -46,7 +47,7 @@ async def open_mail_list(cb: CallbackQuery, callback_data: dict, state: FSMConte
 async def add_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     bot_dc = await bots_db.get(int(callback_data["id"]))
     msg = await cb.message.answer(
-        "Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
+        f"Надішліть текст, гіф, фото або відео з підписом. Переконайтеся, що чат з @{bot_dc.username} ініціалізовано. \nДинамічні змінні:\n\
 <b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
             bot_action.new(
@@ -91,7 +92,7 @@ async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
     mail_text_content += sched_text
     bot_dc = await bots_db.get(mail.bot)
     if mail.photo:
-        file = await file_manager.get_file(mail.photo)
+        file = file_manager.get_file(mail.photo)
         await bot.send_photo(
             uid,
             file,
@@ -99,7 +100,7 @@ async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     elif mail.video:
-        file = await file_manager.get_file(mail.video)
+        file = file_manager.get_file(mail.video)
         await bot.send_video(
             uid,
             file,
@@ -107,7 +108,7 @@ async def open_mail_menu(uid: int, mail_id: int, msg_id: int):
             reply_markup=kb.gen_mail_menu(bot_dc, mail)
         )
     elif mail.gif:
-        file = await file_manager.get_file(mail.gif)
+        file = file_manager.get_file(mail.gif)
         await bot.send_animation(
             uid,
             file,
@@ -157,19 +158,47 @@ async def mail_input_text(msg: Message, state: FSMContext):
 async def mail_input_photo(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.photo[-1].file_id)
+    bot_dc = await bots_db.get(state_data["bot_id"])
+    ubot = manager.bot_dict[bot_dc.token][0]
+    file = file_manager.get_file(filename)
+    try:
+        ubot_msg = await ubot.send_photo(msg.from_user.id, file)
+        await ubot.delete_message(
+            msg.from_user.id,
+            ubot_msg.message_id
+        )
+        file_id = ubot_msg.photo[-1].file_id
+    except ChatNotFound:
+        await safe_edit_message(
+            f"❗️Помилка. Ініціюйте чат з @{bot_dc.username}\n\n\
+Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
+<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(
+                bot_action.new(
+                    id=bot_dc.id,
+                    action="mails"
+                )
+            )
+        )
+        await msg.delete()
+        return
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
         mail.text = msg.parse_entities(as_html=True) if msg.caption else None
         mail.photo = filename
         mail.video = None
         mail.gif = None
+        mail.file_id = file_id
         await mails_db.update(mail)
     else:
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
             text=msg.parse_entities(as_html=True) if msg.caption else None,
-            photo=filename
+            photo=filename,
+            file_id=file_id
         )
         await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -181,19 +210,47 @@ async def mail_input_photo(msg: Message, state: FSMContext):
 async def mail_input_video(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.video.file_id)
+    bot_dc = await bots_db.get(state_data["bot_id"])
+    ubot = manager.bot_dict[bot_dc.token][0]
+    file = file_manager.get_file(filename)
+    try:
+        ubot_msg = await ubot.send_video(msg.from_user.id, file)
+        await ubot.delete_message(
+            msg.from_user.id,
+            ubot_msg.message_id
+        )
+        file_id = ubot_msg.video.file_id
+    except ChatNotFound:
+        await safe_edit_message(
+            f"❗️Помилка. Ініціюйте чат з @{bot_dc.username}\n\n\
+Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
+<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(
+                bot_action.new(
+                    id=bot_dc.id,
+                    action="mails"
+                )
+            )
+        )
+        await msg.delete()
+        return
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
         mail.text = msg.parse_entities(as_html=True) if msg.caption else None
         mail.photo = None
         mail.video = filename
         mail.gif = None
+        mail.file_id = file_id
         await mails_db.update(mail)
     else:
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
             text=msg.parse_entities(as_html=True) if msg.caption else None,
-            video=filename
+            video=filename,
+            file_id=file_id
         )
         await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -205,19 +262,47 @@ async def mail_input_video(msg: Message, state: FSMContext):
 async def mail_input_gif(msg: Message, state: FSMContext):
     state_data = await state.get_data()
     filename = await file_manager.download_file(bot, state_data["bot_id"], msg.animation.file_id)
+    bot_dc = await bots_db.get(state_data["bot_id"])
+    ubot = manager.bot_dict[bot_dc.token][0]
+    file = file_manager.get_file(filename)
+    try:
+        ubot_msg = await ubot.send_animation(msg.from_user.id, file)
+        await ubot.delete_message(
+            msg.from_user.id,
+            ubot_msg.message_id
+        )
+        file_id = ubot_msg.animation.file_id
+    except ChatNotFound:
+        await safe_edit_message(
+            f"❗️Помилка. Ініціюйте чат з @{bot_dc.username}\n\n\
+Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
+<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+            msg.from_user.id,
+            state_data["msg_id"],
+            reply_markup=gen_cancel(
+                bot_action.new(
+                    id=bot_dc.id,
+                    action="mails"
+                )
+            )
+        )
+        await msg.delete()
+        return
     if state_data["edit"]:
         mail = await mails_db.get(state_data["edit"])
         mail.text = msg.parse_entities(as_html=True) if msg.caption else None
         mail.photo = None
         mail.video = None
         mail.gif = filename
+        mail.file_id = file_id
         await mails_db.update(mail)
     else:
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
             text=msg.parse_entities(as_html=True) if msg.caption else None,
-            gif=filename
+            gif=filename,
+            file_id=file_id
         )
         await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -479,23 +564,17 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
 
 @dp.callback_query_handler(mail_action.filter(action="confirm_sendout"))
 async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
-    # mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
-    mail = await mails_db.get(int(callback_data["id"]))
-    # if not mail:
-    #     return
-    users = await user_db.get_by(bot=mail.bot)
-    for user in users:
-        new_mail_msgs = models.MailsQueue(
-            _id=0,
-            bot=mail.bot,
-            user=user.id,
-            mail_id=mail.id
-        )
-        await mails_queue_db.add(new_mail_msgs)
-    mail.active = 1
-    await mails_db.update(mail)
+    mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not mail:
+        return
+    create_task(gig.enqueue_mail(mail))
     await cb.message.answer(
         f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
-        reply_markup=gen_ok("hide")
+        reply_markup=gen_ok(
+            bot_action.new(
+                id=mail.bot,
+                action="mails"
+            )
+        )
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)

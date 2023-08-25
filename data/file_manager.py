@@ -15,6 +15,8 @@ class FileManager:
         await bot.download_file(file.file_path, path.join(DIR, self.source, "media", filename))
         return filename
 
-    async def get_file(self, filename):
+    def get_file(self, filename):
+        if filename is None:
+            return None
         file = open(path.join(DIR, self.source, "media", filename), "rb")
         return file

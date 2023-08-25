@@ -69,6 +69,7 @@ queries = [
         "sent_num"	INTEGER,
         "blocked_num"	INTEGER,
         "error_num"	INTEGER,
+        "file_id" TEXT,
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
         PRIMARY KEY("id" AUTOINCREMENT)
     );
