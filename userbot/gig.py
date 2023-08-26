@@ -118,7 +118,9 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     for tasks in bunches_of_tasks:
         start_rate_time = time()
         await gather(*tasks)
-        await sleep(1 - (time() - start_rate_time))
+        time_of_waiting = (time() - start_rate_time)
+        if time_of_waiting < 1:
+            await sleep(1 - time_of_waiting)
     end_time = time()
     elapsed_time = end_time - start_time
     formatted_time = strftime("%H:%M:%S", gmtime(elapsed_time))
@@ -200,7 +202,6 @@ async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: in
                 admin_mail.blocked_num += 1
                 await admin_mails_db.update(admin_mail)
             except Exception:
-                logging.ERROR()
                 admin_mail.error_num += 1
                 await admin_mails_db.update(admin_mail)
             await mails_queue_db.delete(admin_mail_msg.id)
