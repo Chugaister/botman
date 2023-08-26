@@ -7,11 +7,16 @@ from data.factory import *
 from userbot.handlers import start_handler, req_handler, captcha_confirm, CaptchaStatesGroup, my_chat_member_handler
 import logging
 class Manager:
+
+
     def __init__(self, bots: list[models.Bot], webhook_host: str):
+        self.updates = {bot.token: "" for bot in bots}
         self.sessions = []
         self.logger = logging.getLogger('aiogram')
         self.bot_dict = {bot.token: (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage())) for bot in bots}
         self.webhook_host = webhook_host
+
+
     def register_handlers(self, bots: list[models.Bot]):
         for bot in bots:
             if bot.token not in self.bot_dict.keys():
@@ -25,8 +30,12 @@ class Manager:
             dp.register_message_handler(lambda msg, state: captcha_confirm(Bot.get_current(), Dispatcher.get_current(), msg, state), state=CaptchaStatesGroup.captcha)
             dp.register_my_chat_member_handler(lambda member_update: my_chat_member_handler(Bot.get_current(), Dispatcher.get_current(), member_update))
             dp.register_errors_handler(self.log_exception)
+
+
     async def set_webhook(self, bots: list[models.Bot]):
         for bot in bots:
+            if bot.token not in self.updates.keys():
+                self.updates[bot.token] = ""
             if bot.token not in self.bot_dict.keys():
                 self.bot_dict[bot.token] = ((Bot(token=bot.token)), Dispatcher(Bot(token=bot.token)))  
             ubot = Bot(token=bot.token)
@@ -41,6 +50,8 @@ class Manager:
                 bot = await bots_db.get(ubot.id)
                 bot.admin = None
                 await bots_db.update(bot)
+
+
     async def delete_webhook(self, bot: models.Bot):
         try:
             ubot = self.bot_dict[bot.token][0]
