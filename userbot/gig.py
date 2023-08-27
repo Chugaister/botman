@@ -108,16 +108,16 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     bunches_of_tasks = []
     bunch_of_tasks = []
     for mail_msg in mails_pending:
-        task = create_task(send_mail_to_user(ubot, mail_msg, mail))
-        bunch_of_tasks.append(task)
+        bunch_of_tasks.append(send_mail_to_user(ubot, mail_msg, mail))
         if len(bunch_of_tasks) >= 30:
             bunches_of_tasks.append(bunch_of_tasks)
             bunch_of_tasks = []
     if bunch_of_tasks:
         bunches_of_tasks.append(bunch_of_tasks)
     for tasks in bunches_of_tasks:
+        elapsed_time = time()
         await gather(*tasks)
-        await sleep(1)
+        await sleep(1 - time() + elapsed_time)
     end_time = time()
     elapsed_time = end_time - start_time
     formatted_time = strftime("%H:%M:%S", gmtime(elapsed_time))
