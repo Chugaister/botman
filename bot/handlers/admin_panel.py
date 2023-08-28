@@ -4,25 +4,6 @@ from bot.keyboards import admin_panel as kb
 from bot.keyboards import gen_cancel, admin_bot_action, gen_ok
 
 
-async def safe_get_admin_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.AdminMail | None:
-    try:
-        mail = await admin_mails_db.get(mail_id)
-        return mail
-    except data_exc.RecordIsMissing:
-        if cb_id:
-            await bot.answer_callback_query(
-                cb_id,
-                "❗️Помилка"
-            )
-        else:
-            await bot.send_message(
-                uid,
-                "❗️Помилка",
-                reply_markup=gen_ok("admin", "↩️Адмін меню")
-            )
-        return None
-
-
 @dp.callback_query_handler(lambda cb: cb.from_user.id in config.admin_list and cb.data == "admin", state="*")
 async def send_admin_panel(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)

@@ -21,7 +21,6 @@ purges_stats_buffer = []
 logger = getLogger("aiogram")
 semaphore = Semaphore(3000)
 
-
 async def enqueue_mail(mail: models.Mail):
     users = await user_db.get_by(bot=mail.bot, status=1)
     for user in users:
@@ -108,16 +107,16 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     bunches_of_tasks = []
     bunch_of_tasks = []
     for mail_msg in mails_pending:
-        task = create_task(send_mail_to_user(ubot, mail_msg, mail))
-        bunch_of_tasks.append(task)
+        bunch_of_tasks.append(send_mail_to_user(ubot, mail_msg, mail))
         if len(bunch_of_tasks) >= 30:
             bunches_of_tasks.append(bunch_of_tasks)
             bunch_of_tasks = []
     if bunch_of_tasks:
         bunches_of_tasks.append(bunch_of_tasks)
     for tasks in bunches_of_tasks:
+        elapsed_time = time()
         await gather(*tasks)
-        await sleep(1)
+        await sleep(1 - (time() - elapsed_time))
     end_time = time()
     elapsed_time = end_time - start_time
     formatted_time = strftime("%H:%M:%S", gmtime(elapsed_time))
@@ -137,86 +136,6 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     mail.status = 1
     mail.active = 0
     await mails_db.update(mail)
-
-
-async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: int):
-    for ubot in bots:
-        active_bot_status = True
-        while active_bot_status:
-            bot_in_action = await bots_db.get(ubot.id)
-            if not bot_in_action.action:
-                active_bot_status = False
-                bot_in_action.action = f"admin_mail_{admin_mail.id}"
-                await bots_db.update(bot_in_action)
-            elif active_bot_status:
-                await sleep(2)
-        admin_mails_pending = await mails_queue_db.get_by(mail_id=admin_mail.id, admin_status=1, bot=bot_in_action.id)
-        for admin_mail_msg in admin_mails_pending:
-            admin_mail_copy = copy(admin_mail)
-            if admin_mail_copy.text:
-                admin_mail_copy.text = gen_dynamic_text(admin_mail_copy.text, await user_db.get(admin_mail_msg.user))
-            try:
-                if admin_mail_copy.photo:
-                    msg = await ubot.send_photo(
-                        admin_mail_msg.user,
-                        file_manager.get_file(admin_mail_copy.photo),
-                        caption=admin_mail_copy.text,
-                        reply_markup=gen_custom_buttons(admin_mail_copy.buttons)
-                    )
-                elif admin_mail_copy.video:
-                    msg = await ubot.send_video(
-                        admin_mail_msg.user,
-                        file_manager.get_file(admin_mail_copy.video),
-                        caption=admin_mail_copy.text,
-                        reply_markup=gen_custom_buttons(admin_mail_copy.buttons)
-                    )
-                elif admin_mail_copy.gif:
-                    msg = await ubot.send_animation(
-                        admin_mail_msg.user,
-                        file_manager.get_file(admin_mail_copy.gif),
-                        caption=admin_mail_copy.text,
-                        reply_markup=gen_custom_buttons(admin_mail_copy.buttons)
-                    )
-                elif admin_mail_copy.text:
-                    msg = await ubot.send_message(
-                        admin_mail_msg.user,
-                        admin_mail_copy.text,
-                        reply_markup=gen_custom_buttons(admin_mail_copy.buttons)
-                    )
-                msg_dc = models.Msg(
-                    msg.message_id,
-                    admin_mail_msg.user,
-                    ubot.id,
-                    None
-                )
-                await msgs_db.add(msg_dc)
-                admin_mail.sent_num += 1
-                await admin_mails_db.update(admin_mail)
-            except BotBlocked:
-                user = await user_db.get(admin_mail_msg.user)
-                user.status = 0
-                await user_db.update(user)
-                admin_mail.blocked_num += 1
-                await admin_mails_db.update(admin_mail)
-            except Exception:
-                admin_mail.error_num += 1
-                await admin_mails_db.update(admin_mail)
-            await mails_queue_db.delete(admin_mail_msg.id)
-            if not (await mails_queue_db.get_by(bot=ubot.id, admin_status=True)):
-                new_action_bot = await bots_db.get(ubot.id)
-                new_action_bot.action = None
-                await bots_db.update(new_action_bot)
-            await sleep(0.035)
-    admin_mails_stats_buffer.append({
-        "admin_id": admin_id,
-        "mail_id": admin_mail.id,
-        "sent_num": admin_mail.sent_num,
-        "blocked_num": admin_mail.blocked_num,
-        "error_num": admin_mail.error_num
-    })
-    admin_mail.status = 1
-    admin_mail.active = 0
-    await admin_mails_db.update(admin_mail)
 
 
 async def clean(ubot: Bot, purge: models.Purge, admin_id: int):

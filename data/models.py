@@ -284,69 +284,6 @@ class Mail:
         )
 
 
-class AdminMail:
-    columns = (
-        "active",
-        "text",
-        "photo",
-        "video",
-        "gif",
-        "buttons",
-        "send_dt",
-        "status",
-        "sent_num",
-        "blocked_num",
-        "error_num",
-        "sender"
-    )
-
-    def __init__(
-            self,
-            _id: int,
-            active: bool = False,
-            text: str = None,
-            photo: str = None,
-            video: str = None,
-            gif: str = None,
-            buttons: str = None,
-            sched_dt: str = None,
-            status: bool = False,
-            sent_num: int = 0,
-            blocked_num: int = 0,
-            error_num: int = 0,
-            sender: int = None
-    ):
-        self.id = _id
-        self.active = active
-        self.text = text
-        self.photo = photo
-        self.video = video
-        self.gif = gif
-        self.buttons = deserialize_buttons(buttons)
-        self.send_dt = datetime.strptime(sched_dt, DT_FORMAT) if sched_dt else None
-        self.status = status
-        self.sent_num = sent_num
-        self.blocked_num = blocked_num
-        self.error_num = error_num
-        self.sender = sender
-
-    def get_tuple(self):
-        return (
-            self.active,
-            self.text,
-            self.photo,
-            self.video,
-            self.gif,
-            serialize_buttons(self.buttons),
-            self.send_dt.strftime(DT_FORMAT) if self.send_dt else None,
-            self.status,
-            self.sent_num,
-            self.blocked_num,
-            self.error_num,
-            self.sender
-        )
-
-
 class AdminNotification:
     columns = (
         "text",
@@ -502,3 +439,77 @@ class Settings:
 
     def set_force_captcha(self, value: bool) -> None:
         self.write_bit(2, value)
+
+
+class MultiMail:
+    columns = (
+        "sender",
+        "bots",
+        "active",
+        "text",
+        "photo",
+        "video",
+        "gif",
+        "buttons",
+        "send_dt",
+        "del_dt",
+        "status",
+        "sent_num",
+        "blocked_num",
+        "error_num"
+    )
+
+    def __init__(
+            self,
+            _id: int,
+            sender: int,
+            bots: str = "",
+            active: bool = False,
+            text: str = None,
+            photo: str = None,
+            video: str = None,
+            gif: str = None,
+            buttons: str = None,
+            sched_dt: str = None,
+            del_dt: str = None,
+            status: bool = False,
+            sent_num: int = 0,
+            blocked_num: int = 0,
+            error_num: int = 0
+    ):
+        self.id = _id
+        self.sender = sender
+        self.bots = []
+        for bot_id in bots.split(" "):
+            if bot_id != "":
+                self.bots.append(int(bot_id))
+        self.active = active
+        self.text = text
+        self.photo = photo
+        self.video = video
+        self.gif = gif
+        self.buttons = deserialize_buttons(buttons)
+        self.send_dt = datetime.strptime(sched_dt, DT_FORMAT) if sched_dt else None
+        self.del_dt = datetime.strptime(del_dt, DT_FORMAT) if del_dt else None
+        self.status = status
+        self.sent_num = sent_num
+        self.blocked_num = blocked_num
+        self.error_num = error_num
+
+    def get_tuple(self):
+        return (
+            self.sender,
+            " ".join([str(bot) for bot in self.bots]),
+            self.active,
+            self.text,
+            self.photo,
+            self.video,
+            self.gif,
+            serialize_buttons(self.buttons),
+            self.send_dt.strftime(DT_FORMAT) if self.send_dt else None,
+            self.del_dt.strftime(DT_FORMAT) if self.del_dt else None,
+            self.status,
+            self.sent_num,
+            self.blocked_num,
+            self.error_num
+        )

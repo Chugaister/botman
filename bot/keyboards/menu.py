@@ -6,6 +6,10 @@ go_to_bot_list.add(
     InlineKeyboardButton(
         "🤖Боти",
         callback_data="open_bot_list"
+    ),
+    InlineKeyboardButton(
+        "🚀Мультирозсилка",
+        callback_data="multi_mails"
     )
 )
 

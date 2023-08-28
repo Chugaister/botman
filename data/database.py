@@ -15,10 +15,10 @@ parser.add_argument('--source', action='store', help='Database folder path')
 parser.add_argument('--logs', action='store', help='Logs folder path')
 args = parser.parse_args()
 
-source_folder="source" if not args.source else args.source
+source_folder = "source" if not args.source else args.source
 tables_with_media = ["captchas", "greetings", "mails", "admin_mails"]
 tables_with_dual_foreign_keys = ["msgs", "users"]
-tables_tg_id=["admins", "users", "bots", "msgs"]
+tables_tg_id = ["admins", "users", "bots", "msgs"]
 def create_db(source):
     path = join(DIR, source)
     if not exists(path):
