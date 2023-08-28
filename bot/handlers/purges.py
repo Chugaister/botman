@@ -157,12 +157,13 @@ async def confirm_run(cb: CallbackQuery, callback_data: dict):
         return
     bot_dc = await bots_db.get(purge.bot)
     await cb.message.answer(
-        f"🚀Чистка {gen_hex_caption(purge.id)} розпочата. Вам прийде повідомлення після її закінчення",
+        f"Чистка {gen_hex_caption(purge.id)} була. була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
         reply_markup=gen_ok(bot_action.new(
             bot_dc.id,
             "purges"
         ))
     )
+    purge.active = 1
+    await purges_db.update(purge)
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
-    create_task(gig.clean(manager.bot_dict[bot_dc.token][0], purge, cb.from_user.id))
 

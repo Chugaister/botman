@@ -396,9 +396,9 @@ class Purge:
             active: bool = False,
             sched_dt: str = None,
             status: bool = False,
-            deleted_msgs_num: int = None,
-            cleared_chats_num: int = None,
-            error_num: int = None
+            deleted_msgs_num: int = 0,
+            cleared_chats_num: int = 0,
+            error_num: int = 0
     ):
         self.id = _id
         self.bot = bot

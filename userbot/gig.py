@@ -22,6 +22,11 @@ logger = getLogger("aiogram")
 semaphore = Semaphore(3000)
 
 
+async def create_bunches(*args):
+    #треба буде шось тут придумати
+    return
+
+
 async def enqueue_mail(mail: models.Mail):
     users = await user_db.get_by(bot=mail.bot, status=1)
     for user in users:
@@ -100,6 +105,21 @@ async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models
         mail.error_num += 1
         await mails_db.update(mail)
     await mails_queue_db.delete(mail_msg.id)
+
+
+async def clean_msg(ubot: Bot, msg: models.Msg, purge: models.Purge):
+    try:
+        async with semaphore:
+            await ubot.delete_message(
+                msg.user,
+                msg.id
+            )
+            purge.deleted_msgs_num += 1
+            await purges_db.update(purge)
+    except Exception:
+        purge.error_num += 1
+        await purges_db.update(purge)
+    await msgs_db.delete(msg.id)
 
 
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
@@ -220,27 +240,41 @@ async def send_admin_mail(bots: list, admin_mail: models.AdminMail, admin_id: in
 
 
 async def clean(ubot: Bot, purge: models.Purge, admin_id: int):
-    purge.active = 1
-    await purges_db.update(purge)
+    start_time = time()
     msgs = await msgs_db.get_by(bot=purge.bot)
-    cleared_num = 0
-    error_num = 0
+    bunches_of_tasks = []
+    bunch_of_tasks = []
+
     for msg in msgs:
-        try:
-            await ubot.delete_message(
-                msg.user,
-                msg.id
-            )
-            cleared_num += 1
-        except Exception:
-            error_num += 1
-        await sleep(0.035)
-    for msg in msgs:
-        await msgs_db.delete(msg.id)
+        bunch_of_tasks.append(clean_msg(ubot, msg, purge))
+        if len(bunch_of_tasks) >= 30:
+            bunches_of_tasks.append(bunch_of_tasks)
+            bunch_of_tasks = []
+    if bunch_of_tasks:
+        bunches_of_tasks.append(bunch_of_tasks)
+
+    for tasks in bunches_of_tasks:
+        elapsed_time = time()
+        await gather(*tasks)
+        await sleep(1 - time() + elapsed_time)
+
+    end_time = time()
+    elapsed_time = end_time - start_time
+    formatted_time = strftime("%H:%M:%S", gmtime(elapsed_time))
+
+    await sleep(2)
+
+    new_action_bot = await bots_db.get(ubot.id)
+    new_action_bot.action = None
+    await bots_db.update(new_action_bot)
+
     purges_stats_buffer.append({
         "admin_id": admin_id,
         "purge_id": purge.id,
-        "cleared_num": cleared_num,
-        "error_num": error_num
+        "cleared_num": purge.deleted_msgs_num,
+        "error_num": purge.error_num,
+        "elapsed_time": formatted_time
     })
-    await purges_db.delete(purge.id)
+    purge.status = 1
+    purge.active = 0
+    await purges_db.update(purge)
