@@ -70,6 +70,8 @@ queries = [
         "blocked_num"	INTEGER,
         "error_num"	INTEGER,
         "file_id" TEXT,
+        multi_mail INGTEGER,
+        FOREIGN KEY("multi_mail") REFERENCES "multi_mails"("id"),
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
         PRIMARY KEY("id" AUTOINCREMENT)
     );

@@ -116,6 +116,14 @@ def gen_multi_mail_menu(multi_mail: models.MultiMail) -> InlineKeyboardMarkup:
                 "schedule",
                 extra_field=0
             )
+        ),
+        InlineKeyboardButton(
+            "🤖Боти",
+            callback_data=multi_mail_action.new(
+                multi_mail.id,
+                "bots_select",
+                extra_field=0
+            )
         )
     )
     mail_menu.add(

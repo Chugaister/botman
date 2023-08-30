@@ -57,19 +57,21 @@ async def listen_mails():
             if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active and not mail.status:
                 await gig.enqueue_mail(mail)
                 bot_dc = await bots_db.get(mail.bot)
-                await bot.send_message(
-                    bot_dc.admin,
-                    f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
-                    reply_markup=gen_ok("hide")
-                )
+                if not mail.multi_mail:
+                    await bot.send_message(
+                        bot_dc.admin,
+                        f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
+                        reply_markup=gen_ok("hide")
+                    )
 
             bot_dc = await bots_db.get(mail.bot)
             if not bot_dc.action and mail.active and not mail.status:
-                await bot.send_message(
-                    bot_dc.admin,
-                     f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                    reply_markup=gen_ok("hide")
-                )
+                if not mail.multi_mail:
+                    await bot.send_message(
+                        bot_dc.admin,
+                         f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                        reply_markup=gen_ok("hide")
+                    )
                 mail.status = 1
                 await mails_db.update(mail)
                 bot_dc.action = f"mail_{mail.id}"
@@ -100,14 +102,41 @@ async def listen_mails_stats():
     while True:
         if gig.mails_stats_buffer:
             for mail_stats in gig.mails_stats_buffer:
+                mail = await mails_db.get(mail_stats["mail_id"])
+                if not mail.multi_mail:
+                    await bot.send_message(
+                        mail_stats["admin_id"],
+                        f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
+    ✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
+    ⌛️Час розсилання: {mail_stats['elapsed_time']}",
+                        reply_markup=gen_ok("hide")
+                    )
+            gig.mails_stats_buffer = []
+        await sleep(5)
+
+
+async def listen_multi_mail_stats():
+    while True:
+        multi_mails = await multi_mails_db.get_by(active=1, status=0)
+        for multi_mail in multi_mails:
+            mails = await mails_db.get_by(multi_mail=multi_mail.id)
+            finished = True
+            for mail in mails:
+                finished = finished and (not mail.active and mail.status)
+            if finished:
+                for mail in mails:
+                    multi_mail.sent_num += mail.sent_num
+                    multi_mail.blocked_num += mail.blocked_num
+                    multi_mail.error_num += mail.error_num
+                multi_mail.active = 0
+                multi_mail.status = 1
+                await multi_mails_db.update(multi_mail)
                 await bot.send_message(
-                    mail_stats["admin_id"],
-                    f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
-✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
-⌛️Час розсилання: {mail_stats['elapsed_time']}",
+                    multi_mail.sender,
+                    f"Розсилка {gen_hex_caption(multi_mail.id)} закінчена\n\
+✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
                     reply_markup=gen_ok("hide")
                 )
-            gig.mails_stats_buffer = []
         await sleep(5)
 
 
@@ -167,3 +196,4 @@ async def run_listeners():
     create_task(listen_purges_stats())
     create_task(listen_admin_notification_stats())
     create_task(listen_mails_on_startup())
+    create_task(listen_multi_mail_stats())

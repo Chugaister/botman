@@ -2,7 +2,7 @@ from bot.misc import *
 from bot.keyboards import multi_mails as kb
 from bot.keyboards import bot_action, multi_mail_action, gen_cancel, gen_ok, gen_confirmation
 from datetime import datetime
-
+from .mails import initiate_ubot_file
 
 async def safe_get_multi_mail(uid: int, multi_mail_id: int, cb_id: int | None = None) -> models.MultiMail | None:
     async def alert():
@@ -31,7 +31,7 @@ async def safe_get_multi_mail(uid: int, multi_mail_id: int, cb_id: int | None = 
 @dp.callback_query_handler(lambda cb: cb.data == "multi_mails", state="*")
 async def open_multi_mail_list(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
-    multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id)
+    multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0)
     await cb.message.answer(
         "Мультирозсилки",
         reply_markup=kb.gen_multi_mail_list(multi_mails)
@@ -195,13 +195,17 @@ async def multi_mail_input_gif(msg: Message, state: FSMContext):
 async def select_bots(uid: int, multi_mail_id: int, msg_id: int):
     multi_mail = await multi_mails_db.get(multi_mail_id)
     bots_dc = await bots_db.get_by(admin=uid)
-    await bot.edit_message_text(
-        "Виберіть ботів",
+    await bot.send_message(
         uid,
-        msg_id,
+        "Виберіть ботів",
         reply_markup=kb.gen_bot_select_menu(multi_mail, bots_dc)
     )
-    # await safe_del_msg(uid, msg_id)
+    await safe_del_msg(uid, msg_id)
+
+
+@dp.callback_query_handler(multi_mail_action.filter(action="bots_select"))
+async def select_bots_cb(cb: CallbackQuery, callback_data: dict):
+    await select_bots(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
 
 
 @dp.callback_query_handler(multi_mail_action.filter(action="attach_bot"))
@@ -444,10 +448,6 @@ async def del_del_dt(cb: CallbackQuery, callback_data: dict):
 
 @dp.callback_query_handler(multi_mail_action.filter(action="sendout"))
 async def sendout(cb: CallbackQuery, callback_data: dict):
-    await cb.answer(
-        "In development..."
-    )
-    return
     multi_mail = await safe_get_multi_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not multi_mail:
         return
@@ -463,11 +463,13 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
         reply_markup=gen_confirmation(
             multi_mail_action.new(
                 id=multi_mail.id,
-                action="confirm_sendout"
+                action="confirm_sendout",
+                extra_field=0
             ),
             multi_mail_action.new(
                 id=multi_mail.id,
-                action="open_multi_mail_menu"
+                action="open_multi_mail_menu",
+                extra_field=0
             )
         )
     )
@@ -479,14 +481,40 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     multi_mail = await safe_get_multi_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not multi_mail:
         return
-    create_task(gig.enqueue_mail(multi_mail))
-    await cb.message.answer(
-        f"Розсилка {gen_hex_caption(multi_mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
-        reply_markup=gen_ok(
-            bot_action.new(
-                id=multi_mail.bot,
-                action="mails"
-            )
+    if multi_mail.photo:
+        filename = multi_mail.photo
+    elif multi_mail.video:
+        filename = multi_mail.video
+    elif multi_mail.gif:
+        filename = multi_mail.gif
+    else:
+        filename = None
+    bots_dc = [await bots_db.get(id) for id in multi_mail.bots]
+    for bot_dc in bots_dc:
+        mail = models.Mail(
+            0,
+            bot_dc.id,
+            active=False,
+            text=multi_mail.text,
+            photo=multi_mail.photo,
+            video=multi_mail.video,
+            gif=multi_mail.gif,
+            buttons=models.serialize_buttons(multi_mail.buttons),
+            multi_mail=multi_mail.id
         )
+        if filename:
+            try:
+                file_id = await initiate_ubot_file(mail)
+            except ChatNotFound:
+                multi_mail.bots.remove(bot_dc.id)
+                continue
+            mail.file_id = file_id
+        await mails_db.add(mail)
+        create_task(gig.enqueue_mail(mail))
+    multi_mail.active = 1
+    await multi_mails_db.update(multi_mail)
+    await cb.message.answer(
+        f"Мультирозсилка {gen_hex_caption(multi_mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
+        reply_markup=gen_ok("multi_mails")
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
