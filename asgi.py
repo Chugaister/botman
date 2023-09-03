@@ -102,18 +102,17 @@ async def bot_webhook(token, update: dict):
     telegram_update = types.Update(**update)
     if bot_manager.updates[token] == telegram_update["update_id"]:
         return
+    bot_manager.updates[token] = telegram_update["update_id"]
+    aiogram_logger.debug(f"Get updates: {telegram_update}")
+    if token == main_token:
+        Dispatcher.set_current(main_dp)
+        Bot.set_current(main_bot)
+        await main_dp.process_update(telegram_update)
     else:
-        bot_manager.updates[token] = telegram_update["update_id"]
-        aiogram_logger.debug(f"Get updates: {telegram_update}")
-        if token == main_token:
-            Dispatcher.set_current(main_dp)
-            Bot.set_current(main_bot)
-            await main_dp.process_update(telegram_update)
-        else:
-            ubot, udp = bot_manager.bot_dict[token]
-            Dispatcher.set_current(udp)
-            Bot.set_current(ubot)
-            await udp.process_update(telegram_update)
+        ubot, udp = bot_manager.bot_dict[token]
+        Dispatcher.set_current(udp)
+        Bot.set_current(ubot)
+        await udp.process_update(telegram_update)
 
 
 @app.on_event("shutdown")
