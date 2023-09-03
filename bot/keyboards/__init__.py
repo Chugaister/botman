@@ -8,6 +8,7 @@ mail_action = CallbackData("mail_action", "id", "action")
 captcha_action = CallbackData("captcha_action", "id", "action")
 purge_action = CallbackData("purge_action", "id", "action")
 admin_notification_action = CallbackData("admin_notification", "id", "action")
+multi_mail_action = CallbackData("multi_mail_action", "id", "action", "extra_field")
 
 
 def gen_cancel(callback_data: str) -> InlineKeyboardMarkup:

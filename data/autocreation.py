@@ -70,6 +70,8 @@ queries = [
         "blocked_num"	INTEGER,
         "error_num"	INTEGER,
         "file_id" TEXT,
+        multi_mail INGTEGER,
+        FOREIGN KEY("multi_mail") REFERENCES "multi_mails"("id"),
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
         PRIMARY KEY("id" AUTOINCREMENT)
     );
@@ -113,24 +115,6 @@ queries = [
     );
     """,
     """
-        CREATE TABLE IF NOT EXISTS "admin_mails" (
-        "id"	INTEGER NOT NULL UNIQUE,
-        "active"	INTEGER,
-        "text"	TEXT,
-        "photo"	TEXT,
-        "video"	TEXT,
-        "gif"	TEXT,
-        "buttons"	TEXT,
-        "send_dt"	TEXT,
-        "status"	INTEGER NOT NULL,
-        "sent_num"	INTEGER,
-        "blocked_num"	INTEGER,
-        "error_num"	INTEGER,
-        "sender" INTEGER,
-        PRIMARY KEY("id" AUTOINCREMENT)
-    );
-    """,
-    """
         CREATE TABLE IF NOT EXISTS "mails_queue" (
         "id"	INTEGER NOT NULL UNIQUE,
         "bot"	INTEGER NOT NULL,
@@ -141,5 +125,25 @@ queries = [
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
         FOREIGN KEY("user") REFERENCES "users"("id")
     );
+    """,
     """
+    CREATE TABLE IF NOT EXISTS "multi_mails" (
+        "id"	INTEGER NOT NULL UNIQUE,
+        "sender" TEXT NOT NULL,
+        "bots"	TEXT NOT NULL,
+        "active"	INTEGER,
+        "text"	TEXT,
+        "photo"	TEXT,
+        "video"	TEXT,
+        "gif"	TEXT,
+        "buttons"	TEXT,
+        "send_dt"	TEXT,
+        "del_dt"	TEXT,
+        "status"	INTEGER NOT NULL,
+        "sent_num"	INTEGER,
+        "blocked_num"	INTEGER,
+        "error_num"	INTEGER,
+        PRIMARY KEY("id" AUTOINCREMENT)
+    );
+    """,
 ]

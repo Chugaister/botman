@@ -14,10 +14,10 @@ class InputStateGroup(StatesGroup):
     mail_send_dt = State()
     mail_del_dt = State()
 
-    admin_mail = State()
-    admin_mail_buttons = State()
-    admin_mail_send_dt = State()
-    admin_mail_del_dt = State()
+    multi_mail = State()
+    multi_mail_buttons = State()
+    multi_mail_send_dt = State()
+    multi_mail_del_dt = State()
 
     admin_notification = State()
     admin_notification_send = State()

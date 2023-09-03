@@ -41,6 +41,7 @@ async def listen_purges():
                 create_task(gig.clean(manager.bot_dict[bot_dc.token][0], purge, bot_dc.admin))
         await sleep(5)
 
+
 logger = getLogger("aiogram")
 async def listen_mails():
     while True:
@@ -56,62 +57,27 @@ async def listen_mails():
             if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active and not mail.status:
                 await gig.enqueue_mail(mail)
                 bot_dc = await bots_db.get(mail.bot)
-                await bot.send_message(
-                    bot_dc.admin,
-                    f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
-                    reply_markup=gen_ok("hide")
-                )
+                if not mail.multi_mail:
+                    await bot.send_message(
+                        bot_dc.admin,
+                        f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
+                        reply_markup=gen_ok("hide")
+                    )
 
             bot_dc = await bots_db.get(mail.bot)
             if not bot_dc.action and mail.active and not mail.status:
-                await bot.send_message(
-                    bot_dc.admin,
-                     f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                    reply_markup=gen_ok("hide")
-                )
+                if not mail.multi_mail:
+                    await bot.send_message(
+                        bot_dc.admin,
+                         f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
+                        reply_markup=gen_ok("hide")
+                    )
                 mail.status = 1
                 await mails_db.update(mail)
                 bot_dc.action = f"mail_{mail.id}"
                 await bots_db.update(bot_dc)
                 ubot = manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0]
                 create_task(gig.send_mail(ubot, mail, bot_dc.admin))
-        await sleep(5)
-
-
-async def listen_admin_mails():
-    while True:
-        admin_mails = await admin_mails_db.get_all()
-        for admin_mail in admin_mails:
-            if admin_mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(admin_mail.send_dt) and not admin_mail.active and not admin_mail.status:
-                bots = [ubot for ubot in await bots_db.get_by(premium=0)]
-                for ubot in bots:
-                    users = await user_db.get_by(bot=ubot.id)
-                    for user in users:
-                        new_mail_msgs = models.MailsQueue(
-                            _id=0,
-                            bot=admin_mail.bot,
-                            user=user.id,
-                            mail_id=admin_mail.id,
-                            admin_status=True
-                        )
-                        await mails_queue_db.add(new_mail_msgs)
-                    admin_mail.active = 1
-                    await mails_db.update(admin_mail)
-
-            if admin_mail.active and not admin_mail.status:
-                await bot.send_message(
-                    admin_mail.sender,
-                     f"🚀Адмінська розсилка {gen_hex_caption(admin_mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                    reply_markup=gen_ok("hide")
-                )
-                admin_mail.status = 1
-                await admin_mails_db.update(admin_mail)
-                bots = []
-                bots_without_premium = [bot.token for bot in await bots_db.get_by(premium=0)]
-                for bot_token in manager.bot_dict.keys():
-                    if bot_token in bots_without_premium:
-                        bots.append(manager.bot_dict[bot_token][0])
-                create_task(gig.send_admin_mail(bots, admin_mail, admin_mail.sender))
         await sleep(5)
 
 
@@ -136,28 +102,41 @@ async def listen_mails_stats():
     while True:
         if gig.mails_stats_buffer:
             for mail_stats in gig.mails_stats_buffer:
-                await bot.send_message(
-                    mail_stats["admin_id"],
-                    f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
-✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
-⌛️Час розсилання: {mail_stats['elapsed_time']}",
-                    reply_markup=gen_ok("hide")
-                )
+                mail = await mails_db.get(mail_stats["mail_id"])
+                if not mail.multi_mail:
+                    await bot.send_message(
+                        mail_stats["admin_id"],
+                        f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
+    ✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
+    ⌛️Час розсилання: {mail_stats['elapsed_time']}",
+                        reply_markup=gen_ok("hide")
+                    )
             gig.mails_stats_buffer = []
         await sleep(5)
 
 
-async def listen_admin_mails_stats():
+async def listen_multi_mail_stats():
     while True:
-        if gig.admin_mails_stats_buffer:
-            for mail_stats in gig.admin_mails_stats_buffer:
+        multi_mails = await multi_mails_db.get_by(active=1, status=0)
+        for multi_mail in multi_mails:
+            mails = await mails_db.get_by(multi_mail=multi_mail.id)
+            finished = True
+            for mail in mails:
+                finished = finished and (not mail.active and mail.status)
+            if finished:
+                for mail in mails:
+                    multi_mail.sent_num += mail.sent_num
+                    multi_mail.blocked_num += mail.blocked_num
+                    multi_mail.error_num += mail.error_num
+                multi_mail.active = 0
+                multi_mail.status = 1
+                await multi_mails_db.update(multi_mail)
                 await bot.send_message(
-                    mail_stats["admin_id"],
-                    f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
-Надіслано: {mail_stats['sent_num']}\nЗаблоковано: {mail_stats['blocked_num']}\nПомилка: {mail_stats['error_num']}",
+                    multi_mail.sender,
+                    f"Розсилка {gen_hex_caption(multi_mail.id)} закінчена\n\
+✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
                     reply_markup=gen_ok("hide")
                 )
-            gig.admin_mails_stats_buffer = []
         await sleep(5)
 
 
@@ -209,37 +188,12 @@ async def listen_mails_on_startup():
                     await bots_db.update(ubot)
 
 
-async def listen_admin_mails_on_startup():
-    admin_mails = await admin_mails_db.get_all()
-    for admin_mail in admin_mails:
-        if admin_mail.active and admin_mail.status:
-            bots = []
-            bots_without_premium = [bot.token for bot in await bots_db.get_by(premium=0)]
-            for bot_token in manager.bot_dict.keys():
-                if bot_token in bots_without_premium:
-                    bots.append(manager.bot_dict[bot_token][0])
-            create_task(gig.send_admin_mail(bots, admin_mail, admin_mail.sender))
-            ubots = []
-            ubots_all = await bots_db.get_all()
-            for ubot in ubots_all:
-                if ubot.status == 1 and ubot.admin:
-                    ubots.append(ubot)
-            for ubot in ubots:
-                if ubot.action == f"admin_mail_{admin_mail.id}":
-                    mails_bot_msgs = await mails_queue_db.get_by(bot=ubot.id, mail_id=admin_mail.id, admin_status=True)
-                    if not mails_bot_msgs:
-                        ubot.action = None
-                        await bots_db.update(ubot)
-
-
 async def run_listeners():
     create_task(listen_mails())
-    create_task(listen_admin_mails())
     create_task(listen_purges())
     create_task(listen_autodeletion())
-    create_task(listen_admin_mails_stats())
     create_task(listen_mails_stats())
     create_task(listen_purges_stats())
     create_task(listen_admin_notification_stats())
     create_task(listen_mails_on_startup())
-    create_task(listen_admin_mails_on_startup())
+    create_task(listen_multi_mail_stats())
