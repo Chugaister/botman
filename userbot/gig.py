@@ -116,7 +116,7 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     for tasks in bunches_of_tasks:
         elapsed_time = time()
         await gather(*tasks)
-        await sleep(1 - (time() - elapsed_time))
+        await sleep(1 - time() + elapsed_time)
     end_time = time()
     elapsed_time = end_time - start_time
     formatted_time = strftime("%H:%M:%S", gmtime(elapsed_time))
