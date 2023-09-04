@@ -2,7 +2,7 @@ from bot.misc import *
 from bot.keyboards import mails as kb
 from bot.keyboards import bot_action, mail_action, gen_cancel, gen_ok, gen_confirmation
 from datetime import datetime
-from aiogram.utils.exceptions import ChatNotFound
+from aiogram.utils.exceptions import ChatNotFound, BotBlocked
 
 
 async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> models.Mail | None:
@@ -139,24 +139,29 @@ async def initiate_ubot_file(mail: models.Mail) -> str:
     if users == []:
         raise ChatNotFound("no users")
     user = users[0]
-    if mail.photo:
-        file = file_manager.get_file(mail.photo)
-        ubot_msg = await ubot.send_photo(user.id, file)
-        file_id = ubot_msg.photo[-1].file_id
-    elif mail.video:
-        file = file_manager.get_file(mail.video)
-        ubot_msg = await ubot.send_video(user.id, file)
-        file_id = ubot_msg.video.file_id
-    elif mail.gif:
-        file = file_manager.get_file(mail.gif)
-        ubot_msg = await ubot.send_animation(user.id, file)
-        file_id = ubot_msg.animation.file_id
-    else:
-        raise ValueError()
-    await ubot.delete_message(
-        user.id,
-        ubot_msg.message_id
-    )
+    try:
+        if mail.photo:
+            file = file_manager.get_file(mail.photo)
+            ubot_msg = await ubot.send_photo(user.id, file)
+            file_id = ubot_msg.photo[-1].file_id
+        elif mail.video:
+            file = file_manager.get_file(mail.video)
+            ubot_msg = await ubot.send_video(user.id, file)
+            file_id = ubot_msg.video.file_id
+        elif mail.gif:
+            file = file_manager.get_file(mail.gif)
+            ubot_msg = await ubot.send_animation(user.id, file)
+            file_id = ubot_msg.animation.file_id
+        else:
+            raise ValueError()
+        await ubot.delete_message(
+            user.id,
+            ubot_msg.message_id
+        )
+    except BotBlocked:
+        user.status = 0
+        await user_db.update(user)
+        file_id = await initiate_ubot_file(mail)
     return file_id
 
 async def mail_input(
