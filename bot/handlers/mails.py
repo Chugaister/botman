@@ -135,7 +135,7 @@ async def open_mail_menu_cb(cb: CallbackQuery, callback_data: dict):
 async def initiate_ubot_file(mail: models.Mail) -> str:
     bot_dc = await bots_db.get(mail.bot)
     ubot = manager.bot_dict[bot_dc.token][0]
-    users = await user_db.get_by(bot=bot_dc.id)
+    users = await user_db.get_by(bot=bot_dc.id, status=1)
     if users == []:
         raise ChatNotFound("no users")
     user = users[0]
@@ -159,10 +159,9 @@ async def initiate_ubot_file(mail: models.Mail) -> str:
             ubot_msg.message_id
         )
     except BotBlocked:
-        raise ChatNotFound("no users")
-        # user.status = 0
-        # await user_db.update(user)
-        # file_id = await initiate_ubot_file(mail)
+        user.status = 0
+        await user_db.update(user)
+        file_id = await initiate_ubot_file(mail)
     return file_id
 
 async def mail_input(
