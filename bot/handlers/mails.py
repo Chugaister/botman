@@ -159,9 +159,10 @@ async def initiate_ubot_file(mail: models.Mail) -> str:
             ubot_msg.message_id
         )
     except BotBlocked:
-        user.status = 0
-        await user_db.update(user)
-        file_id = await initiate_ubot_file(mail)
+        raise ChatNotFound("no users")
+        # user.status = 0
+        # await user_db.update(user)
+        # file_id = await initiate_ubot_file(mail)
     return file_id
 
 async def mail_input(
