@@ -1,6 +1,6 @@
 from bot.misc import *
 from bot.keyboards import multi_mails as kb
-from bot.keyboards import bot_action, multi_mail_action, gen_cancel, gen_ok, gen_confirmation
+from bot.keyboards import multi_mail_action, gen_cancel, gen_ok, gen_confirmation
 from datetime import datetime
 from .mails import initiate_ubot_file
 
@@ -28,19 +28,23 @@ async def safe_get_multi_mail(uid: int, multi_mail_id: int, cb_id: int | None = 
     return multi_mail
 
 
+@dp.callback_query_handler(lambda cb: cb.data == "admin_mails", state="*")
 @dp.callback_query_handler(lambda cb: cb.data == "multi_mails", state="*")
 async def open_multi_mail_list(cb: CallbackQuery, state: FSMContext):
+    admin_status = cb.data == "admin_mails"
     await state.set_state(None)
-    multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0)
+    multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0, admin_status=admin_status)
     await cb.message.answer(
         "Мультирозсилки",
-        reply_markup=kb.gen_multi_mail_list(multi_mails)
+        reply_markup=kb.gen_multi_mail_list(multi_mails, admin_status)
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
+@dp.callback_query_handler(lambda cb: cb.data == "add_admin_mail")
 @dp.callback_query_handler(lambda cb: cb.data == "add_multi_mail")
 async def add_multi_mail(cb: CallbackQuery, state: FSMContext):
+    admin_status = cb.data == "add_admin_mail"
     msg = await cb.message.answer(
         f"Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
 <b>[any]\n[username]\n[first_name]\n[last_name]</b>",
@@ -49,7 +53,7 @@ async def add_multi_mail(cb: CallbackQuery, state: FSMContext):
         )
     )
     await state.set_state(states.InputStateGroup.multi_mail)
-    await state.set_data({"msg_id": msg.message_id, "edit": None})
+    await state.set_data({"msg_id": msg.message_id, "edit": None, "admin_status": admin_status})
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
@@ -142,12 +146,16 @@ async def multi_mail_input(
             text=text,
             photo=photo,
             video=video,
-            gif=gif
+            gif=gif,
+            admin_status=state_data["admin_status"]
         )
         await multi_mails_db.add(multi_mail)
-    await select_bots(msg.from_user.id, multi_mail.id, state_data["msg_id"])
+    if state_data["admin_status"]:
+        await open_multi_mail_menu(msg.from_user.id, multi_mail.id, msg.message_id)
+    else:
+        await select_bots(msg.from_user.id, multi_mail.id, state_data["msg_id"])
+        await msg.delete()
     await state.set_state(None)
-    await msg.delete()
 
 
 @dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.multi_mail)
@@ -489,6 +497,8 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
         filename = multi_mail.gif
     else:
         filename = None
+    if multi_mail.admin_status:
+        multi_mail.bots = [bot_dc.id for bot_dc in (await bots_db.get_by(premium=0))]
     bots_dc = [await bots_db.get(id) for id in multi_mail.bots]
     for bot_dc in bots_dc:
         mail = models.Mail(

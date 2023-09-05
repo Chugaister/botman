@@ -143,6 +143,7 @@ queries = [
         "sent_num"	INTEGER,
         "blocked_num"	INTEGER,
         "error_num"	INTEGER,
+        "admin_status" INTEGER,
         PRIMARY KEY("id" AUTOINCREMENT)
     );
     """,

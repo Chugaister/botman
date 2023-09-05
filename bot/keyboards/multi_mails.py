@@ -13,13 +13,14 @@ def gen_cancel_schedule_menu(multi_mail: models.MultiMail) -> InlineKeyboardMark
     return reply_markup
 
 
-def gen_multi_mail_list(multi_mails: list[models.MultiMail]) -> InlineKeyboardMarkup:
+def gen_multi_mail_list(multi_mails: list[models.MultiMail], admin_status: bool) -> InlineKeyboardMarkup:
     multi_mail_list = InlineKeyboardMarkup()
     for multi_mail in multi_mails:
         schedule_mark = '🕑' if multi_mail.send_dt or multi_mail.del_dt else ''
+        admin_mark = '🔐' if multi_mail.admin_status else ''
         multi_mail_list.add(
             InlineKeyboardButton(
-                schedule_mark + (f"{multi_mail.text[:20]}..." if multi_mail.text else gen_hex_caption(multi_mail.id)),
+                admin_mark + schedule_mark + (f"{multi_mail.text[:20]}..." if multi_mail.text else gen_hex_caption(multi_mail.id)),
                 callback_data=multi_mail_action.new(
                     id=multi_mail.id,
                     action="open_multi_mail_menu",
@@ -30,11 +31,11 @@ def gen_multi_mail_list(multi_mails: list[models.MultiMail]) -> InlineKeyboardMa
     multi_mail_list.add(
         InlineKeyboardButton(
             "↩️Назад",
-            callback_data="start_msg"
+            callback_data="admin" if admin_status else "start_msg"
         ),
         InlineKeyboardButton(
             "➕Додати",
-            callback_data="add_multi_mail"
+            callback_data="add_admin_mail" if admin_status else "add_multi_mail"
         )
     )
     return multi_mail_list
@@ -116,20 +117,23 @@ def gen_multi_mail_menu(multi_mail: models.MultiMail) -> InlineKeyboardMarkup:
                 "schedule",
                 extra_field=0
             )
-        ),
-        InlineKeyboardButton(
-            "🤖Боти",
-            callback_data=multi_mail_action.new(
-                multi_mail.id,
-                "bots_select",
-                extra_field=0
-            )
         )
     )
+    if not multi_mail.admin_status:
+        mail_menu.add(
+            InlineKeyboardButton(
+                "🤖Боти",
+                callback_data=multi_mail_action.new(
+                    multi_mail.id,
+                    "bots_select",
+                    extra_field=0
+                )
+            )
+        )
     mail_menu.add(
         InlineKeyboardButton(
             "↩️Назад",
-            callback_data="multi_mails"
+            callback_data="admin_mails" if multi_mail.admin_status else "multi_mails"
         ),
         InlineKeyboardButton(
             "🗑Видалити",

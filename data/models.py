@@ -460,7 +460,8 @@ class MultiMail:
         "status",
         "sent_num",
         "blocked_num",
-        "error_num"
+        "error_num",
+        "admin_status"
     )
 
     def __init__(
@@ -479,7 +480,8 @@ class MultiMail:
             status: bool = False,
             sent_num: int = 0,
             blocked_num: int = 0,
-            error_num: int = 0
+            error_num: int = 0,
+            admin_status: bool = False
     ):
         self.id = _id
         self.sender = sender
@@ -499,6 +501,7 @@ class MultiMail:
         self.sent_num = sent_num
         self.blocked_num = blocked_num
         self.error_num = error_num
+        self.admin_status = admin_status
 
     def get_tuple(self):
         return (
@@ -515,5 +518,6 @@ class MultiMail:
             self.status,
             self.sent_num,
             self.blocked_num,
-            self.error_num
+            self.error_num,
+            self.admin_status
         )
