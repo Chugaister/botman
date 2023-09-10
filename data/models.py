@@ -228,7 +228,10 @@ class Mail:
         "sent_num",
         "blocked_num",
         "error_num",
-        "file_id"
+        "file_id",
+        "sender",
+        "start_time",
+        "duration"
     )
 
     def __init__(
@@ -247,7 +250,10 @@ class Mail:
             sent_num: int = 0,
             blocked_num: int = 0,
             error_num: int = 0,
-            file_id: str = None
+            file_id: str = None,
+            sender: int = None,
+            start_time: int = None,
+            duration: str = None
     ):
         self.id = _id
         self.bot = bot
@@ -264,6 +270,9 @@ class Mail:
         self.blocked_num = blocked_num
         self.error_num = error_num
         self.file_id = file_id
+        self.sender = sender
+        self.start_time = start_time
+        self.duration = duration
 
     def get_tuple(self):
         return (
@@ -280,7 +289,10 @@ class Mail:
             self.sent_num,
             self.blocked_num,
             self.error_num,
-            self.file_id
+            self.file_id,
+            self.sender,
+            self.start_time,
+            self.duration
         )
 
 
@@ -386,7 +398,11 @@ class Purge:
         "status",
         "deleted_msgs_num",
         "cleared_chats_num",
-        "error_num"
+        "error_num",
+        "mail_id",
+        "sender",
+        "start_time",
+        "duration"
     )
 
     def __init__(
@@ -398,7 +414,11 @@ class Purge:
             status: bool = False,
             deleted_msgs_num: int = 0,
             cleared_chats_num: int = 0,
-            error_num: int = 0
+            error_num: int = 0,
+            mail_id: int = None,
+            sender: int = None,
+            start_time: int = None,
+            duration: str = None
     ):
         self.id = _id
         self.bot = bot
@@ -408,6 +428,10 @@ class Purge:
         self.deleted_msgs_num = deleted_msgs_num
         self.cleared_chats_num = cleared_chats_num
         self.error_num = error_num
+        self.mail_id = mail_id if mail_id else None
+        self.sender = sender
+        self.start_time = start_time
+        self.duration = duration
 
     def get_tuple(self):
         return (
@@ -418,6 +442,10 @@ class Purge:
             self.deleted_msgs_num,
             self.cleared_chats_num,
             self.error_num,
+            self.mail_id,
+            self.sender,
+            self.start_time,
+            self.duration
         )
 
 
@@ -426,17 +454,17 @@ class Msg:
         "id",
         "user",
         "bot",
-        "del_dt",
+        "mail_id",
     )
 
-    def __init__(self, _id: int, user: int, bot: int, del_dt: str = None):
+    def __init__(self, _id: int, user: int, bot: int, mail_id: int = 0):
         self.id = _id
         self.user = user
         self.bot = bot
-        self.del_dt = datetime.strptime(del_dt, DT_FORMAT) if del_dt else None
+        self.mail_id = mail_id
 
     def get_tuple(self):
-        return self.id, self.user, self.bot, self.del_dt.strftime(DT_FORMAT) if self.del_dt else None,
+        return self.id, self.user, self.bot, self.mail_id
 
 
 class MailsQueue:

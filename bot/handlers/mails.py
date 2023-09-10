@@ -146,7 +146,8 @@ async def mail_input_text(msg: Message, state: FSMContext):
         mail = models.Mail(
             _id=0,
             bot=state_data["bot_id"],
-            text=msg.parse_entities(as_html=True) if msg.text else None
+            text=msg.parse_entities(as_html=True) if msg.text else None,
+            sender=msg.from_user.id
         )
         await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -198,7 +199,8 @@ async def mail_input_photo(msg: Message, state: FSMContext):
             bot=state_data["bot_id"],
             text=msg.parse_entities(as_html=True) if msg.caption else None,
             photo=filename,
-            file_id=file_id
+            file_id=file_id,
+            sender=msg.from_user.id
         )
         await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -250,7 +252,8 @@ async def mail_input_video(msg: Message, state: FSMContext):
             bot=state_data["bot_id"],
             text=msg.parse_entities(as_html=True) if msg.caption else None,
             video=filename,
-            file_id=file_id
+            file_id=file_id,
+            sender=msg.from_user.id
         )
         await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -302,7 +305,8 @@ async def mail_input_gif(msg: Message, state: FSMContext):
             bot=state_data["bot_id"],
             text=msg.parse_entities(as_html=True) if msg.caption else None,
             gif=filename,
-            file_id=file_id
+            file_id=file_id,
+            sender=msg.from_user.id
         )
         await mails_db.add(mail)
     await open_mail_menu(msg.from_user.id, mail.id, state_data["msg_id"])
@@ -568,8 +572,9 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     if not mail:
         return
     create_task(gig.enqueue_mail(mail))
+    bot_dc = await bots_db.get(mail.bot)
     await cb.message.answer(
-        f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
+        f"Розсилка {gen_hex_caption(mail.id)} в боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
         reply_markup=gen_ok(
             bot_action.new(
                 id=mail.bot,

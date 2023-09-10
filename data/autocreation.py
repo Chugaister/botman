@@ -70,6 +70,9 @@ queries = [
         "blocked_num"	INTEGER,
         "error_num"	INTEGER,
         "file_id" TEXT,
+        "sender" INTEGER NOT NULL,
+        "start_time" TEXT,
+        "duration" TEXT,
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
         PRIMARY KEY("id" AUTOINCREMENT)
     );
@@ -84,8 +87,13 @@ queries = [
         "deleted_msgs_num"	INTEGER,
         "cleared_chats_num"	INTEGER,
         "error_num"	INTEGER,
+        "mail_id" INTEGER,
+        "sender" INTEGER NOT NULL,
+        "start_time" TEXT,
+        "duration" TEXT,
         PRIMARY KEY("id" AUTOINCREMENT),
-        FOREIGN KEY("bot") REFERENCES "bots"("id")
+        FOREIGN KEY("bot") REFERENCES "bots"("id"),
+        FOREIGN KEY("mail_id") REFERENCES "mails"("id")
     );
     """,
     """
@@ -106,10 +114,11 @@ queries = [
         "id"	INTEGER NOT NULL UNIQUE,
         "user"	INTEGER NOT NULL,
         "bot"	INTEGER NOT NULL,
-        "del_dt"	INTEGER,
+        "mail_id"	INTEGER,
         PRIMARY KEY("id", "bot"),
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
-        FOREIGN KEY("user") REFERENCES "users"("id")
+        FOREIGN KEY("user") REFERENCES "users"("id"),
+        FOREIGN KEY("mail_id") REFERENCES "mails"("id")
     );
     """,
     """
