@@ -180,25 +180,26 @@ async def mail_input(
     mail.photo = photo
     mail.video = video
     mail.gif = gif
-    try:
-        file_id = await initiate_ubot_file(mail)
-    except ChatNotFound:
-        await safe_edit_message(
-            f"❗️Помилка. Ініціюйте чат з @{bot_dc.username}\n\n\
-    Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
-    <b>[any]\n[username]\n[first_name]\n[last_name]</b>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(
-                bot_action.new(
-                    id=bot_dc.id,
-                    action="mails"
+    if mail.photo or mail.video or mail.gif:
+        try:
+            file_id = await initiate_ubot_file(mail)
+        except ChatNotFound:
+            await safe_edit_message(
+                f"❗️Помилка. Ініціюйте чат з @{bot_dc.username}\n\n\
+        Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
+        <b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(
+                    bot_action.new(
+                        id=bot_dc.id,
+                        action="mails"
+                    )
                 )
             )
-        )
-        await msg.delete()
-        return
-    mail.file_id = file_id
+            await msg.delete()
+            return
+        mail.file_id = file_id
     if state_data["edit"]:
         await mails_db.update(mail)
     else:

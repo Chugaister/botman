@@ -4,8 +4,9 @@ from bot.keyboards import menu as kb
 from bot.keyboards import gen_cancel
 
 
-@dp.message_handler(commands="start")
-async def send_start(msg: Message):
+@dp.message_handler(commands="start", state="*")
+async def send_start(msg: Message, state: FSMContext):
+    await state.set_state(None)
     try:
         await admins_db.add(
             models.Admin(
