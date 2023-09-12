@@ -116,7 +116,8 @@ async def clean_msg(ubot: Bot, msg: models.Msg, purge: models.Purge):
             )
             purge.deleted_msgs_num += 1
             await purges_db.update(purge)
-    except Exception:
+    except Exception as e:
+        logger.error(f"Exception occurred while deleting msg by purge {purge.id}: {e}", exc_info=True)
         purge.error_num += 1
         await purges_db.update(purge)
     await msgs_db.delete(msg.id)
