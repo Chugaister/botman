@@ -176,6 +176,7 @@ async def mail_input(
             _id=0,
             bot=state_data["bot_id"]
         )
+    mail.sender = msg.from_user.id
     mail.text = text
     mail.photo = photo
     mail.video = video
@@ -512,8 +513,9 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     if not mail:
         return
     create_task(gig.enqueue_mail(mail))
+    bot_dc = await bots_db.get(mail.bot)
     await cb.message.answer(
-        f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
+        f"Розсилка {gen_hex_caption(mail.id)} в боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
         reply_markup=gen_ok(
             bot_action.new(
                 id=mail.bot,
