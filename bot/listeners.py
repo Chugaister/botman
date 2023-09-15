@@ -42,7 +42,11 @@ async def start_action_check(action, bot_dc: models.Bot):
         return TypeError
 
     if not bot_dc.action and action.active and not action.status:
-        await bot.send_message(action.sender, start_msg, reply_markup=gen_ok("hide"))
+        if action_type == "mail":
+            if not action.multi_mail:
+                await bot.send_message(action.sender, start_msg, reply_markup=gen_ok("hide"))
+        else:
+            await bot.send_message(action.sender, start_msg, reply_markup=gen_ok("hide"))
         action.status = 1
         await db_of_action.update(action)
         bot_dc.action = f"{action_type}_{action.id}"
@@ -120,9 +124,9 @@ async def listen_mails_stats():
                 if not mail.multi_mail:
                     await bot.send_message(
                         mail_stats["admin_id"],
-                        f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} в боті @{(await bots_db.get(mail.bot)).username} закінчена\n\
-    ✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
-    ⌛️Час розсилання: {mail_stats['elapsed_time']}",
+                        f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} в боті @{(await bots_db.get(mail.bot)).username} закінчена\n\n\
+✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
+⌛️Час розсилання: {mail_stats['elapsed_time']}",
                         reply_markup=gen_ok("hide")
                     )
             gig.mails_stats_buffer = []
@@ -147,7 +151,7 @@ async def listen_multi_mail_stats():
                 await multi_mails_db.update(multi_mail)
                 await bot.send_message(
                     multi_mail.sender,
-                    f"Мультирозсилка {gen_hex_caption(multi_mail.id)} закінчена\n\
+                    f"Мультирозсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n\
 ✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
                     reply_markup=gen_ok("hide")
                 )
@@ -185,8 +189,8 @@ async def listen_purges_stats():
                     await bot.send_message(
                         purge_stats["admin_id"],
                         f"Чистка {gen_hex_caption(purge_stats['purge_id'])} в боті @{(await bots_db.get(purge.bot)).username} закінчена\n\n\
-    ✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
-    ⌛️Час розсилання: {purge_stats['elapsed_time']}",
+✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
+⌛️Час розсилання: {purge_stats['elapsed_time']}",
                         reply_markup=gen_ok("hide")
                     )
             gig.purges_stats_buffer = []

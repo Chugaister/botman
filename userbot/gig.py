@@ -1,7 +1,7 @@
 from os import path
 
 from aiogram import Bot
-from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, RetryAfter, UserDeactivated
+from aiogram.utils.exceptions import MessageCantBeDeleted, BotBlocked, RetryAfter, UserDeactivated, MessageToDeleteNotFound
 from asyncio import sleep, create_task, gather, Semaphore
 from datetime import datetime
 from pytz import timezone
@@ -116,6 +116,12 @@ async def clean_msg(ubot: Bot, msg: models.Msg, purge: models.Purge):
             )
             purge.deleted_msgs_num += 1
             await purges_db.update(purge)
+    except MessageToDeleteNotFound:
+        purge.error_num += 1
+        await purges_db.update(purge)
+    except MessageCantBeDeleted:
+        purge.error_num += 1
+        await purges_db.update(purge)
     except Exception as e:
         logger.error(f"Exception occurred while deleting msg by purge {purge.id}: {e}", exc_info=True)
         purge.error_num += 1

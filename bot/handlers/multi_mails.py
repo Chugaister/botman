@@ -493,13 +493,16 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     for bot_dc in bots_dc:
         mail = models.Mail(
             0,
-            bot_dc.id,
+            sender=cb.from_user.id,
+            bot=bot_dc.id,
             active=False,
             text=multi_mail.text,
             photo=multi_mail.photo,
             video=multi_mail.video,
             gif=multi_mail.gif,
             buttons=models.serialize_buttons(multi_mail.buttons),
+            # думаємо
+            del_dt=datetime.strftime(multi_mail.del_dt, models.DT_FORMAT),
             multi_mail=multi_mail.id
         )
         if filename:

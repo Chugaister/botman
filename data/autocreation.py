@@ -147,6 +147,7 @@ queries = [
         "gif"	TEXT,
         "buttons"	TEXT,
         "send_dt"	TEXT,
+        "del_dt"	TEXT,
         "status"	INTEGER NOT NULL,
         "sent_num"	INTEGER,
         "blocked_num"	INTEGER,

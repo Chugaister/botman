@@ -230,7 +230,7 @@ class Mail:
         "blocked_num",
         "error_num",
         "file_id",
-        "multi_mail"
+        "multi_mail",
         "start_time",
         "duration"
     )

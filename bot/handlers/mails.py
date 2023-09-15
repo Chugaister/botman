@@ -174,9 +174,9 @@ async def mail_input(
     else:
         mail = models.Mail(
             _id=0,
+            sender=msg.from_user.id,
             bot=state_data["bot_id"]
         )
-    mail.sender = msg.from_user.id
     mail.text = text
     mail.photo = photo
     mail.video = video
