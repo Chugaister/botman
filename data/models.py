@@ -13,7 +13,8 @@ def deserialize_buttons(text: str) -> list[list[dict]]:
         button_dicts = []
         for button in row.split(" | "):
             caption, link = button.split(" - ")
-            if not link.startswith("https://"):
+            link = link.strip()
+            if not "https://" not in link and not "http://" in link:
                 link = "https://" + link
             # try:
             #     req = requests.get(link)
