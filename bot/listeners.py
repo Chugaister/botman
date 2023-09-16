@@ -1,7 +1,7 @@
 from bot.misc import *
 from bot.keyboards import gen_ok
 from bot.handlers import admin_notification
-
+from bot.handlers.multi_mails import run_multi_mail
 from logging import getLogger
 import subprocess
 import os
@@ -56,7 +56,7 @@ async def start_action_check(action, bot_dc: models.Bot):
         return False
 
 
-async def check_start_action_time(action, bot_dc: models.Bot):
+async def check_start_action_time(action, bot_dc: models.Bot | None = None):
     if isinstance(action, models.Purge):
         condition = action.sched_dt and datetime.now(tz=tz) > tz.localize(
             action.sched_dt) and not action.active and not action.status
@@ -72,12 +72,19 @@ async def check_start_action_time(action, bot_dc: models.Bot):
         db_of_action = mails_db
         action_type = "mail"
         queue_msg = f"Розсилка {gen_hex_caption(action.id)} у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
+    elif isinstance(action, models.MultiMail):
+        condition = action.send_dt and datetime.now(tz=tz) > tz.localize(
+            action.send_dt) and not action.active and not action.status
+        db_of_action = multi_mails_db
+        action_type = "multi_mail"
+        queue_msg = f"Мультирозсилка {gen_hex_caption(action.id)} була поставлена в чергу"
     else:
         return TypeError
-
     if condition:
         if action_type == "mail":
             await gig.enqueue_mail(action)
+        if action_type == "multi_mail":
+            await run_multi_mail(action, action.sender)
         action.active = 1
         await db_of_action.update(action)
         await bot.send_message(action.sender, queue_msg, reply_markup=gen_ok("hide"))
@@ -97,12 +104,7 @@ async def listen_purges():
 
 async def listen_mails():
     while True:
-        try:
-            mails = await mails_db.get_all()
-        except ValueError:
-            print("ERROR: mail buttons deserialization failed")
-            await sleep(5)
-            continue
+        mails = await mails_db.get_all()
         for mail in mails:
             bot_dc = await bots_db.get(mail.bot)
             await check_start_action_time(mail, bot_dc)
@@ -216,9 +218,18 @@ async def resume_action():
                 create_task(gig.clean(bot_dc, purge, purge.sender))
 
 
+async def listen_multi_mails():
+    while True:
+        multi_mails = await multi_mails_db.get_all()
+        for multi_mail in multi_mails:
+            await check_start_action_time(multi_mail)
+        await sleep(5)
+
+
 async def run_listeners():
     create_task(listen_mails())
     create_task(listen_purges())
+    create_task(listen_multi_mails())
 
     create_task(listen_mails_stats())
     create_task(listen_purges_stats())
