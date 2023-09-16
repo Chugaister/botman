@@ -2,7 +2,8 @@ from logging.handlers import RotatingFileHandler
 from aiogram import types, Dispatcher, Bot
 from aiogram.types.bot_command import BotCommand
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException  
+from fastapi.responses import FileResponse
 import argparse
 import logging
 import sys
@@ -13,6 +14,8 @@ from bot.config import token as main_token
 from bot.misc import manager as bot_manager, bots_db
 from bot.listeners import run_listeners
 import bot.handlers
+from bot.config import secret_key
+import datetime
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--local', action='store_true', help='Run in local mode')
@@ -62,6 +65,22 @@ def custom_exception_handler(exc_type, exc_value, exc_traceback):
     aiogram_logger.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 
+def list_files_and_last_modified(directory_path):
+    file_list = []
+    
+    with os.scandir(directory_path) as entries:
+        for entry in entries:
+            if entry.is_file():
+                last_modified = datetime.datetime.fromtimestamp(entry.stat().st_mtime)
+                formatted_date = last_modified.strftime('%Y-%m-%d %H:%M:%S')
+                
+                file_info = {
+                    "File": entry.name,
+                    "Last Modified": formatted_date
+                }
+                file_list.append(file_info)
+
+    return file_list
 
 
 sys.excepthook = custom_exception_handler
@@ -96,7 +115,30 @@ async def on_startup():
     await bot_manager.set_webhook(ubots)
     await run_listeners()
 
+@app.get('/logs/{key}/{id}')
+def sendLogs(key, id):
+    try:
+        if key == secret_key:
+            if int(id) > 0:
+                file_path = f'{log_file}.{id}'
+            elif int(id) == 0:
+                file_path = f'{log_file}'
+            return FileResponse(path=file_path, filename=file_path, media_type='text/plain')
+        else:
+            raise HTTPException(status_code=403, detail="Access denied")
+    except Exception:
+        pass
 
+@app.get('/logsInfo/{key}')
+def sendLogsInfo(key):
+    try:
+        if key == secret_key:
+            return list_files_and_last_modified(log_directory)
+        else: 
+            raise HTTPException(status_code=403, detail="Access denied")
+    except Exception:
+        pass
+    
 @app.post("/bot/{token}")
 async def bot_webhook(token, update: dict):
     telegram_update = types.Update(**update)
