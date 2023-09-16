@@ -4,6 +4,21 @@ import requests.exceptions
 
 DT_FORMAT = "%H:%M %d.%m.%Y"
 
+import aiohttp
+
+async def is_valid_link(buttons: list[list[dict]]) -> bool:
+    for row in buttons:
+        for button in row:
+            link = button["link"]
+            async with aiohttp.ClientSession() as session:
+                try:
+                    async with session.get(link) as response:
+                        if 200 <= response.status < 400:
+                            return True
+                        else:
+                            return False
+                except aiohttp.ClientError:
+                    return False
 
 def deserialize_buttons(text: str) -> list[list[dict]]:
     buttons = []
