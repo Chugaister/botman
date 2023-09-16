@@ -51,7 +51,7 @@ aiogram_logger.setLevel(logging.DEBUG)
 max_log_size = 100 * 1024 * 1024
 
 
-file_handler = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=7, encoding='utf-8')
+file_handler = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=15, encoding='utf-8')
 file_handler.suffix = "%Y-%m-%d_%H-%M-%S"  
 file_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
