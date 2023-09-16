@@ -264,21 +264,6 @@ async def multi_mail_buttons_input(msg: Message, state: FSMContext):
     await msg.delete()
     try:
         input_buttons = models.deserialize_buttons(msg.text)
-        if not models.is_valid_link(input_buttons):
-            await safe_edit_message(
-            "❗️Невірне посилання в одній з кнопок. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n\
-<i><b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b></i>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(
-                multi_mail_action.new(
-                    id=multi_mail.id,
-                    action="open_multi_mail_menu",
-                    extra_field=0
-                )
-            )
-        )
-            return
     except ValueError:
         await safe_edit_message(
             "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n\

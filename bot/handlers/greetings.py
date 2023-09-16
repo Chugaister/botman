@@ -256,23 +256,9 @@ async def greeting_buttons_input(msg: Message, state: FSMContext):
     greeting = await greeting_db.get(state_data["greeting_id"])
     try:
         greeting.buttons = models.deserialize_buttons(msg.text)
-        if not models.is_valid_link(greeting.buttons):
-                await safe_edit_message(
-                    "❗️Невірне посилання в одній з кнопок. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n\
-    <b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
-                    msg.from_user.id,
-                    state_data["msg_id"],
-                    reply_markup=gen_cancel(
-                        greeting_action.new(
-                            id=greeting.id,
-                            action="open_greeting_menu"
-                        )
-                    )
-                )
-                return
-        
     except ValueError:
-            await safe_edit_message(
+        try:
+            await bot.edit_message_text(
                 "❗️Невірний формат. Cпробуйте ще раз\nЩоб додати кнопки-посилання надішліть список у форматі\n\
 <b>text_1 - link_1 | text_2 - link_2\ntext_3 - link_3\n...</b>",
                 msg.from_user.id,
@@ -284,7 +270,9 @@ async def greeting_buttons_input(msg: Message, state: FSMContext):
                     )
                 )
             )
-            return
+        except MessageNotModified:
+            pass
+        return
     await greeting_db.update(greeting)
     await state.set_state(None)
     await send_greeting_menu(msg.from_user.id, greeting.id, state_data["msg_id"])
