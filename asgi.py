@@ -126,8 +126,8 @@ def sendLogs(key, id):
             return FileResponse(path=file_path, filename=file_path, media_type='text/plain')
         else:
             raise HTTPException(status_code=403, detail="Access denied")
-    except Exception:
-        pass
+    except Exception as e:
+        return e.args
 
 @app.get('/logsInfo/{key}')
 def sendLogsInfo(key):
