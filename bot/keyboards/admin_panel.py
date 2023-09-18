@@ -17,15 +17,20 @@ admin_panel_menu.add(
 )
 admin_panel_menu.add(
     InlineKeyboardButton(
-        "🔽Приховати",
-        callback_data="hide"
-    ),
-    InlineKeyboardButton(
         "🤖Боти",
         callback_data="bots_admin"
-    )
+    ),
+   InlineKeyboardButton(
+       "📁Логи",
+       callback_data="logs_menu"
+   )
 )
+admin_panel_menu.add(InlineKeyboardButton(
+        "🔽Приховати",
+        callback_data="hide"
+    )
 
+)
 
 def gen_admin_bot_menu(bot: models.Bot) -> InlineKeyboardMarkup:
     admin_bot_menu = InlineKeyboardMarkup()

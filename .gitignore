@@ -1,6 +1,7 @@
 .idea
 data/source/
 bot/config.py
+bot/local_config.py
 **/__pycache__/
 ssl_auth/
 web_config/
