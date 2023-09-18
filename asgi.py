@@ -127,7 +127,7 @@ def sendLogs(key, id):
         else:
             raise HTTPException(status_code=403, detail="Access denied")
     except Exception as e:
-        return e.args
+        return e
 
 @app.get('/logsInfo/{key}')
 def sendLogsInfo(key):
