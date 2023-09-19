@@ -31,7 +31,7 @@ async def start_action_check(action, bot_dc: models.Bot):
         db_of_action = purges_db
         action_type = "purge"
         if action.mail_id:
-            start_msg = f"🚀Видалення({gen_hex_caption(action.id)}) розсилки {gen_hex_caption(action.mail_id)} в боті @{bot_dc.username} було розпочато. Вам прийде повідомлення після його закінчення"
+            start_msg = f"🚀Видалення({gen_hex_caption(action.id)}) розсилки {gen_hex_caption(action.mail_id)} в боті @{bot_dc.username} розпочато. Вам прийде повідомлення після його закінчення"
         else:
             start_msg = f"🚀Чистка {gen_hex_caption(action.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
     elif isinstance(action, models.Mail):
@@ -128,7 +128,7 @@ async def listen_mails_stats():
                         mail_stats["admin_id"],
                         f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} в боті @{(await bots_db.get(mail.bot)).username} закінчена\n\n\
 ✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
-⌛️Час розсилання: {mail_stats['elapsed_time']}",
+⌛️Час розсилання: {mail_stats['duration']}",
                         reply_markup=gen_ok("hide")
                     )
             gig.mails_stats_buffer = []
@@ -184,7 +184,7 @@ async def listen_purges_stats():
                         purge_stats["admin_id"],
                         f"Видалення {gen_hex_caption(purge_stats['purge_id'])} розсилки {gen_hex_caption(purge.mail_id)} в боті @{(await bots_db.get(purge.bot)).username} закінчено\n\n\
 ✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
-⌛️Час розсилання: {purge_stats['elapsed_time']}",
+⌛️Час розсилання: {purge_stats['duration']}",
                         reply_markup=gen_ok("hide")
                     )
                 else:
@@ -192,7 +192,7 @@ async def listen_purges_stats():
                         purge_stats["admin_id"],
                         f"Чистка {gen_hex_caption(purge_stats['purge_id'])} в боті @{(await bots_db.get(purge.bot)).username} закінчена\n\n\
 ✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
-⌛️Час розсилання: {purge_stats['elapsed_time']}",
+⌛️Час розсилання: {purge_stats['duration']}",
                         reply_markup=gen_ok("hide")
                     )
             gig.purges_stats_buffer = []

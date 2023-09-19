@@ -158,7 +158,7 @@ async def confirm_run(cb: CallbackQuery, callback_data: dict):
         return
     bot_dc = await bots_db.get(purge.bot)
     await cb.message.answer(
-        f"Чистка {gen_hex_caption(purge.id)} в боті @{bot_dc.username} була. була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
+        f"Чистка {gen_hex_caption(purge.id)} в боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
         reply_markup=gen_ok(bot_action.new(
             bot_dc.id,
             "purges"

@@ -3,6 +3,7 @@ from datetime import datetime
 import requests.exceptions
 
 DT_FORMAT = "%H:%M %d.%m.%Y"
+DT_FORMAT_ex = "%H:%M:%S %d.%m.%Y"
 
 
 def deserialize_buttons(text: str) -> list[list[dict]]:
@@ -233,6 +234,7 @@ class Mail:
         "file_id",
         "multi_mail",
         "start_time",
+        "end_time",
         "duration"
     )
 
@@ -255,7 +257,8 @@ class Mail:
             error_num: int = 0,
             file_id: str = None,
             multi_mail: int = None,
-            start_time: int = None,
+            start_time: str = None,
+            end_time: str = None,
             duration: str = None
     ):
         self.id = _id
@@ -275,7 +278,8 @@ class Mail:
         self.error_num = error_num
         self.file_id = file_id
         self.multi_mail = multi_mail
-        self.start_time = start_time
+        self.start_time = datetime.strptime(start_time, DT_FORMAT_ex) if start_time else None
+        self.end_time = datetime.strptime(end_time, DT_FORMAT_ex) if end_time else None
         self.duration = duration
 
     def get_tuple(self):
@@ -296,7 +300,8 @@ class Mail:
             self.error_num,
             self.file_id,
             self.multi_mail,
-            self.start_time,
+            self.start_time.strftime(DT_FORMAT_ex) if self.start_time else None,
+            self.end_time.strftime(DT_FORMAT_ex) if self.end_time else None,
             self.duration
         )
 
@@ -344,6 +349,7 @@ class Purge:
         "error_num",
         "mail_id",
         "start_time",
+        "end_time",
         "duration"
     )
 
@@ -359,7 +365,8 @@ class Purge:
             cleared_chats_num: int = 0,
             error_num: int = 0,
             mail_id: int = None,
-            start_time: int = None,
+            start_time: str = None,
+            end_time: str = None,
             duration: str = None
     ):
         self.id = _id
@@ -372,7 +379,8 @@ class Purge:
         self.cleared_chats_num = cleared_chats_num
         self.error_num = error_num
         self.mail_id = mail_id if mail_id else None
-        self.start_time = start_time
+        self.start_time = datetime.strptime(start_time, DT_FORMAT_ex) if start_time else None
+        self.end_time = datetime.strptime(end_time, DT_FORMAT_ex) if end_time else None
         self.duration = duration
 
     def get_tuple(self):
@@ -386,7 +394,8 @@ class Purge:
             self.cleared_chats_num,
             self.error_num,
             self.mail_id,
-            self.start_time,
+            self.start_time.strftime(DT_FORMAT_ex) if self.start_time else None,
+            self.end_time.strftime(DT_FORMAT_ex) if self.end_time else None,
             self.duration
         )
 

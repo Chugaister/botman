@@ -130,7 +130,7 @@ async def clean_msg(ubot: Bot, msg: models.Msg, purge: models.Purge):
 
 
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
-    mail.start_time = time() #make human-readeable
+    mail.start_time = datetime.now()
     await mails_db.update(mail)
     mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
     bunches_of_tasks = []
@@ -146,11 +146,8 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
         elapsed_time = time()
         await gather(*tasks)
         await sleep(1 - time() + elapsed_time)
-    end_time = time()
-    elapsed_time = end_time - mail.start_time
-    formatted_time = strftime("%H:%M:%S", gmtime(elapsed_time))
-    mail.duration = formatted_time
-    mail.start_time = None
+    mail.end_time = datetime.now()
+    mail.duration = str(mail.end_time - mail.start_time)
     await mails_db.update(mail)
     await sleep(2)
 
@@ -163,7 +160,7 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
         "sent_num": mail.sent_num,
         "blocked_num": mail.blocked_num,
         "error_num": mail.error_num,
-        "elapsed_time": formatted_time
+        "duration": mail.duration
     })
     mail.status = 1
     mail.active = 0
@@ -171,7 +168,7 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
 
 
 async def clean(ubot: Bot, purge: models.Purge, admin_id: int):
-    purge.start_time = time()
+    purge.start_time = datetime.now()
     await purges_db.update(purge)
     if purge.mail_id:
         msgs = await msgs_db.get_by(bot=purge.bot, mail_id=purge.mail_id)
@@ -193,11 +190,8 @@ async def clean(ubot: Bot, purge: models.Purge, admin_id: int):
         await gather(*tasks)
         await sleep(1 - time() + elapsed_time)
 
-    end_time = time()
-    elapsed_time = end_time - purge.start_time
-    formatted_time = strftime("%H:%M:%S", gmtime(elapsed_time))
-    purge.duration = formatted_time
-    purge.start_time = None
+    purge.end_time = datetime.now()
+    purge.duration = str(purge.end_time - purge.start_time)
     await purges_db.update(purge)
 
     await sleep(2)
@@ -211,7 +205,7 @@ async def clean(ubot: Bot, purge: models.Purge, admin_id: int):
         "purge_id": purge.id,
         "cleared_num": purge.deleted_msgs_num,
         "error_num": purge.error_num,
-        "elapsed_time": formatted_time
+        "duration": purge.duration
     })
     purge.status = 1
     purge.active = 0
