@@ -3,13 +3,17 @@ from data.database import Database, get_db, create_db
 from data.file_manager import FileManager
 import asyncio
 import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('--local', action='store_true', help='Run in local mode')
-parser.add_argument('--token', action='store', help='Bot token to run on')
-parser.add_argument('--port', action='store', help='Select the port to run on')
-parser.add_argument('--source', action='store', help='Database folder path')
-parser.add_argument('--logs', action='store', help='Logs folder path')
-args = parser.parse_args()
+from configs import args_parse
+
+args = args_parse.args
+
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--local', action='store_true', help='Run in local mode')
+# parser.add_argument('--token', action='store', help='Bot token to run on')
+# parser.add_argument('--port', action='store', help='Select the port to run on')
+# parser.add_argument('--source', action='store', help='Database folder path')
+# parser.add_argument('--logs', action='store', help='Logs folder path')
+# args = parser.parse_args()
 
 source = "source" if not args.source else args.source
 

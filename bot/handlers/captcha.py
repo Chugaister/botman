@@ -39,6 +39,13 @@ async def captcha_on(cb: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(captcha_action.filter(action="captcha_off"))
 async def captcha_off(cb: CallbackQuery, callback_data: dict):
     captcha = await captchas_db.get(int(callback_data["id"]))
+    bot_dc = await bots_db.get(captcha.bot)
+    if bot_dc.premium <= 0:
+        await cb.answer(
+            "❗️Вимкнення капчі доступно лише для преміум-ботів",
+            show_alert=True
+        )
+        return
     captcha.active = False
     await captchas_db.update(captcha)
     await open_captcha_menu(cb.from_user.id, captcha.id, cb.message.message_id)

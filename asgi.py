@@ -10,24 +10,46 @@ import sys
 import os
 import colorama
 from bot.misc import bot as main_bot, dp as main_dp
-from bot.config import token as main_token
 from bot.misc import manager as bot_manager, bots_db
 from bot.listeners import run_listeners
 import bot.handlers
-from bot.config import secret_key
-import datetime
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--local', action='store_true', help='Run in local mode')
-parser.add_argument('--port', action='store', help='Select the port to run on')
-parser.add_argument('--token', action='store', help='Bot token to run on')
-parser.add_argument('--source', action='store', help='Database folder path')
-parser.add_argument('--logs', action='store', help='Logs folder path')
-args = parser.parse_args()
+from configs import config
+from configs import args_parse
+
+
+main_token = config.token
+secret_key = config.secret_key
+
+
+print("asgi print: ", config.token)
+# from bot.config import secret_key
+# from bot.config import token as main_token
+
+args = args_parse.args
+
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--local', action='store_true', help='Run in local mode')
+# parser.add_argument('--port', action='store', help='Select the port to run on')
+# parser.add_argument('--token', action='store', help='Bot token to run on')
+# parser.add_argument('--source', action='store', help='Database folder path')
+# parser.add_argument('--logs', action='store', help='Logs folder path')
+# args = parser.parse_args()
+
 if args.local:
-    from web_config.local_config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
+    # from web_config.local_config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
+    from configs import local_config
+    WEBHOOK_HOST = local_config.WEBHOOK_HOST
+    PUBLIC_IP = local_config.PUBLIC_IP
+    HOST = local_config.HOST
+    PORT = local_config.PORT
 else:
-    from web_config.config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
+    # from web_config.config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
+    WEBHOOK_HOST = config.WEBHOOK_HOST
+    PUBLIC_IP = config.PUBLIC_IP
+    HOST = config.HOST
+    PORT = config.PORT
+    print(WEBHOOK_HOST, PUBLIC_IP, HOST, PORT)
     if args.port:
         PORT = int(args.port)
 
@@ -41,6 +63,7 @@ else:
     log_directory = os.path.join(current_dir, "logs")
     log_file = os.path.join(log_directory, "logfile.log")
     os.makedirs(log_directory, exist_ok=True)
+
 # logging.basicConfig(
 #     filename=log_file,
 #     level=logging.INFO,
@@ -65,24 +88,6 @@ def custom_exception_handler(exc_type, exc_value, exc_traceback):
     aiogram_logger.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 
-def list_files_and_last_modified(directory_path):
-    file_list = []
-    
-    with os.scandir(directory_path) as entries:
-        for entry in entries:
-            if entry.is_file():
-                last_modified = datetime.datetime.fromtimestamp(entry.stat().st_mtime)
-                formatted_date = last_modified.strftime('%Y-%m-%d %H:%M:%S')
-                
-                file_info = {
-                    "File": entry.name,
-                    "Last Modified": formatted_date
-                }
-                file_list.append(file_info)
-
-    return file_list
-
-
 sys.excepthook = custom_exception_handler
 
 
@@ -94,7 +99,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def on_startup():
-    bot_manager.updates[main_token] = ""
+    bot_manager.updates[main_token] = 0
     allowed_updates = ["message", "chat_join_request", "callback_query"]
     await main_bot.set_my_commands(
         commands=[
@@ -129,22 +134,13 @@ def sendLogs(key, id):
     except Exception as e:
         return e
 
-@app.get('/logsInfo/{key}')
-def sendLogsInfo(key):
-    try:
-        if key == secret_key:
-            return list_files_and_last_modified(log_directory)
-        else: 
-            raise HTTPException(status_code=403, detail="Access denied")
-    except Exception:
-        pass
     
 @app.post("/bot/{token}")
 async def bot_webhook(token, update: dict):
     telegram_update = types.Update(**update)
-    if bot_manager.updates[token] == telegram_update["update_id"]:
+    if int(bot_manager.updates[token]) >= int(telegram_update["update_id"]):
         return
-    bot_manager.updates[token] = telegram_update["update_id"]
+    bot_manager.updates[token] = int(telegram_update["update_id"])
     aiogram_logger.debug(f"Get updates: {telegram_update}")
     if token == main_token:
         Dispatcher.set_current(main_dp)
@@ -169,9 +165,9 @@ async def on_shutdown():
     await bot_manager.delete_webhooks(await bots_db.get_all())
 
 
-certfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "certificate.crt")
-keyfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "private.key")
-ca_bundle_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "ca_bundle.crt")
+certfile_path = os.path.join(os.path.dirname(__file__), "configs", PUBLIC_IP, "certificate.crt")
+keyfile_path = os.path.join(os.path.dirname(__file__), "configs", PUBLIC_IP, "private.key")
+ca_bundle_path = os.path.join(os.path.dirname(__file__), "configs", PUBLIC_IP, "ca_bundle.crt")
 
 
 if __name__ == "__main__":
