@@ -35,7 +35,7 @@ class Manager:
     async def set_webhook(self, bots: list[models.Bot]):
         for bot in bots:
             if bot.token not in self.updates.keys():
-                self.updates[bot.token] = ""
+                self.updates[bot.token] = 0
             if bot.token not in self.bot_dict.keys():
                 self.bot_dict[bot.token] = ((Bot(token=bot.token)), Dispatcher(Bot(token=bot.token)))  
             ubot = Bot(token=bot.token)
