@@ -61,9 +61,9 @@ class Manager:
             await (await ubot.get_session()).close()
             await ubot.delete_webhook()
         except Unauthorized:
-            bot = await bots_db.get(ubot.id)
-            bot.admin = None
-            await bots_db.update(bot)
+            db_bot = await bots_db.get(ubot.id)
+            db_bot.admin = None
+            await bots_db.update(db_bot)
         
 
     async def delete_webhooks(self, bots: list[models.Bot]):
