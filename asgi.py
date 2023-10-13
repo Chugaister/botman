@@ -165,9 +165,9 @@ async def on_shutdown():
     await bot_manager.delete_webhooks(await bots_db.get_all())
 
 
-certfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "certificate.crt")
-keyfile_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "private.key")
-ca_bundle_path = os.path.join(os.path.dirname(__file__), "web_config", PUBLIC_IP, "ca_bundle.crt")
+certfile_path = os.path.join(os.path.dirname(__file__), "configs", PUBLIC_IP, "certificate.crt")
+keyfile_path = os.path.join(os.path.dirname(__file__), "configs", PUBLIC_IP, "private.key")
+ca_bundle_path = os.path.join(os.path.dirname(__file__), "configs", PUBLIC_IP, "ca_bundle.crt")
 
 
 if __name__ == "__main__":
