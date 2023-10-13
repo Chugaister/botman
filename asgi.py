@@ -45,8 +45,9 @@ else:
     # from web_config.config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
     WEBHOOK_HOST = config.WEBHOOK_HOST
     PUBLIC_IP = config.PUBLIC_IP
-    HOST = config.PUBLIC_IP
-    PORT = config.PUBLIC_IP
+    HOST = config.HOST
+    PORT = config.PORT
+    print(WEBHOOK_HOST, PUBLIC_IP, HOST, PORT)
     if args.port:
         PORT = int(args.port)
 
