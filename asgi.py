@@ -10,24 +10,43 @@ import sys
 import os
 import colorama
 from bot.misc import bot as main_bot, dp as main_dp
-from bot.config import token as main_token
 from bot.misc import manager as bot_manager, bots_db
 from bot.listeners import run_listeners
 import bot.handlers
-from bot.config import secret_key
-import datetime
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--local', action='store_true', help='Run in local mode')
-parser.add_argument('--port', action='store', help='Select the port to run on')
-parser.add_argument('--token', action='store', help='Bot token to run on')
-parser.add_argument('--source', action='store', help='Database folder path')
-parser.add_argument('--logs', action='store', help='Logs folder path')
-args = parser.parse_args()
+from configs import config
+from configs import args_parse
+
+
+main_token = config.token
+secret_key = config.secret_key
+
+# from bot.config import secret_key
+# from bot.config import token as main_token
+
+args = args_parse.args
+
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--local', action='store_true', help='Run in local mode')
+# parser.add_argument('--port', action='store', help='Select the port to run on')
+# parser.add_argument('--token', action='store', help='Bot token to run on')
+# parser.add_argument('--source', action='store', help='Database folder path')
+# parser.add_argument('--logs', action='store', help='Logs folder path')
+# args = parser.parse_args()
+
 if args.local:
-    from web_config.local_config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
+    # from web_config.local_config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
+    from configs import local_config
+    WEBHOOK_HOST = local_config.WEBHOOK_HOST
+    PUBLIC_IP = local_config.PUBLIC_IP
+    HOST = local_config.HOST
+    PORT = local_config.PORT
 else:
-    from web_config.config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
+    # from web_config.config import WEBHOOK_HOST, PUBLIC_IP, HOST, PORT
+    WEBHOOK_HOST = config.WEBHOOK_HOST
+    PUBLIC_IP = config.PUBLIC_IP
+    HOST = config.PUBLIC_IP
+    PORT = config.PUBLIC_IP
     if args.port:
         PORT = int(args.port)
 
@@ -41,6 +60,7 @@ else:
     log_directory = os.path.join(current_dir, "logs")
     log_file = os.path.join(log_directory, "logfile.log")
     os.makedirs(log_directory, exist_ok=True)
+
 # logging.basicConfig(
 #     filename=log_file,
 #     level=logging.INFO,
@@ -63,24 +83,6 @@ file_handler.setFormatter(formatter)
 aiogram_logger.addHandler(file_handler)
 def custom_exception_handler(exc_type, exc_value, exc_traceback):
     aiogram_logger.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
-
-
-def list_files_and_last_modified(directory_path):
-    file_list = []
-    
-    with os.scandir(directory_path) as entries:
-        for entry in entries:
-            if entry.is_file():
-                last_modified = datetime.datetime.fromtimestamp(entry.stat().st_mtime)
-                formatted_date = last_modified.strftime('%Y-%m-%d %H:%M:%S')
-                
-                file_info = {
-                    "File": entry.name,
-                    "Last Modified": formatted_date
-                }
-                file_list.append(file_info)
-
-    return file_list
 
 
 sys.excepthook = custom_exception_handler
@@ -129,15 +131,6 @@ def sendLogs(key, id):
     except Exception as e:
         return e
 
-@app.get('/logsInfo/{key}')
-def sendLogsInfo(key):
-    try:
-        if key == secret_key:
-            return list_files_and_last_modified(log_directory)
-        else: 
-            raise HTTPException(status_code=403, detail="Access denied")
-    except Exception:
-        pass
     
 @app.post("/bot/{token}")
 async def bot_webhook(token, update: dict):

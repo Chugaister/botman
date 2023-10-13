@@ -25,35 +25,45 @@ from . import states
 import asyncio
 from manager.manager import Manager
 
-try:
-    from . import config
-except ImportError:
-    print("config.py not found")
-    exit()
+from configs import args_parse
+
+# try:
+#     from . import config
+# except ImportError:
+#     print("config.py not found")
+#     exit()
 
 
 tz = timezone('Europe/Kiev')
-parser = argparse.ArgumentParser()
-parser.add_argument('--local', action='store_true', help='Run in local mode')
-parser.add_argument('--token', action='store', help='Bot token to run on')
-parser.add_argument('--port', action='store', help='Select the port to run on')
-parser.add_argument('--source', action='store', help='Database folder path')
-parser.add_argument('--logs', action='store', help='Logs folder path')
-args = parser.parse_args()
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--local', action='store_true', help='Run in local mode')
+# parser.add_argument('--token', action='store', help='Bot token to run on')
+# parser.add_argument('--port', action='store', help='Select the port to run on')
+# parser.add_argument('--source', action='store', help='Database folder path')
+# parser.add_argument('--logs', action='store', help='Logs folder path')
+# args = parser.parse_args()
+
+args = args_parse.args
 
 if args.token:
     bot = Bot(args.token, parse_mode='HTML')
 else:
-    bot = Bot(config.token, parse_mode="HTML")
+    from configs import config
+    token = config.token
+    bot = Bot(token, parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
 
 if args.local:
-    from web_config.local_config import WEBHOOK_HOST
+    from configs import local_config
+    WEBHOOK_HOST = local_config.WEBHOOK_HOST 
+    # from web_config.local_config import WEBHOOK_HOST
     manager = Manager([], WEBHOOK_HOST)
 else:
-    from web_config.config import WEBHOOK_HOST
+    from configs import config
+    WEBHOOK_HOST = config.WEBHOOK_HOST
+    # from web_config.config import WEBHOOK_HOST
     manager = Manager([], WEBHOOK_HOST)
     
 # get_event_loop().run_until_complete(manager.set_webhook(ubots))

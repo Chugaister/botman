@@ -3,7 +3,14 @@ from bot.misc import *
 from bot.keyboards import admin_panel as kb
 from bot.keyboards import gen_cancel, admin_bot_action, gen_ok
 import os
-from bot.config import WEBHOOK_HOST, secret_key
+# from bot.config import WEBHOOK_HOST, secret_key
+from configs import config
+
+
+WEBHOOK_HOST = config.WEBHOOK_HOST
+secret_key = config.secret_key
+print(WEBHOOK_HOST, secret_key)
+
 log_directory = "/home/user/botman/logs"
 def list_files_and_last_modified(directory_path):
     file_list = []
