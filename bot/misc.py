@@ -59,13 +59,11 @@ if args.local:
     WEBHOOK_HOST = local_config.WEBHOOK_HOST 
     # from web_config.local_config import WEBHOOK_HOST
     manager = Manager([], WEBHOOK_HOST)
-    manager.updates[config.token] = 0
 else:
     from configs import config
     WEBHOOK_HOST = config.WEBHOOK_HOST
     # from web_config.config import WEBHOOK_HOST
     manager = Manager([], WEBHOOK_HOST)
-    manager.updates[config.token] = 0
     
 # get_event_loop().run_until_complete(manager.set_webhook(ubots))
 

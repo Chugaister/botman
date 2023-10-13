@@ -99,7 +99,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def on_startup():
-    bot_manager.updates[main_token] = ""
+    bot_manager.updates[main_token] = 0
     allowed_updates = ["message", "chat_join_request", "callback_query"]
     await main_bot.set_my_commands(
         commands=[
