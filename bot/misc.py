@@ -25,8 +25,7 @@ from . import states
 import asyncio
 from manager.manager import Manager
 
-from configs import args_parse
-
+from configs import args_parse,  config
 # try:
 #     from . import config
 # except ImportError:
@@ -48,7 +47,7 @@ args = args_parse.args
 if args.token:
     bot = Bot(args.token, parse_mode='HTML')
 else:
-    from configs import config
+    print("misc print: ", config.token)
     token = config.token
     bot = Bot(token, parse_mode="HTML")
 storage = MemoryStorage()
@@ -60,11 +59,13 @@ if args.local:
     WEBHOOK_HOST = local_config.WEBHOOK_HOST 
     # from web_config.local_config import WEBHOOK_HOST
     manager = Manager([], WEBHOOK_HOST)
+    manager.updates[config.token] = 0
 else:
     from configs import config
     WEBHOOK_HOST = config.WEBHOOK_HOST
     # from web_config.config import WEBHOOK_HOST
     manager = Manager([], WEBHOOK_HOST)
+    manager.updates[config.token] = 0
     
 # get_event_loop().run_until_complete(manager.set_webhook(ubots))
 

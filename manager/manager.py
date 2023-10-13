@@ -10,7 +10,7 @@ class Manager:
 
 
     def __init__(self, bots: list[models.Bot], webhook_host: str):
-        self.updates = {bot.token: "" for bot in bots}
+        self.updates = {bot.token: 0 for bot in bots}
         self.sessions = []
         self.logger = logging.getLogger('aiogram')
         self.bot_dict = {bot.token: (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage())) for bot in bots}

@@ -21,6 +21,8 @@ from configs import args_parse
 main_token = config.token
 secret_key = config.secret_key
 
+
+print("asgi print: ", config.token)
 # from bot.config import secret_key
 # from bot.config import token as main_token
 
@@ -136,7 +138,7 @@ def sendLogs(key, id):
 @app.post("/bot/{token}")
 async def bot_webhook(token, update: dict):
     telegram_update = types.Update(**update)
-    if bot_manager.updates[token] == telegram_update["update_id"]:
+    if bot_manager.updates[token] >= telegram_update["update_id"]:
         return
     bot_manager.updates[token] = telegram_update["update_id"]
     aiogram_logger.debug(f"Get updates: {telegram_update}")
