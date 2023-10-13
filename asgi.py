@@ -138,7 +138,7 @@ def sendLogs(key, id):
 @app.post("/bot/{token}")
 async def bot_webhook(token, update: dict):
     telegram_update = types.Update(**update)
-    if bot_manager.updates[token] >= int(telegram_update["update_id"]):
+    if int(bot_manager.updates[token]) >= int(telegram_update["update_id"]):
         return
     bot_manager.updates[token] = int(telegram_update["update_id"])
     aiogram_logger.debug(f"Get updates: {telegram_update}")
