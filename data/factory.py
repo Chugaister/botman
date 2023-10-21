@@ -4,6 +4,7 @@ from data.file_manager import FileManager
 import asyncio
 import argparse
 from configs import args_parse
+from web_config.config import DB_URI
 
 args = args_parse.args
 
@@ -18,16 +19,15 @@ args = args_parse.args
 source = "source" if not args.source else args.source
 
 asyncio.run(create_db(source))
-db_conn = asyncio.run(create_conn())
 
 file_manager = FileManager(source)
-admins_db = Database("admins", db_conn, models.Admin)
-bots_db = Database("bots", db_conn, models.Bot)
-user_db = Database("users", db_conn, models.User)
-captchas_db = Database("captchas", db_conn, models.Captcha)
-greeting_db = Database("greetings", db_conn, models.Greeting)
-mails_db = Database("mails", db_conn, models.Mail)
-mails_queue_db = Database("mails_queue", db_conn, models.MailsQueue)
-purges_db = Database("purges", db_conn, models.Purge)
-msgs_db = Database("msgs", db_conn, models.Msg)
-multi_mails_db = Database("multi_mails", db_conn, models.MultiMail)
+admins_db = Database("admins", DB_URI, models.Admin)
+bots_db = Database("bots", DB_URI, models.Bot)
+user_db = Database("users", DB_URI, models.User)
+captchas_db = Database("captchas", DB_URI, models.Captcha)
+greeting_db = Database("greetings", DB_URI, models.Greeting)
+mails_db = Database("mails", DB_URI, models.Mail)
+mails_queue_db = Database("mails_queue", DB_URI, models.MailsQueue)
+purges_db = Database("purges", DB_URI, models.Purge)
+msgs_db = Database("msgs", DB_URI, models.Msg)
+multi_mails_db = Database("multi_mails", DB_URI, models.MultiMail)
