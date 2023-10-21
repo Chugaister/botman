@@ -25,7 +25,7 @@ from . import states
 import asyncio
 from manager.manager import Manager
 
-from configs import args_parse,  config
+from configs import args_parse, config
 # try:
 #     from . import config
 # except ImportError:

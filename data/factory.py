@@ -1,5 +1,5 @@
 from data import models
-from data.database import Database, get_db, create_db
+from data.database import Database, create_conn, create_db
 from data.file_manager import FileManager
 import asyncio
 import argparse
@@ -17,8 +17,8 @@ args = args_parse.args
 
 source = "source" if not args.source else args.source
 
-create_db(source)
-db_conn = asyncio.run(get_db(source))
+asyncio.run(create_db(source))
+db_conn = asyncio.run(create_conn())
 
 file_manager = FileManager(source)
 admins_db = Database("admins", db_conn, models.Admin)

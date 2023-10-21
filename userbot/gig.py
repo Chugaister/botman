@@ -132,7 +132,7 @@ async def clean_msg(ubot: Bot, msg: models.Msg, purge: models.Purge):
 async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
     mail.start_time = datetime.now()
     await mails_db.update(mail)
-    mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=0)
+    mails_pending = await mails_queue_db.get_by(mail_id=mail.id, admin_status=False)
     bunches_of_tasks = []
     bunch_of_tasks = []
     for mail_msg in mails_pending:

@@ -1,6 +1,6 @@
 from sqlite3 import connect
 from sqlite3 import IntegrityError
-import aiosqlite
+import aiopg
 from . import DIR, exists, join, makedirs
 from .exceptions import *
 from . import autocreation
@@ -9,6 +9,7 @@ import os
 import argparse
 
 from configs import args_parse
+from web_config.config import DB_URI
 
 args = args_parse.args
 # parser = argparse.ArgumentParser()
@@ -23,31 +24,40 @@ source_folder = "source" if not args.source else args.source
 tables_with_media = ["captchas", "greetings", "mails", "admin_mails"]
 tables_with_dual_foreign_keys = ["msgs", "users"]
 tables_tg_id = ["admins", "users", "bots", "msgs"]
-def create_db(source):
+
+
+# create dirs if not exists and create tables if not exists
+# gets source folder name
+# returns None
+async def create_db(source):
     path = join(DIR, source)
     if not exists(path):
         makedirs(path)
-        conn = connect(join(path, "base.db"))
-        cur = conn.cursor()
-        for query in autocreation.queries:
-            cur.execute(query)
-        conn.commit()
         makedirs(join(path, "media"))
+    async with aiopg.create_pool(DB_URI) as pool:
+        async with pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                for query in autocreation.queries:
+                    await cur.execute(query)
 
 
-async def get_db(source) -> aiosqlite.Connection:
-    return await aiosqlite.connect(join(DIR, source, "base.db"))
+# create connection to db
+# gets None
+# returns None
+async def create_conn() -> aiopg.Connection:
+    pool = await aiopg.create_pool(DB_URI)
+    return await pool.acquire()
 
 
 class Database:
 
-    def __init__(self, table_name: str, conn: aiosqlite.Connection, datatype):
+    def __init__(self, table_name: str, conn: aiopg.Connection, datatype):
         self.table_name = table_name
         self.conn = conn
         self.datatype = datatype
 
     async def add(self, object):
-        query = f"INSERT INTO {self.table_name} {str(object.columns)} VALUES ({'?, '*(len(object.columns)-1)}?)"
+        query = f"INSERT INTO {self.table_name} {str(object.columns)} VALUES ({'?, ' * (len(object.columns) - 1)}?)"
         try:
             async with self.conn.execute(query, object.get_tuple()) as cur:
                 object.id = cur.lastrowid if self.table_name not in tables_tg_id else object.id
