@@ -1,5 +1,5 @@
 from data import models
-from data.database import Database, create_conn, create_db
+from data.database import Database, create_db
 from data.file_manager import FileManager
 import asyncio
 import argparse

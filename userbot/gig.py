@@ -28,7 +28,7 @@ async def create_bunches(*args):
 
 
 async def enqueue_mail(mail: models.Mail):
-    users = await user_db.get_by(bot=mail.bot, status=1)
+    users = await user_db.get_by(bot=mail.bot, status=True)
     for user in users:
         new_mail_msgs = models.MailsQueue(
             _id=0,
@@ -37,14 +37,14 @@ async def enqueue_mail(mail: models.Mail):
             mail_id=mail.id
         )
         await mails_queue_db.add(new_mail_msgs)
-    mail.active = 1
+    mail.active = True
     await mails_db.update(mail)
 
 
 async def send_mail_to_user(ubot: Bot, mail_msg: models.MailsQueue, mail: models.Mail):
     async def kill_user(user_id):
         user_to_kill = await user_db.get(user_id)
-        user_to_kill.status = 0
+        user_to_kill.status = False
         await user_db.update(user_to_kill)
         mail.blocked_num += 1
         await mails_db.update(mail)
@@ -162,8 +162,8 @@ async def send_mail(ubot: Bot, mail: models.Mail, admin_id: int):
         "error_num": mail.error_num,
         "duration": mail.duration
     })
-    mail.status = 1
-    mail.active = 0
+    mail.status = True
+    mail.active = False
     await mails_db.update(mail)
 
 
@@ -207,6 +207,6 @@ async def clean(ubot: Bot, purge: models.Purge, admin_id: int):
         "error_num": purge.error_num,
         "duration": purge.duration
     })
-    purge.status = 1
-    purge.active = 0
+    purge.status = True
+    purge.active = False
     await purges_db.update(purge)

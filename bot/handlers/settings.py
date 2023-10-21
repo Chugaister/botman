@@ -37,7 +37,7 @@ async def deletion_confirm(cb: CallbackQuery, callback_data: dict, state: FSMCon
     bot_dc = await bots_db.get(int(callback_data["id"]))
     await manager.delete_webhook(bot_dc)
     bot_dc.admin = None
-    bot_status = 0
+    bot_dc.status = 0
     await bots_db.update(bot_dc)
     await open_bot_list_cb(cb, state)
 

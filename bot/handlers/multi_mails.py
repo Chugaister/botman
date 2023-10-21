@@ -22,7 +22,7 @@ async def safe_get_multi_mail(uid: int, multi_mail_id: int, cb_id: int | None = 
     except data_exc.RecordIsMissing:
         await alert()
         return None
-    if multi_mail.active == 1:
+    if multi_mail.active:
         await alert()
         return None
     return multi_mail
@@ -31,7 +31,7 @@ async def safe_get_multi_mail(uid: int, multi_mail_id: int, cb_id: int | None = 
 @dp.callback_query_handler(lambda cb: cb.data == "multi_mails", state="*")
 async def open_multi_mail_list(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
-    multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0)
+    multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=False, status=False)
     await cb.message.answer(
         "Мультирозсилки",
         reply_markup=kb.gen_multi_mail_list(multi_mails)
@@ -509,7 +509,7 @@ async def run_multi_mail(multi_mail: models.MultiMail, uid: int):
             mail.file_id = file_id
         await mails_db.add(mail)
         create_task(gig.enqueue_mail(mail))
-    multi_mail.active = 1
+    multi_mail.active = True
     await multi_mails_db.update(multi_mail)
 
 

@@ -47,7 +47,7 @@ async def start_action_check(action, bot_dc: models.Bot):
                 await bot.send_message(action.sender, start_msg, reply_markup=gen_ok("hide"))
         else:
             await bot.send_message(action.sender, start_msg, reply_markup=gen_ok("hide"))
-        action.status = 1
+        action.status = True
         await db_of_action.update(action)
         bot_dc.action = f"{action_type}_{action.id}"
         await bots_db.update(bot_dc)
@@ -85,7 +85,7 @@ async def check_start_action_time(action, bot_dc: models.Bot | None = None):
             await gig.enqueue_mail(action)
         if action_type == "multi_mail":
             await run_multi_mail(action, action.sender)
-        action.active = 1
+        action.active = True
         await db_of_action.update(action)
         await bot.send_message(action.sender, queue_msg, reply_markup=gen_ok("hide"))
 
@@ -137,7 +137,7 @@ async def listen_mails_stats():
 
 async def listen_multi_mail_stats():
     while True:
-        multi_mails = await multi_mails_db.get_by(active=1, status=0)
+        multi_mails = await multi_mails_db.get_by(active=True, status=False)
         for multi_mail in multi_mails:
             mails = await mails_db.get_by(multi_mail=multi_mail.id)
             finished = True
@@ -148,8 +148,8 @@ async def listen_multi_mail_stats():
                     multi_mail.sent_num += mail.sent_num
                     multi_mail.blocked_num += mail.blocked_num
                     multi_mail.error_num += mail.error_num
-                multi_mail.active = 0
-                multi_mail.status = 1
+                multi_mail.active = False
+                multi_mail.status = True
                 await multi_mails_db.update(multi_mail)
                 await bot.send_message(
                     multi_mail.sender,

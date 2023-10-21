@@ -23,7 +23,7 @@ async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> mod
     except data_exc.RecordIsMissing:
         await alert()
         return None
-    if mail.active == 1:
+    if mail.active:
         await alert()
         return None
     return mail
@@ -33,7 +33,7 @@ async def safe_get_mail(uid: int, mail_id: int, cb_id: int | None = None) -> mod
 async def open_mail_list(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     await state.set_state(None)
     bot_dc = await bots_db.get(int(callback_data["id"]))
-    mails = await mails_db.get_by(bot=int(callback_data["id"]), active=0, status=0)
+    mails = await mails_db.get_by(bot=int(callback_data["id"]), active=False, status=False)
     await cb.message.answer(
         "<i>💡В цьому меню, можна створити, редагувати та запускати розсилки користувачам, які є у базі цього бота. \
 </i>\n\n\
@@ -135,7 +135,7 @@ async def open_mail_menu_cb(cb: CallbackQuery, callback_data: dict):
 async def initiate_ubot_file(mail: models.Mail) -> str:
     bot_dc = await bots_db.get(mail.bot)
     ubot = manager.bot_dict[bot_dc.token][0]
-    users = await user_db.get_by(bot=bot_dc.id, status=1)
+    users = await user_db.get_by(bot=bot_dc.id, status=True)
     if users == []:
         raise ChatNotFound("no users")
     user = users[0]
@@ -159,7 +159,7 @@ async def initiate_ubot_file(mail: models.Mail) -> str:
             ubot_msg.message_id
         )
     except BotBlocked:
-        user.status = 0
+        user.status = False
         await user_db.update(user)
         file_id = await initiate_ubot_file(mail)
     return file_id

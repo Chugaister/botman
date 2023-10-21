@@ -21,7 +21,7 @@ async def safe_get_purge(uid: int, purge_id: int, cb_id: int | None = None) -> m
     except data_exc.RecordIsMissing:
         await alert()
         return None
-    if purge.active == 1:
+    if purge.active:
         await alert()
         return None
     return purge
@@ -33,7 +33,7 @@ async def open_purges_list(cb: CallbackQuery, callback_data: dict):
     if bot_dc.premium <= 0:
         await cb.answer("⭐️Лише для преміум ботів")
         return
-    purges = await purges_db.get_by(bot=int(callback_data["id"]), active=0, status=0)
+    purges = await purges_db.get_by(bot=int(callback_data["id"]), active=False, status=False)
     await cb.message.answer(
         "<i>💡Меню чисток. В цьому розділі можна створювати та запускати/заплановувати чистки. \
 При виконанні чистки будуть видалятися всі коли-небудь надіслані ботом повідомлення за допомогою нашого сервісу. \
@@ -164,7 +164,7 @@ async def confirm_run(cb: CallbackQuery, callback_data: dict):
             "purges"
         ))
     )
-    purge.active = 1
+    purge.active = True
     await purges_db.update(purge)
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 

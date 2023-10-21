@@ -1,6 +1,10 @@
+import asyncio
+import time
 from sqlite3 import connect
 from sqlite3 import IntegrityError
 import aiopg
+import psycopg2
+
 from . import DIR, exists, join, makedirs
 from .exceptions import *
 from . import autocreation
@@ -41,14 +45,6 @@ async def create_db(source):
                     await cur.execute(query)
 
 
-# create connection to db
-# gets None
-# returns None
-async def create_conn() -> aiopg.Connection:
-    pool = await aiopg.create_pool(DB_URI)
-    return await pool.acquire()
-
-
 class Database:
 
     def __init__(self, table_name: str, DB_URI: str, datatype):
@@ -66,21 +62,23 @@ class Database:
             return into
 
         query = f"INSERT INTO {self.table_name} {form_query(object)} VALUES ({('%s, ' * len(object.columns))[:-2]})"
+        query = (query + " RETURNING id;") if self.table_name not in tables_tg_id else query
         async with aiopg.create_pool(DB_URI) as pool:
             async with pool.acquire() as conn:
                 async with conn.cursor() as cur:
                     try:
                         await cur.execute(query, object.get_tuple())
-                    except IntegrityError:
+                        new_id = await cur.fetchone()
+                        object.id = new_id[0] if self.table_name not in tables_tg_id else object.id
+                    except psycopg2.errors.UniqueViolation:
                         raise RecordAlreadyExists(object)
-                    object.id = cur.lastrowid if self.table_name not in tables_tg_id else object.id
 
     async def get(self, _id: int):
         query = f"SELECT * FROM {self.table_name} WHERE id=%s"
         async with aiopg.create_pool(DB_URI) as pool:
             async with pool.acquire() as conn:
                 async with conn.cursor() as cur:
-                    cur = await cur.execute(query, (_id,))
+                    await cur.execute(query, (_id,))
                     data = await cur.fetchone()
         if data is None:
             raise RecordIsMissing(_id)
@@ -101,7 +99,7 @@ class Database:
         async with aiopg.create_pool(DB_URI) as pool:
             async with pool.acquire() as conn:
                 if self.table_name in tables_with_media:
-                    query = f"SELECT photo, video, gif FROM {self.table_name} WHERE {_id}"
+                    query = f"SELECT photo, video, gif FROM {self.table_name} WHERE id={_id}"
                     async with conn.cursor() as cur:
                         await cur.execute(query)
                         records = await cur.fetchall()
@@ -120,7 +118,8 @@ class Database:
                 async with conn.cursor() as cur:
                     await cur.execute(query, [value for key, value in items])
                     records = await cur.fetchall()
-        return [self.datatype(*record) for record in records]
+        data = [self.datatype(*record) for record in records]
+        return data
 
     async def get_all(self):
         query = f"SELECT * FROM {self.table_name}"
