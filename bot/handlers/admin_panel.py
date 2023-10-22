@@ -2,26 +2,69 @@ import bot.handlers.settings
 from bot.misc import *
 from bot.keyboards import admin_panel as kb
 from bot.keyboards import gen_cancel, admin_bot_action, gen_ok
+import os
+# from bot.config import WEBHOOK_HOST, secret_key
+from configs import config
 
 
-async def send_admin_panel(uid: int, msg_id: int):
-    await bot.send_message(
-        uid,
+WEBHOOK_HOST = config.WEBHOOK_HOST
+secret_key = config.secret_key
+print(WEBHOOK_HOST, secret_key)
+
+log_directory = "/home/user/botman/logs"
+def list_files_and_last_modified(directory_path):
+    file_list = []
+    
+    with os.scandir(directory_path) as entries:
+        for entry in entries:
+            if entry.is_file():
+                last_modified = datetime.fromtimestamp(entry.stat().st_mtime)
+                formatted_date = last_modified.strftime('%Y-%m-%d %H:%M:%S')
+                
+                file_info = {
+                    "File": entry.name,
+                    "Last Modified": formatted_date
+                }
+                file_list.append(file_info)
+
+    return file_list
+
+def display_file_list_as_table(file_list):
+    if not file_list:
+        return "No files found."
+
+    table = PrettyTable()
+    table.field_names = ["File", "Last Modified"]
+
+    for file_info in file_list:
+        table.add_row([file_info["File"], file_info["Last Modified"]])
+
+    return table
+
+def download_strings(file_list):
+    res = ''
+    for file_info in file_list:
+        index = file_info["File"].split(".")[2] if file_info["File"][-1] != 'g' else 0
+        res += f'<a href="{WEBHOOK_HOST}/logs/{secret_key}/{index}">{file_info["File"].strip()}</a>\n'
+    return res
+
+@dp.callback_query_handler(lambda cb: cb.from_user.id in config.admin_list and cb.data == "admin", state="*")
+async def send_admin_panel(cb: CallbackQuery, state: FSMContext):
+    await state.set_state(None)
+    await cb.message.answer(
         "Адмін-панель",
         reply_markup=kb.admin_panel_menu
     )
-    await safe_del_msg(uid, msg_id)
-
-
-@dp.callback_query_handler(lambda cb: cb.from_user.id in config.admin_list and cb.data == "admin", state="*")
-async def send_admin_panel_cb(cb: CallbackQuery, state: FSMContext):
-    await state.set_state(None)
-    await send_admin_panel(cb.from_user.id, cb.message.message_id)
+    await cb.message.delete()
 
 
 @dp.message_handler(lambda msg: msg.from_user.id in config.admin_list, commands="admin")
-async def send_admin_panel_msg(msg: Message):
-    await send_admin_panel(msg.from_user.id, msg.message_id)
+async def send_admin_panel(msg: Message):
+    await msg.answer(
+        "Адмін-панель",
+        reply_markup=kb.admin_panel_menu
+    )
+    await msg.delete()
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "bots_admin")
@@ -107,10 +150,16 @@ async def premium_sub(cb: CallbackQuery, callback_data: dict):
 async def hide(cb: CallbackQuery):
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
-#
-# @dp.callback_query_handler(lambda cb: cb.data == "admin_mails")
-# async def admin_mail_list(cb: CallbackQuery):
-#     await cb.answer(
-#         "👨‍💻In development. Coming soon..."
-#     )
 
+@dp.callback_query_handler(lambda cb: cb.data == "admin_mails_list")
+async def admin_mail_list(cb: CallbackQuery):
+    await cb.answer(
+        "👨‍💻In development. Coming soon..."
+    )
+
+@dp.callback_query_handler(lambda cb: cb.data == "logs_menu")
+async def logs(cb: CallbackQuery):
+    await cb.message.answer(
+        f'''<code>{display_file_list_as_table(list_files_and_last_modified(log_directory))}</code>\n
+        {download_strings(list_files_and_last_modified(log_directory))}'''
+    )

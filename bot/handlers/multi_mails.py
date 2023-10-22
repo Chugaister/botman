@@ -484,11 +484,7 @@ async def sendout(cb: CallbackQuery, callback_data: dict):
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
-@dp.callback_query_handler(multi_mail_action.filter(action="confirm_sendout"))
-async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
-    multi_mail = await safe_get_multi_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
-    if not multi_mail:
-        return
+async def run_multi_mail(multi_mail: models.MultiMail, uid: int):
     if multi_mail.photo:
         filename = multi_mail.photo
     elif multi_mail.video:
@@ -503,13 +499,15 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     for bot_dc in bots_dc:
         mail = models.Mail(
             0,
-            bot_dc.id,
+            sender=uid,
+            bot=bot_dc.id,
             active=False,
             text=multi_mail.text,
             photo=multi_mail.photo,
             video=multi_mail.video,
             gif=multi_mail.gif,
             buttons=models.serialize_buttons(multi_mail.buttons),
+            del_dt=datetime.strftime(multi_mail.del_dt, models.DT_FORMAT) if multi_mail.del_dt else None,
             multi_mail=multi_mail.id
         )
         if filename:
@@ -523,8 +521,13 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
         create_task(gig.enqueue_mail(mail))
     multi_mail.active = 1
     await multi_mails_db.update(multi_mail)
-    await cb.message.answer(
-        f"Мультирозсилка {gen_hex_caption(multi_mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
-        reply_markup=gen_ok("multi_mails")
-    )
+
+
+@dp.callback_query_handler(multi_mail_action.filter(action="confirm_sendout"))
+async def confirm_sendout(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    multi_mail = await safe_get_multi_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    if not multi_mail:
+        return
+    await run_multi_mail(multi_mail, cb.from_user.id)
+    await open_multi_mail_list(cb, state)
     await safe_del_msg(cb.from_user.id, cb.message.message_id)

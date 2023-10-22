@@ -33,7 +33,7 @@ async def open_purges_list(cb: CallbackQuery, callback_data: dict):
     if bot_dc.premium <= 0:
         await cb.answer("⭐️Лише для преміум ботів")
         return
-    purges = await purges_db.get_by(bot=int(callback_data["id"]))
+    purges = await purges_db.get_by(bot=int(callback_data["id"]), active=0, status=0)
     await cb.message.answer(
         "<i>💡Меню чисток. В цьому розділі можна створювати та запускати/заплановувати чистки. \
 При виконанні чистки будуть видалятися всі коли-небудь надіслані ботом повідомлення за допомогою нашого сервісу. \
@@ -58,8 +58,9 @@ async def open_purge_menu(uid: int, purge_id: int, msg_id: int):
 @dp.callback_query_handler(bot_action.filter(action="add_purge"))
 async def add_purge(cb: CallbackQuery, callback_data: dict):
     purge = models.Purge(
-        0,
-        int(callback_data["id"])
+        _id=0,
+        bot=int(callback_data["id"]),
+        sender=cb.from_user.id
     )
     await purges_db.add(purge)
     await open_purge_menu(cb.from_user.id, purge.id, cb.message.message_id)
@@ -157,12 +158,13 @@ async def confirm_run(cb: CallbackQuery, callback_data: dict):
         return
     bot_dc = await bots_db.get(purge.bot)
     await cb.message.answer(
-        f"🚀Чистка {gen_hex_caption(purge.id)} розпочата. Вам прийде повідомлення після її закінчення",
+        f"Чистка {gen_hex_caption(purge.id)} в боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
         reply_markup=gen_ok(bot_action.new(
             bot_dc.id,
             "purges"
         ))
     )
+    purge.active = 1
+    await purges_db.update(purge)
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
-    create_task(gig.clean(manager.bot_dict[bot_dc.token][0], purge, cb.from_user.id))
 

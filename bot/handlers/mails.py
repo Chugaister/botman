@@ -174,31 +174,33 @@ async def mail_input(
     else:
         mail = models.Mail(
             _id=0,
+            sender=msg.from_user.id,
             bot=state_data["bot_id"]
         )
     mail.text = text
     mail.photo = photo
     mail.video = video
     mail.gif = gif
-    try:
-        file_id = await initiate_ubot_file(mail)
-    except ChatNotFound:
-        await safe_edit_message(
-            f"❗️Помилка. Ініціюйте чат з @{bot_dc.username}\n\n\
-    Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
-    <b>[any]\n[username]\n[first_name]\n[last_name]</b>",
-            msg.from_user.id,
-            state_data["msg_id"],
-            reply_markup=gen_cancel(
-                bot_action.new(
-                    id=bot_dc.id,
-                    action="mails"
+    if mail.photo or mail.video or mail.gif:
+        try:
+            file_id = await initiate_ubot_file(mail)
+        except ChatNotFound:
+            await safe_edit_message(
+                f"❗️Помилка. Ініціюйте чат з @{bot_dc.username}\n\n\
+        Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
+        <b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+                msg.from_user.id,
+                state_data["msg_id"],
+                reply_markup=gen_cancel(
+                    bot_action.new(
+                        id=bot_dc.id,
+                        action="mails"
+                    )
                 )
             )
-        )
-        await msg.delete()
-        return
-    mail.file_id = file_id
+            await msg.delete()
+            return
+        mail.file_id = file_id
     if state_data["edit"]:
         await mails_db.update(mail)
     else:
@@ -511,8 +513,9 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict):
     if not mail:
         return
     create_task(gig.enqueue_mail(mail))
+    bot_dc = await bots_db.get(mail.bot)
     await cb.message.answer(
-        f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
+        f"Розсилка {gen_hex_caption(mail.id)} в боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
         reply_markup=gen_ok(
             bot_action.new(
                 id=mail.bot,

@@ -1,10 +1,12 @@
 from bot.misc import *
 from bot.keyboards import gen_ok
 from bot.handlers import admin_notification
-
+from bot.handlers.multi_mails import run_multi_mail
 from logging import getLogger
 import subprocess
 import os
+
+logger = getLogger("aiogram")
 
 
 def count_output_lines(command):
@@ -24,77 +26,95 @@ def count_output_lines(command):
         return None
 
 
+async def start_action_check(action, bot_dc: models.Bot):
+    if isinstance(action, models.Purge):
+        db_of_action = purges_db
+        action_type = "purge"
+        if action.mail_id:
+            start_msg = f"🚀Видалення({gen_hex_caption(action.id)}) розсилки {gen_hex_caption(action.mail_id)} в боті @{bot_dc.username} розпочато. Вам прийде повідомлення після його закінчення"
+        else:
+            start_msg = f"🚀Чистка {gen_hex_caption(action.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
+    elif isinstance(action, models.Mail):
+        db_of_action = mails_db
+        action_type = "mail"
+        start_msg = f"🚀Розсилка {gen_hex_caption(action.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
+    else:
+        return TypeError
+
+    if not bot_dc.action and action.active and not action.status:
+        if action_type == "mail":
+            if not action.multi_mail:
+                await bot.send_message(action.sender, start_msg, reply_markup=gen_ok("hide"))
+        else:
+            await bot.send_message(action.sender, start_msg, reply_markup=gen_ok("hide"))
+        action.status = 1
+        await db_of_action.update(action)
+        bot_dc.action = f"{action_type}_{action.id}"
+        await bots_db.update(bot_dc)
+        return True
+    else:
+        return False
+
+
+async def check_start_action_time(action, bot_dc: models.Bot | None = None):
+    if isinstance(action, models.Purge):
+        condition = action.sched_dt and datetime.now(tz=tz) > tz.localize(
+            action.sched_dt) and not action.active and not action.status
+        db_of_action = purges_db
+        action_type = "purge"
+        if action.mail_id:
+            queue_msg = f"Видалення({gen_hex_caption(action.id)}) розсилки {gen_hex_caption(action.mail_id)} у боті @{bot_dc.username} було поставлено в чергу. Вам прийде повідомлення коли воно розпочнеться"
+        else:
+            queue_msg = f"Чистка({gen_hex_caption(action.id)}) у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
+    elif isinstance(action, models.Mail):
+        condition = action.send_dt and datetime.now(tz=tz) > tz.localize(
+            action.send_dt) and not action.active and not action.status
+        db_of_action = mails_db
+        action_type = "mail"
+        queue_msg = f"Розсилка {gen_hex_caption(action.id)} у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
+    elif isinstance(action, models.MultiMail):
+        condition = action.send_dt and datetime.now(tz=tz) > tz.localize(
+            action.send_dt) and not action.active and not action.status
+        db_of_action = multi_mails_db
+        action_type = "multi_mail"
+        queue_msg = f"Мультирозсилка {gen_hex_caption(action.id)} була поставлена в чергу"
+    else:
+        return TypeError
+    if condition:
+        if action_type == "mail":
+            await gig.enqueue_mail(action)
+        if action_type == "multi_mail":
+            await run_multi_mail(action, action.sender)
+        action.active = 1
+        await db_of_action.update(action)
+        await bot.send_message(action.sender, queue_msg, reply_markup=gen_ok("hide"))
+
+
 async def listen_purges():
     while True:
         purges = await purges_db.get_all()
         for purge in purges:
-            if purge.sched_dt and datetime.now(tz=tz) > tz.localize(purge.sched_dt)\
-            and purge.active != 1:
-                purge.active = 1
-                await purges_db.update(purge)
-                bot_dc = await bots_db.get(purge.bot)
-                await bot.send_message(
-                    bot_dc.admin,
-                    f"🚀Чистка {gen_hex_caption(purge.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                    reply_markup=gen_ok("hide")
-                )
-                create_task(gig.clean(manager.bot_dict[bot_dc.token][0], purge, bot_dc.admin))
+            bot_dc = await bots_db.get(purge.bot)
+            await check_start_action_time(purge, bot_dc)
+            if await start_action_check(purge, bot_dc):
+                create_task(
+                    gig.clean(manager.bot_dict[(await bots_db.get_by(id=purge.bot))[0].token][0], purge, purge.sender))
         await sleep(5)
 
 
-logger = getLogger("aiogram")
 async def listen_mails():
     while True:
-        cmd = f"sudo lsof -p {os.getpid()}"
-        logger.debug(f"Number of open files: {count_output_lines(cmd)}")
-        try:
-            mails = await mails_db.get_all()
-        except ValueError:
-            print("ERROR: mail buttons deserialization failed")
-            await sleep(5)
-            continue
+        mails = await mails_db.get_all()
         for mail in mails:
-            if mail.send_dt and datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(mail.send_dt) and not mail.active and not mail.status:
-                await gig.enqueue_mail(mail)
-                bot_dc = await bots_db.get(mail.bot)
-                if not mail.multi_mail:
-                    await bot.send_message(
-                        bot_dc.admin,
-                        f"Розсилка {gen_hex_caption(mail.id)} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться",
-                        reply_markup=gen_ok("hide")
-                    )
-
             bot_dc = await bots_db.get(mail.bot)
-            if not bot_dc.action and mail.active and not mail.status:
-                if not mail.multi_mail:
-                    await bot.send_message(
-                        bot_dc.admin,
-                         f"🚀Розсилка {gen_hex_caption(mail.id)} розпочата. Вам прийде повідомлення після її закінчення",
-                        reply_markup=gen_ok("hide")
-                    )
-                mail.status = 1
-                await mails_db.update(mail)
-                bot_dc.action = f"mail_{mail.id}"
-                await bots_db.update(bot_dc)
-                ubot = manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0]
-                create_task(gig.send_mail(ubot, mail, bot_dc.admin))
-        await sleep(5)
-
-
-async def listen_autodeletion():
-    while True:
-        msgs = [msg for msg in await msgs_db.get_all() if msg.del_dt != None]
-        for msg in msgs:
-            if datetime.now(tz=timezone('Europe/Kiev')) > tz.localize(msg.del_dt):
-                bot_dc = await bots_db.get(msg.bot)
-                try:
-                    await manager.bot_dict[bot_dc.token][0].delete_message(
-                        msg.user,
-                        msg.id
-                    )
-                except Exception:
-                    pass
-                await msgs_db.delete(msg.id)
+            await check_start_action_time(mail, bot_dc)
+            if await start_action_check(mail, bot_dc):
+                if mail.del_dt:
+                    purge = models.Purge(0, sender=mail.sender, bot=mail.bot, sched_dt=datetime.strftime(mail.del_dt, models.DT_FORMAT),
+                                         mail_id=mail.id)
+                    await purges_db.add(purge)
+                create_task(gig.send_mail(manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0], mail,
+                                          mail.sender))
         await sleep(5)
 
 
@@ -106,9 +126,9 @@ async def listen_mails_stats():
                 if not mail.multi_mail:
                     await bot.send_message(
                         mail_stats["admin_id"],
-                        f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} закінчена\n\
-    ✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
-    ⌛️Час розсилання: {mail_stats['elapsed_time']}",
+                        f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} в боті @{(await bots_db.get(mail.bot)).username} закінчена\n\n\
+✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
+⌛️Час розсилання: {mail_stats['duration']}",
                         reply_markup=gen_ok("hide")
                     )
             gig.mails_stats_buffer = []
@@ -133,7 +153,7 @@ async def listen_multi_mail_stats():
                 await multi_mails_db.update(multi_mail)
                 await bot.send_message(
                     multi_mail.sender,
-                    f"Розсилка {gen_hex_caption(multi_mail.id)} закінчена\n\
+                    f"Мультирозсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n\
 ✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
                     reply_markup=gen_ok("hide")
                 )
@@ -158,42 +178,62 @@ async def listen_purges_stats():
     while True:
         if gig.purges_stats_buffer != []:
             for purge_stats in gig.purges_stats_buffer:
-                await bot.send_message(
-                    purge_stats["admin_id"],
-                    f"Чистка {gen_hex_caption(purge_stats['purge_id'])} закінчена\n\
-Очищено: {purge_stats['cleared_num']}\nПомилка: {purge_stats['error_num']}",
-                    reply_markup=gen_ok("hide")
-                )
+                purge = await purges_db.get(purge_stats['purge_id'])
+                if purge.mail_id:
+                    await bot.send_message(
+                        purge_stats["admin_id"],
+                        f"Видалення {gen_hex_caption(purge_stats['purge_id'])} розсилки {gen_hex_caption(purge.mail_id)} в боті @{(await bots_db.get(purge.bot)).username} закінчено\n\n\
+✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
+⌛️Час розсилання: {purge_stats['duration']}",
+                        reply_markup=gen_ok("hide")
+                    )
+                else:
+                    await bot.send_message(
+                        purge_stats["admin_id"],
+                        f"Чистка {gen_hex_caption(purge_stats['purge_id'])} в боті @{(await bots_db.get(purge.bot)).username} закінчена\n\n\
+✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
+⌛️Час розсилання: {purge_stats['duration']}",
+                        reply_markup=gen_ok("hide")
+                    )
             gig.purges_stats_buffer = []
         await sleep(5)
 
 
-async def listen_mails_on_startup():
+async def resume_action():
     ubots = []
     ubots_all = await bots_db.get_all()
     for ubot in ubots_all:
         if ubot.status == 1 and ubot.admin:
             ubots.append(ubot)
-    mails = await mails_db.get_all()
-    for mail in mails:
-        mail_msgs = await mails_queue_db.get_by(mail_id=mail.id, admin_status=False)
-        if mail_msgs:
-            for ubot in ubots:
-                mail_bot_msgs = await mails_queue_db.get_by(bot=ubot.id, mail_id=mail.id, admin_status=False)
-                if ubot.action == f"mail_{mail.id}" and mail_bot_msgs:
-                    bot_dc = manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0]
-                    create_task(gig.send_mail(bot_dc, mail, ubot.admin))
-                elif ubot.action == f"mail_{mail.id}" and not mail_bot_msgs:
-                    ubot.action = None
-                    await bots_db.update(ubot)
+    for ubot in ubots:
+        if ubot.action:
+            ubot_action_all = ubot.action.split("_")
+            if ubot_action_all[0] == "mail":
+                mail = await mails_db.get(ubot_action_all[1])
+                bot_dc = manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0]
+                create_task(gig.send_mail(bot_dc, mail, mail.sender))
+            elif ubot_action_all[0] == "purge":
+                purge = await purges_db.get(ubot_action_all[1])
+                bot_dc = manager.bot_dict[(await bots_db.get_by(id=purge.bot))[0].token][0]
+                create_task(gig.clean(bot_dc, purge, purge.sender))
+
+
+async def listen_multi_mails():
+    while True:
+        multi_mails = await multi_mails_db.get_all()
+        for multi_mail in multi_mails:
+            await check_start_action_time(multi_mail)
+        await sleep(5)
 
 
 async def run_listeners():
     create_task(listen_mails())
     create_task(listen_purges())
-    create_task(listen_autodeletion())
+    create_task(listen_multi_mails())
+
     create_task(listen_mails_stats())
     create_task(listen_purges_stats())
     create_task(listen_admin_notification_stats())
-    create_task(listen_mails_on_startup())
+
+    create_task(resume_action())
     create_task(listen_multi_mail_stats())

@@ -56,6 +56,7 @@ queries = [
     """
     CREATE TABLE IF NOT EXISTS "mails" (
         "id"	INTEGER NOT NULL UNIQUE,
+        "sender" INTEGER NOT NULL,
         "bot"	INTEGER NOT NULL,
         "active"	INTEGER,
         "text"	TEXT,
@@ -70,7 +71,10 @@ queries = [
         "blocked_num"	INTEGER,
         "error_num"	INTEGER,
         "file_id" TEXT,
-        multi_mail INGTEGER,
+        "multi_mail" INGTEGER,
+        "start_time" TEXT,
+        "end_time" TEXT,
+        "duration" TEXT,
         FOREIGN KEY("multi_mail") REFERENCES "multi_mails"("id"),
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
         PRIMARY KEY("id" AUTOINCREMENT)
@@ -79,6 +83,7 @@ queries = [
     """
     CREATE TABLE IF NOT EXISTS "purges" (
         "id"	INTEGER NOT NULL UNIQUE,
+        "sender" INTEGER NOT NULL,
         "bot"	INTEGER NOT NULL,
         "active"	INTEGER NOT NULL,
         "sched_dt"	INTEGER,
@@ -86,8 +91,13 @@ queries = [
         "deleted_msgs_num"	INTEGER,
         "cleared_chats_num"	INTEGER,
         "error_num"	INTEGER,
+        "mail_id" INTEGER,
+        "start_time" TEXT,
+        "end_time" TEXT,
+        "duration" TEXT,
         PRIMARY KEY("id" AUTOINCREMENT),
-        FOREIGN KEY("bot") REFERENCES "bots"("id")
+        FOREIGN KEY("bot") REFERENCES "bots"("id"),
+        FOREIGN KEY("mail_id") REFERENCES "mails"("id")
     );
     """,
     """
@@ -108,10 +118,11 @@ queries = [
         "id"	INTEGER NOT NULL UNIQUE,
         "user"	INTEGER NOT NULL,
         "bot"	INTEGER NOT NULL,
-        "del_dt"	INTEGER,
+        "mail_id"	INTEGER,
         PRIMARY KEY("id", "bot"),
         FOREIGN KEY("bot") REFERENCES "bots"("id"),
-        FOREIGN KEY("user") REFERENCES "users"("id")
+        FOREIGN KEY("user") REFERENCES "users"("id"),
+        FOREIGN KEY("mail_id") REFERENCES "mails"("id")
     );
     """,
     """
@@ -129,7 +140,7 @@ queries = [
     """
     CREATE TABLE IF NOT EXISTS "multi_mails" (
         "id"	INTEGER NOT NULL UNIQUE,
-        "sender" TEXT NOT NULL,
+        "sender" INTEGER NOT NULL,
         "bots"	TEXT NOT NULL,
         "active"	INTEGER,
         "text"	TEXT,
@@ -146,5 +157,5 @@ queries = [
         "admin_status" INTEGER,
         PRIMARY KEY("id" AUTOINCREMENT)
     );
-    """,
+    """
 ]

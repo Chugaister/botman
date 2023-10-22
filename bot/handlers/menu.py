@@ -4,8 +4,9 @@ from bot.keyboards import menu as kb
 from bot.keyboards import gen_cancel
 
 
-@dp.message_handler(commands="start")
-async def send_start(msg: Message):
+@dp.message_handler(commands="start", state="*")
+async def send_start(msg: Message, state: FSMContext):
+    await state.set_state(None)
     try:
         await admins_db.add(
             models.Admin(
@@ -60,9 +61,9 @@ async def open_bot_list_msg(msg: Message, state: FSMContext):
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "start_msg")
-async def back_to_start_msg(cb: CallbackQuery):
+async def back_to_start_msg(cb: CallbackQuery, state: FSMContext):
     cb.message.from_user = cb.from_user
-    await send_start(cb.message)
+    await send_start(cb.message, state)
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "add_bot")

@@ -10,7 +10,7 @@ class Manager:
 
 
     def __init__(self, bots: list[models.Bot], webhook_host: str):
-        self.updates = {bot.token: "" for bot in bots}
+        self.updates = {bot.token: 0 for bot in bots}
         self.sessions = []
         self.logger = logging.getLogger('aiogram')
         self.bot_dict = {bot.token: (Bot(token=bot.token), Dispatcher(Bot(token=bot.token), storage=MemoryStorage())) for bot in bots}
@@ -35,7 +35,7 @@ class Manager:
     async def set_webhook(self, bots: list[models.Bot]):
         for bot in bots:
             if bot.token not in self.updates.keys():
-                self.updates[bot.token] = ""
+                self.updates[bot.token] = 0
             if bot.token not in self.bot_dict.keys():
                 self.bot_dict[bot.token] = ((Bot(token=bot.token)), Dispatcher(Bot(token=bot.token)))  
             ubot = Bot(token=bot.token)
@@ -61,9 +61,9 @@ class Manager:
             await (await ubot.get_session()).close()
             await ubot.delete_webhook()
         except Unauthorized:
-            bot = await bots_db.get(ubot.id)
-            bot.admin = None
-            await bots_db.update(bot)
+            db_bot = await bots_db.get(ubot.id)
+            db_bot.admin = None
+            await bots_db.update(db_bot)
         
 
     async def delete_webhooks(self, bots: list[models.Bot]):
