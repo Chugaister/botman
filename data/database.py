@@ -49,18 +49,18 @@ class Database:
     async def add(self, object):
         query = f"INSERT INTO {self.table_name} {str(object.columns)} VALUES ({'?, '*(len(object.columns)-1)}?)"
         try:
-            cur = await self.conn.execute(query, object.get_tuple())
+            async with self.conn.execute(query, object.get_tuple()) as cur:
+                object.id = cur.lastrowid if self.table_name not in tables_tg_id else object.id
+                await self.conn.commit()
         except IntegrityError:
             raise RecordAlreadyExists(object)
-        object.id = cur.lastrowid if self.table_name not in tables_tg_id else object.id
-        await self.conn.commit()
 
     async def get(self, _id: int):
         query = f"SELECT * FROM {self.table_name} WHERE id=?"
-        cur = await self.conn.execute(query, (_id,))
-        data = await cur.fetchone()
-        if data is None:
-            raise RecordIsMissing(_id)
+        async with self.conn.execute(query, (_id,)) as cur:
+            data = await cur.fetchone()
+            if data is None:
+                raise RecordIsMissing(_id)
         return self.datatype(*data)
 
     async def update(self, object):
@@ -73,14 +73,13 @@ class Database:
         await self.conn.commit()
 
     async def delete(self, _id: int):
-        records = None
         if self.table_name in tables_with_media:
             query = f"SELECT photo, video, gif FROM {self.table_name} WHERE {_id}"
-            cur = await self.conn.execute(query)
-            records = await cur.fetchall()
-            for record in records[0]:
-                if record is not None:
-                    os.remove(join(DIR, source_folder, "media", record))
+            async with self.conn.execute(query) as cur:
+                records = await cur.fetchall()
+                for record in records[0]:
+                    if record is not None:
+                        os.remove(join(DIR, source_folder, "media", record))
         query = f"DELETE FROM {self.table_name} WHERE id={_id}"
         await self.conn.execute(query)
         await self.conn.commit()
@@ -88,13 +87,12 @@ class Database:
     async def get_by(self, **kwargs):
         items = list(kwargs.items())
         query = f"SELECT * FROM {self.table_name} WHERE {' AND '.join([f'{key}=?' for key, value in items])}"
-        cur = await self.conn.execute(query, [value for key, value in items])
-        records = await cur.fetchall()
+        async with self.conn.execute(query, [value for key, value in items]) as cur:
+            records = await cur.fetchall()
         return [self.datatype(*record) for record in records]
 
     async def get_all(self):
         query = f"SELECT * FROM {self.table_name}"
-        cur = await self.conn.execute(query)
-        records = await cur.fetchall()
+        async with self.conn.execute(query) as cur:
+            records = await cur.fetchall()
         return [self.datatype(*record) for record in records]
-    
