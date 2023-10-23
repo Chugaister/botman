@@ -32,10 +32,11 @@ async def safe_get_multi_mail(uid: int, multi_mail_id: int, cb_id: int | None = 
 @dp.callback_query_handler(lambda cb: cb.data == "multi_mails", state="*")
 async def open_multi_mail_list(cb: CallbackQuery, state: FSMContext):
     admin_status = cb.data == "admin_mails"
+    is_admin_menu = cb.data == "admin_mails"
     await state.set_state(None)
     multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0, admin_status=admin_status)
     await cb.message.answer(
-        "Мультирозсилки",
+        "Адмін-розсилки" if is_admin_menu else "Мультирозсилки",
         reply_markup=kb.gen_multi_mail_list(multi_mails, admin_status)
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
@@ -49,7 +50,7 @@ async def add_multi_mail(cb: CallbackQuery, state: FSMContext):
         f"Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
 <b>[any]\n[username]\n[first_name]\n[last_name]</b>",
         reply_markup=gen_cancel(
-             "multi_mails"
+             "admin_mails" if admin_status else "multi_mails"
         )
     )
     await state.set_state(states.InputStateGroup.multi_mail)
@@ -150,7 +151,7 @@ async def multi_mail_input(
             admin_status=state_data["admin_status"]
         )
         await multi_mails_db.add(multi_mail)
-    if state_data["admin_status"]:
+    if multi_mail.admin_status:
         await open_multi_mail_menu(msg.from_user.id, multi_mail.id, msg.message_id)
     else:
         await select_bots(msg.from_user.id, multi_mail.id, state_data["msg_id"])
@@ -299,6 +300,7 @@ async def delete_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext)
     if not multi_mail:
         return
     await multi_mails_db.delete(multi_mail.id)
+    cb.data = "admin_mails"
     await open_multi_mail_list(cb, state)
 
 
@@ -529,5 +531,6 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict, state: FSMCont
     if not multi_mail:
         return
     await run_multi_mail(multi_mail, cb.from_user.id)
+    cb.data = "admin_mails"
     await open_multi_mail_list(cb, state)
     await safe_del_msg(cb.from_user.id, cb.message.message_id)

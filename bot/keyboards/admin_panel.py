@@ -17,8 +17,8 @@ admin_panel_menu.add(
 )
 admin_panel_menu.add(
     InlineKeyboardButton(
-        "🔽Приховати",
-        callback_data="hide"
+        "🤖Боти",
+        callback_data="bots_admin"
     ),
     InlineKeyboardButton(
         "📁Логи",
@@ -28,8 +28,8 @@ admin_panel_menu.add(
 
 admin_panel_menu.add(
     InlineKeyboardButton(
-        "🤖Боти",
-        callback_data="bots_admin"
+        "🔽Приховати",
+        callback_data="hide"
     )
 )
 
