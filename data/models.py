@@ -408,7 +408,7 @@ class Msg:
         "mail_id",
     )
 
-    def __init__(self, _id: int, user: int, bot: int, mail_id: int = 0):
+    def __init__(self, _id: int, user: int, bot: int, mail_id: int = None):
         self.id = _id
         self.user = user
         self.bot = bot

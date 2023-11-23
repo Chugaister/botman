@@ -10,7 +10,7 @@ import sys
 import os
 import colorama
 from bot.misc import bot as main_bot, dp as main_dp
-from bot.misc import manager as bot_manager, bots_db
+from bot.misc import manager as bot_manager, bots_db, start_conns
 from bot.listeners import run_listeners
 import bot.handlers
 
@@ -113,6 +113,7 @@ async def on_startup():
         drop_pending_updates=True,
         allowed_updates=allowed_updates
     )
+    await start_conns()
     ubots = await bots_db.get_by(status=1)
     ubots = [ubot for ubot in ubots if ubot.admin is not None]
     main_dp.register_errors_handler(log_exception)

@@ -122,6 +122,7 @@ async def send_greeting(ubot: Bot, user: models.User, greeting: models.Greeting)
         except MessageCantBeDeleted:
             pass
     else:
+        print(msg.message_id)
         msg_dc = models.Msg(
             msg.message_id,
             user.id,

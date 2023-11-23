@@ -13,7 +13,7 @@ import os
 import argparse
 
 from configs import args_parse
-from web_config.config import DB_URI
+from configs.config import DB_URI
 
 args = args_parse.args
 # parser = argparse.ArgumentParser()
@@ -51,6 +51,19 @@ class Database:
         self.table_name = table_name
         self.DB_URI = DB_URI
         self.datatype = datatype
+        self.pool = None
+        self.conn = None
+
+    async def connect(self):
+        self.pool = await aiopg.create_pool(self.DB_URI)
+        self.conn = await self.pool.acquire()
+
+    async def close(self):
+        if self.conn:
+            self.pool.release(self.conn)
+        if self.pool:
+            self.pool.close()
+            await self.pool.wait_closed()
 
     async def add(self, object):
         def form_query(object):
@@ -61,25 +74,25 @@ class Database:
             into = into + ")"
             return into
 
-        query = f"INSERT INTO {self.table_name} {form_query(object)} VALUES ({('%s, ' * len(object.columns))[:-2]})"
-        query = (query + " RETURNING id;") if self.table_name not in tables_tg_id else query
-        async with aiopg.create_pool(DB_URI) as pool:
-            async with pool.acquire() as conn:
-                async with conn.cursor() as cur:
-                    try:
-                        await cur.execute(query, object.get_tuple())
-                        new_id = await cur.fetchone()
-                        object.id = new_id[0] if self.table_name not in tables_tg_id else object.id
-                    except psycopg2.errors.UniqueViolation:
-                        raise RecordAlreadyExists(object)
+        query = f"INSERT INTO {self.table_name} {form_query(object)} VALUES ({('%s, ' * len(object.columns))[:-2]}) RETURNING id;"
+        # async with aiopg.create_pool(DB_URI) as pool:
+        #     async with pool.acquire() as conn:
+        async with self.conn.cursor() as cur:
+            try:
+                await cur.execute(query, object.get_tuple())
+                print(f"{object.get_tuple()}\n{query}")
+                new_id = await cur.fetchone()
+                object.id = new_id[0] if self.table_name not in tables_tg_id else object.id
+            except psycopg2.errors.UniqueViolation:
+                raise RecordAlreadyExists(object)
 
     async def get(self, _id: int):
         query = f"SELECT * FROM {self.table_name} WHERE id=%s"
-        async with aiopg.create_pool(DB_URI) as pool:
-            async with pool.acquire() as conn:
-                async with conn.cursor() as cur:
-                    await cur.execute(query, (_id,))
-                    data = await cur.fetchone()
+        # async with aiopg.create_pool(DB_URI) as pool:
+        #     async with pool.acquire() as conn:
+        async with self.conn.cursor() as cur:
+            await cur.execute(query, (_id,))
+            data = await cur.fetchone()
         if data is None:
             raise RecordIsMissing(_id)
         return self.datatype(*data)
@@ -90,42 +103,42 @@ class Database:
             query = f"UPDATE {self.table_name} SET {', '.join([f'{cl_name}=%s' for cl_name, value in zip(object.columns, data_tuple)])} WHERE id={object.id} AND bot={object.bot}"
         else:
             query = f"UPDATE {self.table_name} SET {', '.join([f'{cl_name}=%s' for cl_name, value in zip(object.columns, data_tuple)])} WHERE id={object.id}"
-        async with aiopg.create_pool(DB_URI) as pool:
-            async with pool.acquire() as conn:
-                async with conn.cursor() as cur:
-                    await cur.execute(query, data_tuple)
+        # async with aiopg.create_pool(DB_URI) as pool:
+        #     async with pool.acquire() as conn:
+            async with self.conn.cursor() as cur:
+                await cur.execute(query, data_tuple)
 
     async def delete(self, _id: int):
-        async with aiopg.create_pool(DB_URI) as pool:
-            async with pool.acquire() as conn:
-                if self.table_name in tables_with_media:
-                    query = f"SELECT photo, video, gif FROM {self.table_name} WHERE id={_id}"
-                    async with conn.cursor() as cur:
-                        await cur.execute(query)
-                        records = await cur.fetchall()
-                    for record in records[0]:
-                        if record is not None:
-                            os.remove(join(DIR, source_folder, "media", record))
-                query = f"DELETE FROM {self.table_name} WHERE id={_id}"
-                async with conn.cursor() as cur:
-                    await cur.execute(query)
+    # async with aiopg.create_pool(DB_URI) as pool:
+    #     async with pool.acquire() as conn:
+        if self.table_name in tables_with_media:
+            query = f"SELECT photo, video, gif FROM {self.table_name} WHERE id={_id}"
+            async with self.conn.cursor() as cur:
+                await cur.execute(query)
+                records = await cur.fetchall()
+            for record in records[0]:
+                if record is not None:
+                    os.remove(join(DIR, source_folder, "media", record))
+        query = f"DELETE FROM {self.table_name} WHERE id={_id}"
+        async with self.conn.cursor() as cur:
+            await cur.execute(query)
 
     async def get_by(self, **kwargs):
         items = list(kwargs.items())
         query = f"SELECT * FROM {self.table_name} WHERE {' AND '.join([f'{key}=%s' for key, value in items])}"
-        async with aiopg.create_pool(DB_URI) as pool:
-            async with pool.acquire() as conn:
-                async with conn.cursor() as cur:
-                    await cur.execute(query, [value for key, value in items])
-                    records = await cur.fetchall()
+        # async with aiopg.create_pool(DB_URI) as pool:
+        #     async with pool.acquire() as conn:
+        async with self.conn.cursor() as cur:
+            await cur.execute(query, [value for key, value in items])
+            records = await cur.fetchall()
         data = [self.datatype(*record) for record in records]
         return data
 
     async def get_all(self):
         query = f"SELECT * FROM {self.table_name}"
-        async with aiopg.create_pool(DB_URI) as pool:
-            async with pool.acquire() as conn:
-                async with conn.cursor() as cur:
-                    await cur.execute(query)
-                    records = await cur.fetchall()
+        # async with aiopg.create_pool(DB_URI) as pool:
+        #     async with pool.acquire() as conn:
+        async with self.conn.cursor() as cur:
+            await cur.execute(query)
+            records = await cur.fetchall()
         return [self.datatype(*record) for record in records]

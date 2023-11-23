@@ -4,7 +4,7 @@ from data.file_manager import FileManager
 import asyncio
 import argparse
 from configs import args_parse
-from web_config.config import DB_URI
+from configs.config import DB_URI
 
 args = args_parse.args
 
@@ -21,6 +21,8 @@ source = "source" if not args.source else args.source
 asyncio.run(create_db(source))
 
 file_manager = FileManager(source)
+
+
 admins_db = Database("admins", DB_URI, models.Admin)
 bots_db = Database("bots", DB_URI, models.Bot)
 user_db = Database("users", DB_URI, models.User)
@@ -31,3 +33,17 @@ mails_queue_db = Database("mails_queue", DB_URI, models.MailsQueue)
 purges_db = Database("purges", DB_URI, models.Purge)
 msgs_db = Database("msgs", DB_URI, models.Msg)
 multi_mails_db = Database("multi_mails", DB_URI, models.MultiMail)
+
+
+async def start_conns():
+    await admins_db.connect()
+    await bots_db.connect()
+    await user_db.connect()
+    await captchas_db.connect()
+    await greeting_db.connect()
+    await mails_db.connect()
+    await mails_queue_db.connect()
+    await purges_db.connect()
+    await msgs_db.connect()
+    await multi_mails_db.connect()
+    print("DONE CONNS")
