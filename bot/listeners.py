@@ -4,6 +4,8 @@ from bot.handlers import admin_notification
 from bot.handlers.multi_mails import run_multi_mail
 from logging import getLogger
 import subprocess
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from datetime import datetime, timedelta
 
 logger = getLogger("aiogram")
 
@@ -92,174 +94,155 @@ async def queue_action(action, db_of_action, action_type: str):
 # gets: nothing
 # returns: nothing
 async def listen_purges():
-    # make listener to work permanently
-    while True:
+    print("purge_listener", datetime.now())
+    # get all purges from db and start checking for each
+    purges = await purges_db.get_all()
+    for purge in purges:
 
-        # get all purges from db and start checking for each
-        purges = await purges_db.get_all()
-        for purge in purges:
+        # get bot data from db
+        bot_dc = await bots_db.get(purge.bot)
 
-            # get bot data from db
-            bot_dc = await bots_db.get(purge.bot)
+        # check if purge is cleaning of bot or is auto-deleting of mail and set msg text
+        if purge.mail_id:
+            queue_msg = f"Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} у боті @{bot_dc.username} було поставлено в чергу. Вам прийде повідомлення коли воно розпочнеться"
+            start_msg = f"🚀Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} в боті @{bot_dc.username} розпочато. Вам прийде повідомлення після його закінчення"
+        else:
+            queue_msg = f"Чистка({gen_hex_caption(purge.id)}) у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
+            start_msg = f"🚀Чистка {gen_hex_caption(purge.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
 
-            # check if purge is cleaning of bot or is auto-deleting of mail and set msg text
-            if purge.mail_id:
-                queue_msg = f"Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} у боті @{bot_dc.username} було поставлено в чергу. Вам прийде повідомлення коли воно розпочнеться"
-                start_msg = f"🚀Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} в боті @{bot_dc.username} розпочато. Вам прийде повідомлення після його закінчення"
-            else:
-                queue_msg = f"Чистка({gen_hex_caption(purge.id)}) у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
-                start_msg = f"🚀Чистка {gen_hex_caption(purge.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
+        # if purge is enqueued, send msg to sender of it enqueueing
+        if await queue_action(purge, purges_db, "purge"):
+            await bot.send_message(purge.sender, queue_msg, reply_markup=gen_ok("hide"))
 
-            # if purge is enqueued, send msg to sender of it enqueueing
-            if await queue_action(purge, purges_db, "purge"):
-                await bot.send_message(purge.sender, queue_msg, reply_markup=gen_ok("hide"))
-
-            # if purge can be started, then send msg to sender of it starting and starts purge in userbot
-            if await start_action(purge, bot_dc, purges_db, "purge"):
-                await bot.send_message(purge.sender, start_msg, reply_markup=gen_ok("hide"))
-                create_task(
-                    gig.clean(manager.bot_dict[(await bots_db.get_by(id=purge.bot))[0].token][0], purge, purge.sender))
-
-        # set sleep time to listener
-        await sleep(5)
+        # if purge can be started, then send msg to sender of it starting and starts purge in userbot
+        if await start_action(purge, bot_dc, purges_db, "purge"):
+            await bot.send_message(purge.sender, start_msg, reply_markup=gen_ok("hide"))
+            create_task(
+                gig.clean(manager.bot_dict[(await bots_db.get_by(id=purge.bot))[0].token][0], purge, purge.sender))
 
 
 # listen_mails() is listener which check all mails for start
 # gets: nothing
 # returns: nothing
 async def listen_mails():
-    # make listener to work permanently
-    while True:
+    print("mail_listener", datetime.now())
+    # get all mails from db and start checking for each
+    mails = await mails_db.get_all()
+    for mail in mails:
 
-        # get all mails from db and start checking for each
-        mails = await mails_db.get_all()
-        for mail in mails:
+        # get bot data from db
+        bot_dc = await bots_db.get(mail.bot)
 
-            # get bot data from db
-            bot_dc = await bots_db.get(mail.bot)
+        # if mail is enqueued, send msg to sender of it enqueueing
+        if await queue_action(mail, mails_db, "mail"):
+            queue_msg = f"Розсилка {gen_hex_caption(mail.id)} у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
+            await bot.send_message(mail.sender, queue_msg, reply_markup=gen_ok("hide"))
 
-            # if mail is enqueued, send msg to sender of it enqueueing
-            if await queue_action(mail, mails_db, "mail"):
-                queue_msg = f"Розсилка {gen_hex_caption(mail.id)} у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
-                await bot.send_message(mail.sender, queue_msg, reply_markup=gen_ok("hide"))
+        # if mail(not multi_mail) can be started, then send msg to sender of it starting and starts purge in userbot
+        if await start_action(mail, bot_dc, mails_db, "mail"):
+            if not mail.multi_mail:
+                start_msg = f"🚀Розсилка {gen_hex_caption(mail.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
+                await bot.send_message(mail.sender, start_msg, reply_markup=gen_ok("hide"))
 
-            # if mail(not multi_mail) can be started, then send msg to sender of it starting and starts purge in userbot
-            if await start_action(mail, bot_dc, mails_db, "mail"):
-                if not mail.multi_mail:
-                    start_msg = f"🚀Розсилка {gen_hex_caption(mail.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
-                    await bot.send_message(mail.sender, start_msg, reply_markup=gen_ok("hide"))
-
-                create_task(gig.send_mail(manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0], mail,
-                                          mail.sender))
-
-        # set sleep time to listener
-        await sleep(5)
-
-
-# listen_mails_stats() is listener which check buffet of mail stats and send stats to sender
-# gets: nothing
-# returns: nothing
-async def listen_mails_stats():
-    while True:
-        if gig.mails_stats_buffer:
-            for mail_stats in gig.mails_stats_buffer:
-                mail = await mails_db.get(mail_stats["mail_id"])
-                if not mail.multi_mail:
-                    await bot.send_message(
-                        mail_stats["admin_id"],
-                        f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} в боті @{(await bots_db.get(mail.bot)).username} закінчена\n\n\
-✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
-⌛️Час розсилання: {mail_stats['duration']}",
-                        reply_markup=gen_ok("hide")
-                    )
-            gig.mails_stats_buffer = []
-        await sleep(5)
+            create_task(gig.send_mail(manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0], mail,
+                                      mail.sender))
 
 
 # listen_multi_mails() is listener which check all multi_mails for start
 # gets: nothing
 # returns: nothing
 async def listen_multi_mails():
-    while True:
-        multi_mails = await multi_mails_db.get_all()
-        for multi_mail in multi_mails:
-            if await queue_action(multi_mail, multi_mails_db, "multi_mail"):
-                queue_msg = f"Мультирозсилка {gen_hex_caption(multi_mail.id)} була поставлена в чергу"
-                await bot.send_message(multi_mail.sender, queue_msg, reply_markup=gen_ok("hide"))
-        await sleep(5)
+    print("multi_mail_listener", datetime.now())
+    multi_mails = await multi_mails_db.get_all()
+    for multi_mail in multi_mails:
+        if await queue_action(multi_mail, multi_mails_db, "multi_mail"):
+            queue_msg = f"Мультирозсилка {gen_hex_caption(multi_mail.id)} була поставлена в чергу"
+            await bot.send_message(multi_mail.sender, queue_msg, reply_markup=gen_ok("hide"))
+
+
+# listen_mails_stats() is listener which check buffet of mail stats and send stats to sender
+# gets: nothing
+# returns: nothing
+async def listen_mails_stats():
+    if gig.mails_stats_buffer:
+        for mail_stats in gig.mails_stats_buffer:
+            mail = await mails_db.get(mail_stats["mail_id"])
+            if not mail.multi_mail:
+                await bot.send_message(
+                    mail_stats["admin_id"],
+                    f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} в боті @{(await bots_db.get(mail.bot)).username} закінчена\n\n\
+✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
+⌛️Час розсилання: {mail_stats['duration']}",
+                    reply_markup=gen_ok("hide")
+                )
+        gig.mails_stats_buffer = []
 
 
 # listen_multi_mail_stats() is listener which check buffet of multi_mail stats and send stats to sender
 # gets: nothing
 # returns: nothing
 async def listen_multi_mail_stats():
-    while True:
-        multi_mails = await multi_mails_db.get_by(active=1, status=0)
-        for multi_mail in multi_mails:
-            mails = await mails_db.get_by(multi_mail=multi_mail.id)
-            finished = True
+    multi_mails = await multi_mails_db.get_by(active=1, status=0)
+    for multi_mail in multi_mails:
+        mails = await mails_db.get_by(multi_mail=multi_mail.id)
+        finished = True
+        for mail in mails:
+            finished = finished and (not mail.active and mail.status)
+        if finished:
             for mail in mails:
-                finished = finished and (not mail.active and mail.status)
-            if finished:
-                for mail in mails:
-                    multi_mail.sent_num += mail.sent_num
-                    multi_mail.blocked_num += mail.blocked_num
-                    multi_mail.error_num += mail.error_num
-                multi_mail.active = 0
-                multi_mail.status = 1
-                await multi_mails_db.update(multi_mail)
-                await bot.send_message(
-                    multi_mail.sender,
-                    f"Мультирозсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n\
+                multi_mail.sent_num += mail.sent_num
+                multi_mail.blocked_num += mail.blocked_num
+                multi_mail.error_num += mail.error_num
+            multi_mail.active = 0
+            multi_mail.status = 1
+            await multi_mails_db.update(multi_mail)
+            await bot.send_message(
+                multi_mail.sender,
+                f"Мультирозсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n\
 ✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
-                    reply_markup=gen_ok("hide")
-                )
-        await sleep(5)
+                reply_markup=gen_ok("hide")
+            )
 
 
 # listen_admin_notification_stats() is listener which check buffet of admin notification stats and send stats to sender
 # gets: nothing
 # returns: nothing
 async def listen_admin_notification_stats():
-    while True:
-        if admin_notification.admin_notification_stats:
-            for notification_stats in admin_notification.admin_notification_stats:
-                await bot.send_message(
-                    notification_stats["admin_id"],
-                    f"Сповіщення адмінів закінчено\n\
+    if admin_notification.admin_notification_stats:
+        for notification_stats in admin_notification.admin_notification_stats:
+            await bot.send_message(
+                notification_stats["admin_id"],
+                f"Сповіщення адмінів закінчено\n\
 Надіслано: {notification_stats['sent_num']}\nЗаблоковано: {notification_stats['blocked_num']}\nПомилка: {notification_stats['error_num']}",
-                    reply_markup=gen_ok("hide")
-                )
-            admin_notification.admin_notification_stats = []
-        await sleep(5)
+                reply_markup=gen_ok("hide")
+            )
+        admin_notification.admin_notification_stats = []
 
 
 # listen_purges_stats() is listener which check buffet of purge stats and send stats to sender
 # gets: nothing
 # returns: nothing
 async def listen_purges_stats():
-    while True:
-        if gig.purges_stats_buffer != []:
-            for purge_stats in gig.purges_stats_buffer:
-                purge = await purges_db.get(purge_stats['purge_id'])
-                if purge.mail_id:
-                    await bot.send_message(
-                        purge_stats["admin_id"],
-                        f"Видалення {gen_hex_caption(purge_stats['purge_id'])} розсилки {gen_hex_caption(purge.mail_id)} в боті @{(await bots_db.get(purge.bot)).username} закінчено\n\n\
+    if gig.purges_stats_buffer != []:
+        for purge_stats in gig.purges_stats_buffer:
+            purge = await purges_db.get(purge_stats['purge_id'])
+            if purge.mail_id:
+                await bot.send_message(
+                    purge_stats["admin_id"],
+                    f"Видалення {gen_hex_caption(purge_stats['purge_id'])} розсилки {gen_hex_caption(purge.mail_id)} в боті @{(await bots_db.get(purge.bot)).username} закінчено\n\n\
 ✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
 ⌛️Час розсилання: {purge_stats['duration']}",
-                        reply_markup=gen_ok("hide")
-                    )
-                else:
-                    await bot.send_message(
-                        purge_stats["admin_id"],
-                        f"Чистка {gen_hex_caption(purge_stats['purge_id'])} в боті @{(await bots_db.get(purge.bot)).username} закінчена\n\n\
+                    reply_markup=gen_ok("hide")
+                )
+            else:
+                await bot.send_message(
+                    purge_stats["admin_id"],
+                    f"Чистка {gen_hex_caption(purge_stats['purge_id'])} в боті @{(await bots_db.get(purge.bot)).username} закінчена\n\n\
 ✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
 ⌛️Час розсилання: {purge_stats['duration']}",
-                        reply_markup=gen_ok("hide")
-                    )
-            gig.purges_stats_buffer = []
-        await sleep(5)
+                    reply_markup=gen_ok("hide")
+                )
+        gig.purges_stats_buffer = []
 
 
 # resume_action() resume all action after startup
@@ -288,11 +271,19 @@ async def resume_action():
 async def run_listeners():
     await resume_action()
 
-    create_task(listen_mails())
-    create_task(listen_purges())
-    create_task(listen_multi_mails())
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(listen_mails_stats, 'interval', seconds=5)
+    scheduler.add_job(listen_purges_stats, 'interval', seconds=5)
+    scheduler.add_job(listen_admin_notification_stats, 'interval', seconds=5)
+    scheduler.add_job(listen_multi_mail_stats, 'interval', seconds=5)
 
-    create_task(listen_mails_stats())
-    create_task(listen_purges_stats())
-    create_task(listen_admin_notification_stats())
-    create_task(listen_multi_mail_stats())
+    scheduler.add_job(listen_mails, 'interval', seconds=15)
+
+    scheduler.start()
+
+    await sleep(5)
+    scheduler.add_job(listen_purges, 'interval', seconds=15)
+
+    await sleep(5)
+    scheduler.add_job(listen_multi_mails, 'interval', seconds=15)
+
