@@ -8,3 +8,6 @@ pyngrok~=6.0.0
 aiosqlite~=0.19.0
 aiosqlite~=0.19.0
 colorama~=0.4.6
+APScheduler~=3.10.4
+flask~=2.3.3
+gevent~=23.7.0

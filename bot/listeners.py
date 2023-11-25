@@ -94,9 +94,8 @@ async def queue_action(action, db_of_action, action_type: str):
 # gets: nothing
 # returns: nothing
 async def listen_purges():
-    print("purge_listener", datetime.now())
-    # get all purges from db and start checking for each
-    purges = await purges_db.get_all()
+    # get all purges, which don't started and don't enqueued from db and start checking for each
+    purges = await purges_db.get_by(active=0, status=0)
     for purge in purges:
 
         # get bot data from db
@@ -105,14 +104,32 @@ async def listen_purges():
         # check if purge is cleaning of bot or is auto-deleting of mail and set msg text
         if purge.mail_id:
             queue_msg = f"Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} у боті @{bot_dc.username} було поставлено в чергу. Вам прийде повідомлення коли воно розпочнеться"
-            start_msg = f"🚀Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} в боті @{bot_dc.username} розпочато. Вам прийде повідомлення після його закінчення"
+
         else:
             queue_msg = f"Чистка({gen_hex_caption(purge.id)}) у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
-            start_msg = f"🚀Чистка {gen_hex_caption(purge.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
 
         # if purge is enqueued, send msg to sender of it enqueueing
         if await queue_action(purge, purges_db, "purge"):
             await bot.send_message(purge.sender, queue_msg, reply_markup=gen_ok("hide"))
+
+
+async def listen_start_purges():
+    # get all purges, which don't started but enqueued from db and start checking for each
+    purges = await purges_db.get_by(active=1, status=0)
+
+    # if not any purges which we need stop listeners
+    if not purges:
+        return
+
+    for purge in purges:
+        # get bot data from db
+        bot_dc = await bots_db.get(purge.bot)
+
+        # check if purge is cleaning of bot or is auto-deleting of mail and set msg text
+        if purge.mail_id:
+            start_msg = f"🚀Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} в боті @{bot_dc.username} розпочато. Вам прийде повідомлення після його закінчення"
+        else:
+            start_msg = f"🚀Чистка {gen_hex_caption(purge.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
 
         # if purge can be started, then send msg to sender of it starting and starts purge in userbot
         if await start_action(purge, bot_dc, purges_db, "purge"):
@@ -125,9 +142,13 @@ async def listen_purges():
 # gets: nothing
 # returns: nothing
 async def listen_mails():
-    print("mail_listener", datetime.now())
-    # get all mails from db and start checking for each
-    mails = await mails_db.get_all()
+    # get all mails from db, which don't started and don't enqueued from db and start checking for each
+    mails = await mails_db.get_by(active=0, status=0)
+
+    # if not any purges which we need stop listeners
+    if not mails:
+        return
+
     for mail in mails:
 
         # get bot data from db
@@ -138,12 +159,24 @@ async def listen_mails():
             queue_msg = f"Розсилка {gen_hex_caption(mail.id)} у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
             await bot.send_message(mail.sender, queue_msg, reply_markup=gen_ok("hide"))
 
-        # if mail(not multi_mail) can be started, then send msg to sender of it starting and starts purge in userbot
+
+async def listen_start_mail():
+    # get all mails, which don't started but enqueued from db and start checking for each
+    mails = await mails_db.get_by(active=1, status=0)
+
+    # if not any purges which we need stop listeners
+    if not mails:
+        return None
+
+    for mail in mails:
+        # get bot data from db
+        bot_dc = await bots_db.get(mail.bot)
+
+        # if mail can be started, then send msg to sender of it starting and starts purge in userbot
         if await start_action(mail, bot_dc, mails_db, "mail"):
             if not mail.multi_mail:
                 start_msg = f"🚀Розсилка {gen_hex_caption(mail.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
                 await bot.send_message(mail.sender, start_msg, reply_markup=gen_ok("hide"))
-
             create_task(gig.send_mail(manager.bot_dict[(await bots_db.get_by(id=mail.bot))[0].token][0], mail,
                                       mail.sender))
 
@@ -152,7 +185,6 @@ async def listen_mails():
 # gets: nothing
 # returns: nothing
 async def listen_multi_mails():
-    print("multi_mail_listener", datetime.now())
     multi_mails = await multi_mails_db.get_all()
     for multi_mail in multi_mails:
         if await queue_action(multi_mail, multi_mails_db, "multi_mail"):
@@ -278,11 +310,13 @@ async def run_listeners():
     scheduler.add_job(listen_multi_mail_stats, 'interval', seconds=5)
 
     scheduler.add_job(listen_mails, 'interval', seconds=15)
+    scheduler.add_job(listen_start_mail, 'interval', seconds=15)
 
     scheduler.start()
 
     await sleep(5)
     scheduler.add_job(listen_purges, 'interval', seconds=15)
+    scheduler.add_job(listen_start_purges, 'interval', seconds=15)
 
     await sleep(5)
     scheduler.add_job(listen_multi_mails, 'interval', seconds=15)
