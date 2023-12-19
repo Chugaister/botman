@@ -77,10 +77,6 @@ async def queue_action(action, db_of_action, action_type: str):
                                      mail_id=action.id)
                 await purges_db.add(purge)
 
-        # if action is multi_mail, run multi_mail
-        if action_type == "multi_mail":
-            await run_multi_mail(action, action.sender)
-
         # update status of action to enqueued
         action.active = 1
         await db_of_action.update(action)
@@ -103,10 +99,14 @@ async def listen_purges():
 
         # check if purge is cleaning of bot or is auto-deleting of mail and set msg text
         if purge.mail_id:
-            queue_msg = f"Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} у боті @{bot_dc.username} було поставлено в чергу. Вам прийде повідомлення коли воно розпочнеться"
+            mail = await mails_db.get(purge.mail_id)
+            if mail.multi_mail:
+                queue_msg = f"🕑Видалення({gen_hex_caption(purge.id)}) мультирозсилки {gen_hex_caption(mail.multi_mail)} у боті @{bot_dc.username} було поставлено в чергу. Вам прийде повідомлення коли воно розпочнеться"
+            else:
+                queue_msg = f"🕑Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} у боті @{bot_dc.username} було поставлено в чергу. Вам прийде повідомлення коли воно розпочнеться"
 
         else:
-            queue_msg = f"Чистка({gen_hex_caption(purge.id)}) у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
+            queue_msg = f"🕑Чистка({gen_hex_caption(purge.id)}) у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
 
         # if purge is enqueued, send msg to sender of it enqueueing
         if await queue_action(purge, purges_db, "purge"):
@@ -127,9 +127,13 @@ async def listen_start_purges():
 
         # check if purge is cleaning of bot or is auto-deleting of mail and set msg text
         if purge.mail_id:
-            start_msg = f"🚀Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} в боті @{bot_dc.username} розпочато. Вам прийде повідомлення після його закінчення"
+            mail = await mails_db.get(purge.mail_id)
+            if mail.multi_mail:
+                start_msg = f"♻️Видалення({gen_hex_caption(purge.id)}) мультирозсилки {gen_hex_caption(mail.multi_mail)} в боті @{bot_dc.username} розпочато. Вам прийде повідомлення після його закінчення"
+            else:
+                start_msg = f"♻️Видалення({gen_hex_caption(purge.id)}) розсилки {gen_hex_caption(purge.mail_id)} в боті @{bot_dc.username} розпочато. Вам прийде повідомлення після його закінчення"
         else:
-            start_msg = f"🚀Чистка {gen_hex_caption(purge.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
+            start_msg = f"♻️Чистка {gen_hex_caption(purge.id)} в боті @{bot_dc.username} розпочата. Вам прийде повідомлення після її закінчення"
 
         # if purge can be started, then send msg to sender of it starting and starts purge in userbot
         if await start_action(purge, bot_dc, purges_db, "purge"):
@@ -156,7 +160,7 @@ async def listen_mails():
 
         # if mail is enqueued, send msg to sender of it enqueueing
         if await queue_action(mail, mails_db, "mail"):
-            queue_msg = f"Розсилка {gen_hex_caption(mail.id)} у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
+            queue_msg = f"🕑Розсилка {gen_hex_caption(mail.id)} у боті @{bot_dc.username} була поставлена в чергу. Вам прийде повідомлення коли вона розпочнеться"
             await bot.send_message(mail.sender, queue_msg, reply_markup=gen_ok("hide"))
 
 
@@ -185,11 +189,10 @@ async def listen_start_mail():
 # gets: nothing
 # returns: nothing
 async def listen_multi_mails():
-    multi_mails = await multi_mails_db.get_all()
+    multi_mails = await multi_mails_db.get_by(active=0, status=0)
     for multi_mail in multi_mails:
         if await queue_action(multi_mail, multi_mails_db, "multi_mail"):
-            queue_msg = f"Мультирозсилка {gen_hex_caption(multi_mail.id)} була поставлена в чергу"
-            await bot.send_message(multi_mail.sender, queue_msg, reply_markup=gen_ok("hide"))
+            create_task(run_multi_mail(multi_mail, multi_mail.sender))
 
 
 # listen_mails_stats() is listener which check buffet of mail stats and send stats to sender
@@ -202,7 +205,7 @@ async def listen_mails_stats():
             if not mail.multi_mail:
                 await bot.send_message(
                     mail_stats["admin_id"],
-                    f"Розсилка {gen_hex_caption(mail_stats['mail_id'])} в боті @{(await bots_db.get(mail.bot)).username} закінчена\n\n\
+                    f"📭Розсилка {gen_hex_caption(mail_stats['mail_id'])} в боті @{(await bots_db.get(mail.bot)).username} закінчена\n\n\
 ✅Надіслано: {mail_stats['sent_num']}\n💀Заблоковано: {mail_stats['blocked_num']}\n❌Помилка: {mail_stats['error_num']}\n\
 ⌛️Час розсилання: {mail_stats['duration']}",
                     reply_markup=gen_ok("hide")
@@ -230,7 +233,7 @@ async def listen_multi_mail_stats():
             await multi_mails_db.update(multi_mail)
             await bot.send_message(
                 multi_mail.sender,
-                f"Мультирозсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n\
+                f"📭Мультирозсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n\
 ✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
                 reply_markup=gen_ok("hide")
             )
@@ -244,7 +247,7 @@ async def listen_admin_notification_stats():
         for notification_stats in admin_notification.admin_notification_stats:
             await bot.send_message(
                 notification_stats["admin_id"],
-                f"Сповіщення адмінів закінчено\n\
+                f"📭Сповіщення адмінів закінчено\n\
 Надіслано: {notification_stats['sent_num']}\nЗаблоковано: {notification_stats['blocked_num']}\nПомилка: {notification_stats['error_num']}",
                 reply_markup=gen_ok("hide")
             )
@@ -261,7 +264,7 @@ async def listen_purges_stats():
             if purge.mail_id:
                 await bot.send_message(
                     purge_stats["admin_id"],
-                    f"Видалення {gen_hex_caption(purge_stats['purge_id'])} розсилки {gen_hex_caption(purge.mail_id)} в боті @{(await bots_db.get(purge.bot)).username} закінчено\n\n\
+                    f"📭Видалення {gen_hex_caption(purge_stats['purge_id'])} розсилки {gen_hex_caption(purge.mail_id)} в боті @{(await bots_db.get(purge.bot)).username} закінчено\n\n\
 ✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
 ⌛️Час розсилання: {purge_stats['duration']}",
                     reply_markup=gen_ok("hide")
@@ -269,7 +272,7 @@ async def listen_purges_stats():
             else:
                 await bot.send_message(
                     purge_stats["admin_id"],
-                    f"Чистка {gen_hex_caption(purge_stats['purge_id'])} в боті @{(await bots_db.get(purge.bot)).username} закінчена\n\n\
+                    f"📭Чистка {gen_hex_caption(purge_stats['purge_id'])} в боті @{(await bots_db.get(purge.bot)).username} закінчена\n\n\
 ✅Очищено: {purge_stats['cleared_num']}\n❌Помилка: {purge_stats['error_num']}\n\
 ⌛️Час розсилання: {purge_stats['duration']}",
                     reply_markup=gen_ok("hide")

@@ -500,6 +500,7 @@ async def run_multi_mail(multi_mail: models.MultiMail, uid: int):
             del_dt=datetime.strftime(multi_mail.del_dt, models.DT_FORMAT) if multi_mail.del_dt else None,
             multi_mail=multi_mail.id
         )
+
         if filename:
             try:
                 file_id = await initiate_ubot_file(mail)
@@ -508,9 +509,15 @@ async def run_multi_mail(multi_mail: models.MultiMail, uid: int):
                 continue
             mail.file_id = file_id
         await mails_db.add(mail)
+        if mail.del_dt:
+            purge = models.Purge(0, sender=mail.sender, bot=mail.bot,
+                                 sched_dt=datetime.strftime(mail.del_dt, models.DT_FORMAT), mail_id=mail.id)
+            await purges_db.add(purge)
         create_task(gig.enqueue_mail(mail))
     multi_mail.active = 1
     await multi_mails_db.update(multi_mail)
+    queue_msg = f"🚀Мультирозсилка {gen_hex_caption(multi_mail.id)} була запущена. Вам прийде повідомлення після її закінчення"
+    await bot.send_message(multi_mail.sender, queue_msg, reply_markup=gen_ok("hide"))
 
 
 @dp.callback_query_handler(multi_mail_action.filter(action="confirm_sendout"))
@@ -518,6 +525,6 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict, state: FSMCont
     multi_mail = await safe_get_multi_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not multi_mail:
         return
-    await run_multi_mail(multi_mail, cb.from_user.id)
     await open_multi_mail_list(cb, state)
+    await run_multi_mail(multi_mail, cb.from_user.id)
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
