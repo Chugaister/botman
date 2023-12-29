@@ -1,9 +1,9 @@
 from bot.misc import *
-from bot.handlers.admin_panel import admin_mail_list
 from bot.keyboards import multi_mails as kb
 from bot.keyboards import bot_action, multi_mail_action, gen_cancel, gen_ok, gen_confirmation
 from datetime import datetime
 from .mails import initiate_ubot_file
+
 
 async def safe_get_multi_mail(uid: int, multi_mail_id: int, cb_id: int | None = None) -> models.MultiMail | None:
     async def alert():
@@ -520,7 +520,10 @@ async def run_multi_mail(multi_mail: models.MultiMail, uid: int):
         create_task(gig.enqueue_mail(mail))
     multi_mail.active = 1
     await multi_mails_db.update(multi_mail)
-    queue_msg = f"🚀Мультирозсилка {gen_hex_caption(multi_mail.id)} була запущена. Вам прийде повідомлення після її закінчення"
+    if multi_mail.admin:
+        queue_msg = f"🚀Адмінська розсилка {gen_hex_caption(multi_mail.id)} була запущена. Вам прийде повідомлення після її закінчення"
+    else:
+        queue_msg = f"🚀Мультирозсилка {gen_hex_caption(multi_mail.id)} була запущена. Вам прийде повідомлення після її закінчення"
     await bot.send_message(multi_mail.sender, queue_msg, reply_markup=gen_ok("hide"))
 
 

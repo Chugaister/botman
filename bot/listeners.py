@@ -231,12 +231,18 @@ async def listen_multi_mail_stats():
             multi_mail.active = 0
             multi_mail.status = 1
             await multi_mails_db.update(multi_mail)
-            await bot.send_message(
-                multi_mail.sender,
-                f"📭Мультирозсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n\
-✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
-                reply_markup=gen_ok("hide")
-            )
+            if multi_mail.admin:
+                await bot.send_message(
+                    multi_mail.sender,
+                    f"📭Адмінська розсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
+                    reply_markup=gen_ok("hide")
+                )
+            else:
+                await bot.send_message(
+                    multi_mail.sender,
+                    f"📭Мультирозсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
+                    reply_markup=gen_ok("hide")
+                )
 
 
 # listen_admin_notification_stats() is listener which check buffet of admin notification stats and send stats to sender
