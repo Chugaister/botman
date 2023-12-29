@@ -100,32 +100,52 @@ def gen_multi_mail_menu(multi_mail: models.MultiMail) -> InlineKeyboardMarkup:
             )
         )
     )
-    mail_menu.add(
-        InlineKeyboardButton(
-            "🔥Запустити",
-            callback_data=multi_mail_action.new(
-                multi_mail.id,
-                "sendout",
-                extra_field=0
-            )
-        ),
-        InlineKeyboardButton(
-            "🕑Планування",
-            callback_data=multi_mail_action.new(
-                multi_mail.id,
-                "schedule",
-                extra_field=0
-            )
-        ),
-        InlineKeyboardButton(
-            "🤖Боти",
-            callback_data=multi_mail_action.new(
-                multi_mail.id,
-                "bots_select",
-                extra_field=0
+    if multi_mail.admin:
+        mail_menu.add(
+            InlineKeyboardButton(
+                "🔥Запустити",
+                callback_data=multi_mail_action.new(
+                    multi_mail.id,
+                    "sendout",
+                    extra_field=0
+                )
+            ),
+            InlineKeyboardButton(
+                "🕑Планування",
+                callback_data=multi_mail_action.new(
+                    multi_mail.id,
+                    "schedule",
+                    extra_field=0
+                )
             )
         )
-    )
+    else:
+        mail_menu.add(
+            InlineKeyboardButton(
+                "🔥Запустити",
+                callback_data=multi_mail_action.new(
+                    multi_mail.id,
+                    "sendout",
+                    extra_field=0
+                )
+            ),
+            InlineKeyboardButton(
+                "🕑Планування",
+                callback_data=multi_mail_action.new(
+                    multi_mail.id,
+                    "schedule",
+                    extra_field=0
+                )
+            ),
+            InlineKeyboardButton(
+                "🤖Боти",
+                callback_data=multi_mail_action.new(
+                    multi_mail.id,
+                    "bots_select",
+                    extra_field=0
+                )
+            )
+        )
     mail_menu.add(
         InlineKeyboardButton(
             "↩️Назад",

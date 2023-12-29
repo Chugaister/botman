@@ -1,4 +1,5 @@
 import bot.handlers.settings
+from bot.handlers.multi_mails import open_multi_mail_menu
 from bot.misc import *
 from bot.keyboards import admin_panel as kb
 from bot.keyboards import gen_cancel, admin_bot_action, gen_ok
@@ -152,10 +153,93 @@ async def hide(cb: CallbackQuery):
 
 
 @dp.callback_query_handler(lambda cb: cb.data == "admin_mails_list")
-async def admin_mail_list(cb: CallbackQuery):
-    await cb.answer(
-        "👨‍💻In development. Coming soon..."
+async def admin_mail_list(cb: CallbackQuery, state: FSMContext):
+    await state.set_state(None)
+    admin_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0, admin=1)
+    await cb.message.answer(
+        "Адмін розсилки",
+        reply_markup=kb.gen_admin_mail_list(admin_mails)
     )
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+
+@dp.callback_query_handler(lambda cb: cb.data == "add_admin_mail")
+async def add_admin_mail(cb: CallbackQuery, state: FSMContext):
+    msg = await cb.message.answer(
+        f"Надішліть текст, гіф, фото або відео з підписом.\nДинамічні змінні:\n\
+<b>[any]\n[username]\n[first_name]\n[last_name]</b>",
+        reply_markup=gen_cancel(
+             "admin_mails_list"
+        )
+    )
+    await state.set_state(states.InputStateGroup.admin_mail)
+    await state.set_data({"msg_id": msg.message_id, "edit": None})
+    await safe_del_msg(cb.from_user.id, cb.message.message_id)
+
+
+async def admin_mail_input(
+        msg: Message, state: FSMContext, text: str = None, photo: str = None, video: str = None, gif: str = None
+):
+    state_data = await state.get_data()
+    admin_mail = models.MultiMail(
+        _id=0,
+        sender=msg.from_user.id,
+        text=text,
+        photo=photo,
+        video=video,
+        gif=gif,
+        admin=True
+    )
+    bots = await bots_db.get_by(premium=0)
+    for bot_dc in bots:
+        admin_mail.bots.append(bot_dc.id)
+    await multi_mails_db.add(admin_mail)
+    await state.set_state(None)
+    await msg.delete()
+    create_task(open_multi_mail_menu(msg.from_user.id, admin_mail.id, state_data["msg_id"]))
+
+
+@dp.message_handler(content_types=ContentTypes.TEXT, state=states.InputStateGroup.admin_mail)
+async def admin_mail_input_text(msg: Message, state: FSMContext):
+    await admin_mail_input(
+        msg,
+        state,
+        text=msg.parse_entities(as_html=True) if msg.text else None
+    )
+
+
+@dp.message_handler(content_types=ContentTypes.PHOTO, state=states.InputStateGroup.admin_mail)
+async def multi_mail_input_photo(msg: Message, state: FSMContext):
+    filename = await file_manager.download_file(bot, f"admin{msg.from_user.id}", msg.photo[-1].file_id)
+    await admin_mail_input(
+        msg,
+        state,
+        text=msg.parse_entities(as_html=True) if msg.caption else None,
+        photo=filename
+    )
+
+
+@dp.message_handler(content_types=ContentTypes.VIDEO, state=states.InputStateGroup.admin_mail)
+async def multi_mail_input_video(msg: Message, state: FSMContext):
+    filename = await file_manager.download_file(bot, f"admin{msg.from_user.id}", msg.video.file_id)
+    await admin_mail_input(
+        msg,
+        state,
+        text=msg.parse_entities(as_html=True) if msg.caption else None,
+        video=filename
+    )
+
+
+@dp.message_handler(content_types=ContentTypes.ANIMATION, state=states.InputStateGroup.admin_mail)
+async def multi_mail_input_gif(msg: Message, state: FSMContext):
+    filename = await file_manager.download_file(bot, f"admin{msg.from_user.id}", msg.animation.file_id)
+    await admin_mail_input(
+        msg,
+        state,
+        text=msg.parse_entities(as_html=True) if msg.caption else None,
+        gif=filename
+    )
+
 
 @dp.callback_query_handler(lambda cb: cb.data == "logs_menu")
 async def logs(cb: CallbackQuery):

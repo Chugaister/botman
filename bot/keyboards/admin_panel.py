@@ -1,5 +1,5 @@
 from bot.misc import *
-from bot.keyboards import admin_bot_action, bot_action, admin_mail_action, admin_notification_action
+from bot.keyboards import admin_bot_action, bot_action, multi_mail_action, admin_notification_action
 
 admin_panel_menu = InlineKeyboardMarkup()
 admin_panel_menu.add(
@@ -32,6 +32,33 @@ admin_panel_menu.add(
         callback_data="bots_admin"
     )
 )
+
+
+def gen_admin_mail_list(multi_mails: list[models.MultiMail]) -> InlineKeyboardMarkup:
+    admin_mail_list = InlineKeyboardMarkup()
+    for multi_mail in multi_mails:
+        schedule_mark = '🕑' if multi_mail.send_dt or multi_mail.del_dt else ''
+        admin_mail_list.add(
+            InlineKeyboardButton(
+                schedule_mark + (f"{multi_mail.text[:20]}..." if multi_mail.text else gen_hex_caption(multi_mail.id)),
+                callback_data=multi_mail_action.new(
+                    id=multi_mail.id,
+                    action="open_multi_mail_menu",
+                    extra_field=0
+                )
+            )
+        )
+    admin_mail_list.add(
+        InlineKeyboardButton(
+            "↩️Назад",
+            callback_data="start_msg"
+        ),
+        InlineKeyboardButton(
+            "➕Додати",
+            callback_data="add_admin_mail"
+        )
+    )
+    return admin_mail_list
 
 
 def gen_admin_bot_menu(bot: models.Bot) -> InlineKeyboardMarkup:

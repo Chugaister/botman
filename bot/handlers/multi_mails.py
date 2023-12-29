@@ -1,4 +1,5 @@
 from bot.misc import *
+from bot.handlers.admin_panel import admin_mail_list
 from bot.keyboards import multi_mails as kb
 from bot.keyboards import bot_action, multi_mail_action, gen_cancel, gen_ok, gen_confirmation
 from datetime import datetime
@@ -31,7 +32,7 @@ async def safe_get_multi_mail(uid: int, multi_mail_id: int, cb_id: int | None = 
 @dp.callback_query_handler(lambda cb: cb.data == "multi_mails", state="*")
 async def open_multi_mail_list(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
-    multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0)
+    multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0, admin=0)
     await cb.message.answer(
         "Мультирозсилки",
         reply_markup=kb.gen_multi_mail_list(multi_mails)
@@ -145,7 +146,10 @@ async def multi_mail_input(
             gif=gif
         )
         await multi_mails_db.add(multi_mail)
-    await select_bots(msg.from_user.id, multi_mail.id, state_data["msg_id"])
+    if not multi_mail.admin:
+        await select_bots(msg.from_user.id, multi_mail.id, state_data["msg_id"])
+    else:
+        create_task(open_multi_mail_menu(msg.from_user.id, multi_mail.id, state_data["msg_id"]))
     await state.set_state(None)
     await msg.delete()
 
@@ -525,6 +529,7 @@ async def confirm_sendout(cb: CallbackQuery, callback_data: dict, state: FSMCont
     multi_mail = await safe_get_multi_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
     if not multi_mail:
         return
-    await open_multi_mail_list(cb, state)
+    if not multi_mail.admin:
+        await open_multi_mail_list(cb, state)
     await run_multi_mail(multi_mail, cb.from_user.id)
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
