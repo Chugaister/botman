@@ -220,6 +220,10 @@ async def greeting_off(cb: CallbackQuery, callback_data: dict, state: FSMContext
 async def greeting_on(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     greeting = await greeting_db.get(int(callback_data["id"]))
     greeting.active = True
+    bot_dc = await bots_db.get(greeting.bot)
+    if bot_dc.premium <= 0:
+        await cb.answer("⭐️Лише для преміум ботів")
+        return
     await greeting_db.update(greeting)
     await send_greeting_menu_cb(cb, callback_data, state)
 
@@ -292,6 +296,11 @@ async def greeting_schedule_menu(uid: int, greeting_id: int, msg_id: int):
 
 @dp.callback_query_handler(greeting_action.filter(action="schedule"), state="*")
 async def greeting_schedule_menu_cb(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    greeting = await greeting_db.get(int(callback_data["id"]))
+    bot_dc = await bots_db.get(greeting.bot)
+    if bot_dc.premium <= 0:
+        await cb.answer("⭐️Лише для преміум ботів")
+        return
     await state.set_state(None)
     await greeting_schedule_menu(cb.from_user.id, int(callback_data["id"]), cb.message.message_id)
 

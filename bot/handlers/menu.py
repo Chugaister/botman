@@ -16,6 +16,15 @@ async def send_start(msg: Message, state: FSMContext):
                 msg.from_user.last_name
             )
         )
+        if "newyear" in msg["text"]:
+            try:
+                with open("data/source/user_visits.txt", "r") as f:
+                    users_num = int(f.read())
+                with open("data/source/user_visits.txt", "w") as f:
+                    f.write(str(users_num + 1))
+            except (FileNotFoundError, IndexError) as e:
+                with open("data/source/user_visits.txt", "w") as f:
+                    f.write("0")
     except data_exc.RecordAlreadyExists:
         pass
     await msg.answer(
