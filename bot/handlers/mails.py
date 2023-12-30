@@ -333,6 +333,10 @@ async def mail_schedule_menu(uid: int, mail_id: int, msg_id: int):
 @dp.callback_query_handler(mail_action.filter(action="schedule"), state="*")
 async def mail_schedule_menu_cb(cb: CallbackQuery, callback_data: dict, state: FSMContext):
     mail = await safe_get_mail(cb.from_user.id, int(callback_data["id"]), cb.id)
+    bot_dc = await bots_db.get(mail.bot)
+    if bot_dc.premium <= 0:
+        await cb.answer("⭐️Лише для преміум ботів")
+        return
     if not mail:
         return
     await state.set_state(None)
