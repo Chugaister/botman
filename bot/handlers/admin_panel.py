@@ -60,8 +60,16 @@ async def send_admin_panel(cb: CallbackQuery, state: FSMContext):
 
 @dp.message_handler(lambda msg: msg.from_user.id in config.admin_list, commands="admin")
 async def send_admin_panel(msg: Message):
+    try: 
+        with open("data/source/user_visits.txt", "r") as f:
+            lines = f.readlines()
+            total_users = lines[1]
+            unique_users = lines[3]
+    except (FileNotFoundError, IndexError):
+        total_users = 0
+        unique_users = 0
     await msg.answer(
-        "Адмін-панель",
+        f"Адмін-панель\nЛінк з метаінфо: https://t.me/impulse_trafficbot?start=newyear\nЗагальних користувачів: {total_users}Унікальних користувачів: {unique_users}",
         reply_markup=kb.admin_panel_menu
     )
     await msg.delete()

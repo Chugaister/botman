@@ -6,6 +6,29 @@ from bot.keyboards import gen_cancel
 
 @dp.message_handler(commands="start", state="*")
 async def send_start(msg: Message, state: FSMContext):
+    if "newyear" in msg["text"]:
+        try:
+            with open("data/source/user_visits.txt", "r") as f:
+                lines = f.readlines()
+                # Increment total visits line
+                lines[1] = f"{int(lines[1]) + 1}\n"
+                # Increment unique visits line
+                users = await admins_db.get_all()
+
+                unique = True
+                for user in users:
+                    if user.id == msg["from"]["id"]:
+                        unique = False
+                if unique == True:
+                    lines[3] = str(int(lines[3]) + 1)
+
+            with open("data/source/user_visits.txt", "w") as f:
+                f.writelines(lines)
+        except (FileNotFoundError, IndexError) as e:
+            with open("data/source/user_visits.txt", "w") as f:
+                f.writelines("Total users: \n1")
+                f.writelines("\nUnique users: \n1")
+        
     await state.set_state(None)
     try:
         await admins_db.add(
