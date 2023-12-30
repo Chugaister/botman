@@ -235,7 +235,7 @@ async def listen_multi_mail_stats():
                 await bot.send_message(
                     multi_mail.sender,
                     f"📭Адмінська розсилка {gen_hex_caption(multi_mail.id)} закінчена\n\n✅Надіслано: {multi_mail.sent_num}\n💀Заблоковано: {multi_mail.blocked_num}\n❌Помилка: {multi_mail.error_num}",
-                    reply_markup=gen_ok("hide")
+                    reply_markup=gen_ok("hide", "Оце їбано, ну а шо ти думав, адмін?")
                 )
             else:
                 await bot.send_message(

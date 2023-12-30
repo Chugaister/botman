@@ -1,5 +1,5 @@
 from bot.misc import *
-from . import bot_action, gen_cancel, multi_mail_action
+from . import bot_action, gen_cancel, multi_mail_action, admin_mail_action
 
 
 def gen_cancel_schedule_menu(multi_mail: models.MultiMail) -> InlineKeyboardMarkup:
@@ -119,6 +119,20 @@ def gen_multi_mail_menu(multi_mail: models.MultiMail) -> InlineKeyboardMarkup:
                 )
             )
         )
+        mail_menu.add(
+            InlineKeyboardButton(
+                "↩️Назад",
+                callback_data="admin_mails_list"
+            ),
+            InlineKeyboardButton(
+                "🗑Видалити",
+                callback_data=multi_mail_action.new(
+                    multi_mail.id,
+                    "delete_mail",
+                    extra_field=0
+                )
+            )
+        )
     else:
         mail_menu.add(
             InlineKeyboardButton(
@@ -146,20 +160,20 @@ def gen_multi_mail_menu(multi_mail: models.MultiMail) -> InlineKeyboardMarkup:
                 )
             )
         )
-    mail_menu.add(
-        InlineKeyboardButton(
-            "↩️Назад",
-            callback_data="multi_mails"
-        ),
-        InlineKeyboardButton(
-            "🗑Видалити",
-            callback_data=multi_mail_action.new(
-                multi_mail.id,
-                "delete_mail",
-                extra_field=0
+        mail_menu.add(
+            InlineKeyboardButton(
+                "↩️Назад",
+                callback_data="multi_mails"
+            ),
+            InlineKeyboardButton(
+                "🗑Видалити",
+                callback_data=multi_mail_action.new(
+                    multi_mail.id,
+                    "delete_mail",
+                    extra_field=0
+                )
             )
         )
-    )
     return mail_menu
 
 

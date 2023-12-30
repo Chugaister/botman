@@ -34,7 +34,7 @@ async def open_multi_mail_list(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
     multi_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0, admin=0)
     await cb.message.answer(
-        "Мультирозсилки",
+        "📮Мультирозсилки",
         reply_markup=kb.gen_multi_mail_list(multi_mails)
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
@@ -295,7 +295,18 @@ async def delete_mail(cb: CallbackQuery, callback_data: dict, state: FSMContext)
     if not multi_mail:
         return
     await multi_mails_db.delete(multi_mail.id)
-    await open_multi_mail_list(cb, state)
+    await safe_del_msg(multi_mail.sender, cb.message.message_id)
+    if multi_mail.admin:
+        await bot.send_message(
+            multi_mail.sender,
+            "🕳Адмінська розсилка була видалена",
+            reply_markup=gen_ok("admin_mails_list")
+        )
+    else:
+        await bot.send_message(
+            multi_mail.sender,
+            "🕳Мультирозсилка була видалена",
+            reply_markup=gen_ok("multi_mails"))
 
 
 async def multi_mail_schedule_menu(uid: int, multi_mail_id: int, msg_id: int):
@@ -524,7 +535,7 @@ async def run_multi_mail(multi_mail: models.MultiMail, uid: int):
         queue_msg = f"🚀Адмінська розсилка {gen_hex_caption(multi_mail.id)} була запущена. Вам прийде повідомлення після її закінчення"
     else:
         queue_msg = f"🚀Мультирозсилка {gen_hex_caption(multi_mail.id)} була запущена. Вам прийде повідомлення після її закінчення"
-    await bot.send_message(multi_mail.sender, queue_msg, reply_markup=gen_ok("hide"))
+    await bot.send_message(multi_mail.sender, queue_msg, reply_markup=gen_ok("hide", "Ого їбане зараз" if multi_mail.admin else "OK"))
 
 
 @dp.callback_query_handler(multi_mail_action.filter(action="confirm_sendout"))

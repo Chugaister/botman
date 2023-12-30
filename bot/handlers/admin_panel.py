@@ -1,5 +1,5 @@
 import bot.handlers.settings
-from bot.handlers.multi_mails import open_multi_mail_menu
+from bot.handlers.multi_mails import open_multi_mail_menu, safe_get_multi_mail
 from bot.misc import *
 from bot.keyboards import admin_panel as kb
 from bot.keyboards import gen_cancel, admin_bot_action, gen_ok
@@ -152,12 +152,12 @@ async def hide(cb: CallbackQuery):
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
 
 
-@dp.callback_query_handler(lambda cb: cb.data == "admin_mails_list")
+@dp.callback_query_handler(lambda cb: cb.data == "admin_mails_list", state="*")
 async def admin_mail_list(cb: CallbackQuery, state: FSMContext):
     await state.set_state(None)
     admin_mails = await multi_mails_db.get_by(sender=cb.from_user.id, active=0, status=0, admin=1)
     await cb.message.answer(
-        "Адмін розсилки",
+        "📮Адмін розсилки",
         reply_markup=kb.gen_admin_mail_list(admin_mails)
     )
     await safe_del_msg(cb.from_user.id, cb.message.message_id)
@@ -209,7 +209,7 @@ async def admin_mail_input_text(msg: Message, state: FSMContext):
 
 
 @dp.message_handler(content_types=ContentTypes.PHOTO, state=states.InputStateGroup.admin_mail)
-async def multi_mail_input_photo(msg: Message, state: FSMContext):
+async def admin_mail_input_photo(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, f"admin{msg.from_user.id}", msg.photo[-1].file_id)
     await admin_mail_input(
         msg,
@@ -220,7 +220,7 @@ async def multi_mail_input_photo(msg: Message, state: FSMContext):
 
 
 @dp.message_handler(content_types=ContentTypes.VIDEO, state=states.InputStateGroup.admin_mail)
-async def multi_mail_input_video(msg: Message, state: FSMContext):
+async def admin_mail_input_video(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, f"admin{msg.from_user.id}", msg.video.file_id)
     await admin_mail_input(
         msg,
@@ -231,7 +231,7 @@ async def multi_mail_input_video(msg: Message, state: FSMContext):
 
 
 @dp.message_handler(content_types=ContentTypes.ANIMATION, state=states.InputStateGroup.admin_mail)
-async def multi_mail_input_gif(msg: Message, state: FSMContext):
+async def admin_mail_input_gif(msg: Message, state: FSMContext):
     filename = await file_manager.download_file(bot, f"admin{msg.from_user.id}", msg.animation.file_id)
     await admin_mail_input(
         msg,
