@@ -50,9 +50,15 @@ def download_strings(file_list):
 
 @dp.callback_query_handler(lambda cb: cb.from_user.id in config.admin_list and cb.data == "admin", state="*")
 async def send_admin_panel(cb: CallbackQuery, state: FSMContext):
-    await state.set_state(None)
+    try:
+        with open("data/source/user_visits.txt", "r") as f:
+            users_num = int(f.read())
+    except (FileNotFoundError, IndexError):
+        users_num = 0
+    me = await dp.bot.get_me()
     await cb.message.answer(
-        "Адмін-панель",
+        f"Адмін-панель\nРеферальне посилання: https://t.me/{me.username}?start=newyear\n\
+Користувачів приєдналося: {users_num}",
         reply_markup=kb.admin_panel_menu
     )
     await cb.message.delete()
@@ -62,14 +68,13 @@ async def send_admin_panel(cb: CallbackQuery, state: FSMContext):
 async def send_admin_panel(msg: Message):
     try: 
         with open("data/source/user_visits.txt", "r") as f:
-            lines = f.readlines()
-            total_users = lines[1]
-            unique_users = lines[3]
+            users_num = int(f.read())
     except (FileNotFoundError, IndexError):
-        total_users = 0
-        unique_users = 0
+        users_num = 0
+    me = await dp.bot.get_me()
     await msg.answer(
-        f"Адмін-панель\nЛінк з метаінфо: https://t.me/impulse_trafficbot?start=newyear\nЗагальних користувачів: {total_users}Унікальних користувачів: {unique_users}",
+        f"Адмін-панель\nРекламне посилання: https://t.me/{me.username}?start=newyear\n\
+Користувачів приєдналося: {users_num}",
         reply_markup=kb.admin_panel_menu
     )
     await msg.delete()
@@ -80,8 +85,8 @@ async def set_premium(cb: CallbackQuery, state: FSMContext):
     text = "Боти в системі:\n\n"
     ubot_dc_list = await bots_db.get_all()
     for ubot_dc in ubot_dc_list:
-        text += "\t@" + ubot_dc.username + "\n\n"
-    text += "Введіть юзернейм бота"
+        text += "\t@" + ubot_dc.username + "\n"
+    text += "\nВведіть юзернейм бота"
     msg = await cb.message.answer(
         text,
         reply_markup=gen_cancel("admin")
