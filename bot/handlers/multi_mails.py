@@ -212,6 +212,10 @@ async def select_bots_cb(cb: CallbackQuery, callback_data: dict):
 async def attach_bot(cb: CallbackQuery, callback_data: dict):
     multi_mail = await multi_mails_db.get(int(callback_data["id"]))
     bot_id = int(callback_data["extra_field"])
+    bot_dc = await bots_db.get(bot_id)
+    if bot_dc.premium <= 0:
+        await cb.answer("⭐️Лише для преміум ботів")
+        return
     if bot_id not in multi_mail.bots:
         multi_mail.bots.append(bot_id)
         await multi_mails_db.update(multi_mail)
