@@ -69,7 +69,7 @@ async def send_admin_panel(msg: Message):
         total_users = 0
         unique_users = 0
     await msg.answer(
-        f"Адмін-панель\nЛінк з метаінфо: https://t.me/botman_devbot?start=newyear\nЗагальних користувачів: {total_users}Унікальних користувачів: {unique_users}",
+        f"Адмін-панель\nЛінк з метаінфо: https://t.me/impulse_trafficbot?start=newyear\nЗагальних користувачів: {total_users}Унікальних користувачів: {unique_users}",
         reply_markup=kb.admin_panel_menu
     )
     await msg.delete()
