@@ -223,6 +223,9 @@ async def listen_multi_mail_stats():
         finished = True
         for mail in mails:
             finished = finished and (not mail.active and mail.status)
+        multi_mail.sent_num = int(multi_mail.sent_num)
+        multi_mail.blocked_num = int(multi_mail.blocked_num)
+        multi_mail.error_num = int(multi_mail.error_num)
         if finished:
             for mail in mails:
                 multi_mail.sent_num += mail.sent_num
