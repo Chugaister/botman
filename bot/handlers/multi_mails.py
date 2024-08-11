@@ -523,7 +523,7 @@ async def run_multi_mail(multi_mail: models.MultiMail, uid: int):
         if filename:
             try:
                 file_id = await initiate_ubot_file(mail)
-            except (ChatNotFound, Unauthorized):
+            except (ChatNotFound, Unauthorized, KeyError):
                 multi_mail.bots.remove(bot_dc.id)
                 continue
             mail.file_id = file_id
