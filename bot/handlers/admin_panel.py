@@ -81,13 +81,22 @@ async def send_admin_panel(msg: Message):
     await msg.delete()
 
 
+def split_list(input_list, size):
+    return [input_list[i:i + size] for i in range(0, len(input_list), size)]
+
+
 @dp.callback_query_handler(lambda cb: cb.data == "bots_admin")
 async def set_premium(cb: CallbackQuery, state: FSMContext):
-    text = "Боти в системі:\n\n"
     ubot_dc_list = await bots_db.get_all()
-    for ubot_dc in ubot_dc_list:
-        text += "\t@" + ubot_dc.username + "\n"
-    text += "\nВведіть юзернейм бота"
+    ubot_dc_pkgs = split_list(ubot_dc_list, 30)
+    for ubot_dc_pkg in ubot_dc_pkgs:
+        text = ""
+        for ubot_dc in ubot_dc_pkg:
+            text += "\t@" + ubot_dc.username + "\n"
+        await cb.message.answer(
+            text
+        )
+    text = "Введіть юзернейм бота"
     msg = await cb.message.answer(
         text,
         reply_markup=gen_cancel("admin")
