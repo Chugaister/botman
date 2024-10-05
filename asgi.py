@@ -181,8 +181,5 @@ if __name__ == "__main__":
         uvicorn.run(
             app,
             host=HOST,
-            port=PORT,
-            ssl_certfile=certfile_path,
-            ssl_keyfile=keyfile_path,
-            ssl_ca_certs=ca_bundle_path
+            port=PORT
         )
